@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Build Your Pizza</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/picocss/2.0.6/pico.min.css">
+<script>
+  (function(h,o,u,n,d) {
+    h=h[d]=h[d]||{q:[],onReady:function(c){h.q.push(c)}}
+    d=o.createElement(u);d.async=1;d.src=n;d.crossOrigin=''
+    n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
+  })(window,document,'script','https://www.datadoghq-browser-agent.com/us1/v6/datadog-rum.js','DD_RUM')
+  window.DD_RUM.onReady(function() {
+    window.DD_RUM.init({
+      clientToken: 'pub067eb57994325a05bf401b11a686e8e3',
+      applicationId: '4a79b017-ea18-4839-9153-ce2b058b4db6',
+      site: 'datadoghq.com',
+      service: 'datadog-demo-app',
+      env: 'demo',
+      sessionSampleRate: 100,
+      sessionReplaySampleRate: 100,
+      trackBfcacheViews: true,
+      defaultPrivacyLevel: 'mask-user-input',
+      beforeSend: (event) => { logRumEvent(event); return true; }
+    });
+  })
+</script>
+<style>
+  body { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem; }
+  h1 { text-align: center; margin-bottom: 0.25rem; }
+  .subtitle { text-align: center; color: var(--pico-muted-color); margin-bottom: 2rem; }
+
+  body > h1, body > .subtitle, .progress-wrap, .screen { max-width: 560px; margin-left: auto; margin-right: auto; }
+  .progress-labels { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--pico-muted-color); margin-bottom: 0.4rem; }
+  progress { width: 100%; }
+
+  .options { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin: 1.5rem 0; }
+  .option-card { border: 2px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); padding: 1rem; cursor: pointer; transition: border-color 0.15s, background 0.15s; text-align: center; user-select: none; }
+  .option-card:hover { border-color: var(--pico-primary); }
+  .option-card.selected { border-color: var(--pico-primary); background: var(--pico-primary-background); }
+  .option-card .emoji { font-size: 2rem; display: block; margin-bottom: 0.4rem; }
+  .option-card .label { font-weight: 600; }
+  .option-card .desc { font-size: 0.8rem; color: var(--pico-muted-color); }
+
+  .result-list { list-style: none; padding: 0; }
+  .result-list li { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0; border-bottom: 1px solid var(--pico-muted-border-color); }
+  .result-list li:last-child { border-bottom: none; }
+  .result-list .step-label { color: var(--pico-muted-color); font-size: 0.8rem; min-width: 90px; }
+  .result-list .step-value { font-weight: 600; }
+
+  #start-screen { text-align: center; padding: 3rem 1rem; }
+  #start-screen .pizza-hero { font-size: 5rem; margin-bottom: 1rem; }
+
+  .btn-row { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* RUM Log */
+  #rum-log-wrap { margin-top: 3rem; border-top: 1px solid var(--pico-muted-border-color); padding-top: 1.25rem; }
+  #rum-log-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem; }
+  #rum-log-header h3 { margin: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--pico-muted-color); }
+  .log-controls { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .filter-btn { font-size: 0.7rem; padding: 2px 8px; border-radius: 3px; cursor: pointer; border: 1px solid transparent; font-weight: 600; opacity: 0.45; transition: opacity 0.15s; }
+  .filter-btn.active { opacity: 1; }
+  .filter-btn.view     { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
+  .filter-btn.action   { background: #dcfce7; color: #15803d; border-color: #86efac; }
+  .filter-btn.resource { background: #fef9c3; color: #854d0e; border-color: #fde68a; }
+  .filter-btn.error    { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+  .filter-btn.long_task{ background: #ede9fe; color: #6d28d9; border-color: #c4b5fd; }
+  #clear-log-btn { font-size: 0.72rem; padding: 2px 10px; }
+
+  /* Table */
+  #rum-table-wrap { max-height: 300px; overflow-y: auto; border: 1px solid var(--pico-muted-border-color); border-radius: 6px; }
+  table#rum-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; font-family: monospace; table-layout: fixed; margin: 0; }
+  #rum-table thead th { position: sticky; top: 0; background: var(--pico-card-background-color); padding: 5px 8px; text-align: left; font-weight: 700; border-bottom: 1px solid var(--pico-muted-border-color); white-space: nowrap; font-family: monospace; }
+  #rum-table tbody tr:nth-child(even) { background: var(--pico-card-sectionning-background-color); }
+  #rum-table td { padding: 4px 8px; vertical-align: top; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #rum-table td.wrap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
+  .type-badge { display: inline-block; font-size: 0.65rem; padding: 1px 5px; border-radius: 3px; font-weight: 700; white-space: nowrap; }
+  .type-badge.view     { background: #dbeafe; color: #1d4ed8; }
+  .type-badge.action   { background: #dcfce7; color: #15803d; }
+  .type-badge.resource { background: #fef9c3; color: #854d0e; }
+  .type-badge.error    { background: #fee2e2; color: #991b1b; }
+  .type-badge.long_task{ background: #ede9fe; color: #6d28d9; }
+  .type-badge.other    { background: #f3f4f6; color: #6b7280; }
+  #rum-empty-row td { text-align: center; color: var(--pico-muted-color); padding: 1.5rem; font-family: sans-serif; }
+
+  /* col widths */
+  .col-time  { width: 62px; }
+  .col-type  { width: 72px; }
+  .col-a     { width: 38%; }
+  .col-b     { width: calc(62% - 134px); }
+</style>
+</head>
+<body>
+
+<h1>🍕 Pizza Builder</h1>
+<p class="subtitle">Craft your perfect pie in 5 easy steps</p>
+
+<div class="progress-wrap" id="progress-wrap" style="display:none">
+  <div class="progress-labels">
+    <span id="step-label">Step 1 of 5</span>
+    <span id="step-name"></span>
+  </div>
+  <progress id="progress-bar" value="0" max="5"></progress>
+</div>
+
+<div class="screen active" id="screen-start">
+  <div id="start-screen">
+    <div class="pizza-hero">🍕</div>
+    <h2>Ready to build your pizza?</h2>
+    <p>Choose your crust, sauce, cheese, toppings, and size — we'll handle the rest.</p>
+    <button onclick="goTo(1)">Start Building</button>
+  </div>
+</div>
+
+<div class="screen" id="screen-1">
+  <h2>Choose your crust</h2>
+  <div class="options" id="opts-1">
+    <div class="option-card" onclick="select(1,this,'Thin & Crispy')"><span class="emoji">🥨</span><div class="label">Thin & Crispy</div><div class="desc">Light and snappy</div></div>
+    <div class="option-card" onclick="select(1,this,'Hand-Tossed')"><span class="emoji">🫓</span><div class="label">Hand-Tossed</div><div class="desc">Classic and chewy</div></div>
+    <div class="option-card" onclick="select(1,this,'Deep Dish')"><span class="emoji">🍞</span><div class="label">Deep Dish</div><div class="desc">Thick and doughy</div></div>
+    <div class="option-card" onclick="select(1,this,'Gluten-Free')"><span class="emoji">🌾</span><div class="label">Gluten-Free</div><div class="desc">Light rice crust</div></div>
+  </div>
+  <div class="btn-row">
+    <button class="secondary outline" onclick="goTo(0)">Back</button>
+    <button id="btn-1" disabled onclick="goTo(2)">Continue</button>
+  </div>
+</div>
+
+<div class="screen" id="screen-2">
+  <h2>Pick your sauce</h2>
+  <div class="options" id="opts-2">
+    <div class="option-card" onclick="select(2,this,'Classic Tomato')"><span class="emoji">🍅</span><div class="label">Classic Tomato</div><div class="desc">Rich marinara</div></div>
+    <div class="option-card" onclick="select(2,this,'White Garlic')"><span class="emoji">🧄</span><div class="label">White Garlic</div><div class="desc">Creamy alfredo</div></div>
+    <div class="option-card" onclick="select(2,this,'BBQ')"><span class="emoji">🔥</span><div class="label">BBQ</div><div class="desc">Smoky and sweet</div></div>
+    <div class="option-card" onclick="select(2,this,'Pesto')"><span class="emoji">🌿</span><div class="label">Pesto</div><div class="desc">Fresh basil blend</div></div>
+  </div>
+  <div class="btn-row">
+    <button class="secondary outline" onclick="goTo(1)">Back</button>
+    <button id="btn-2" disabled onclick="goTo(3)">Continue</button>
+  </div>
+</div>
+
+<div class="screen" id="screen-3">
+  <h2>Select your cheese</h2>
+  <div class="options" id="opts-3">
+    <div class="option-card" onclick="select(3,this,'Mozzarella')"><span class="emoji">🧀</span><div class="label">Mozzarella</div><div class="desc">The OG melt</div></div>
+    <div class="option-card" onclick="select(3,this,'Four Cheese')"><span class="emoji">🫕</span><div class="label">Four Cheese</div><div class="desc">Mozz, provolone, parmesan, romano</div></div>
+    <div class="option-card" onclick="select(3,this,'Vegan')"><span class="emoji">🌱</span><div class="label">Vegan</div><div class="desc">Cashew-based</div></div>
+    <div class="option-card" onclick="select(3,this,'No Cheese')"><span class="emoji">🚫</span><div class="label">No Cheese</div><div class="desc">Sauce only</div></div>
+  </div>
+  <div class="btn-row">
+    <button class="secondary outline" onclick="goTo(2)">Back</button>
+    <button id="btn-3" disabled onclick="goTo(4)">Continue</button>
+  </div>
+</div>
+
+<div class="screen" id="screen-4">
+  <h2>Add your toppings</h2>
+  <div class="options" id="opts-4">
+    <div class="option-card" onclick="select(4,this,'Pepperoni')"><span class="emoji">🍖</span><div class="label">Pepperoni</div><div class="desc">A classic</div></div>
+    <div class="option-card" onclick="select(4,this,'Mushrooms')"><span class="emoji">🍄</span><div class="label">Mushrooms</div><div class="desc">Earthy and savory</div></div>
+    <div class="option-card" onclick="select(4,this,'Bell Peppers')"><span class="emoji">🫑</span><div class="label">Bell Peppers</div><div class="desc">Crisp and sweet</div></div>
+    <div class="option-card" onclick="select(4,this,'Jalapeños')"><span class="emoji">🌶️</span><div class="label">Jalapeños</div><div class="desc">Bring the heat</div></div>
+  </div>
+  <div class="btn-row">
+    <button class="secondary outline" onclick="goTo(3)">Back</button>
+    <button id="btn-4" disabled onclick="goTo(5)">Continue</button>
+  </div>
+</div>
+
+<div class="screen" id="screen-5">
+  <h2>Choose your size</h2>
+  <div class="options" id="opts-5">
+    <div class="option-card" onclick="select(5,this,'Personal (6 in)')"><span class="emoji">🤏</span><div class="label">Personal</div><div class="desc">6" · 4 slices</div></div>
+    <div class="option-card" onclick="select(5,this,'Medium (12 in)')"><span class="emoji">✋</span><div class="label">Medium</div><div class="desc">12" · 8 slices</div></div>
+    <div class="option-card" onclick="select(5,this,'Large (16 in)')"><span class="emoji">🙌</span><div class="label">Large</div><div class="desc">16" · 10 slices</div></div>
+    <div class="option-card" onclick="select(5,this,'XL Party (20 in)')"><span class="emoji">🎉</span><div class="label">XL Party</div><div class="desc">20" · 12 slices</div></div>
+  </div>
+  <div class="btn-row">
+    <button class="secondary outline" onclick="goTo(4)">Back</button>
+    <button id="btn-5" disabled onclick="goTo('results')">See My Pizza</button>
+  </div>
+</div>
+
+<div class="screen" id="screen-results">
+  <h2>🎉 Your Pizza Order</h2>
+  <p>Here's what you built:</p>
+  <ul class="result-list" id="result-list"></ul>
+  <div class="btn-row" style="justify-content:center; margin-top:2rem">
+    <button onclick="stopAndRestart()">Start Over</button>
+  </div>
+</div>
+
+<!-- RUM Event Log -->
+<div id="rum-log-wrap">
+  <div id="rum-log-header">
+    <h3>Datadog RUM events</h3>
+    <div class="log-controls">
+      <button class="filter-btn view active"      onclick="toggleFilter('view')">view</button>
+      <button class="filter-btn action active"    onclick="toggleFilter('action')">action</button>
+      <button class="filter-btn resource"         onclick="toggleFilter('resource')">resource</button>
+      <button class="filter-btn error active"     onclick="toggleFilter('error')">error</button>
+      <button class="filter-btn long_task active" onclick="toggleFilter('long_task')">long_task</button>
+      <button class="secondary outline" id="clear-log-btn" onclick="clearLog()">Clear</button>
+    </div>
+  </div>
+
+  <div id="rum-table-wrap">
+    <table id="rum-table">
+      <colgroup>
+        <col class="col-time"><col class="col-type"><col class="col-a"><col class="col-b">
+      </colgroup>
+      <thead id="rum-thead">
+        <tr>
+          <th>time</th>
+          <th>type</th>
+          <th id="col-a-head">path / name</th>
+          <th id="col-b-head">hash / payload</th>
+        </tr>
+      </thead>
+      <tbody id="rum-tbody">
+        <tr id="rum-empty-row"><td colspan="4">Waiting for events…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const stepMeta = [
+    null,
+    { hash: 'crust',    label: 'Crust'    },
+    { hash: 'sauce',    label: 'Sauce'    },
+    { hash: 'cheese',   label: 'Cheese'   },
+    { hash: 'toppings', label: 'Toppings' },
+    { hash: 'size',     label: 'Size'     },
+  ];
+  const selections = {};
+
+  function goTo(step) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const wrap = document.getElementById('progress-wrap');
+    if (step === 0) {
+      document.getElementById('screen-start').classList.add('active');
+      wrap.style.display = 'none';
+      location.hash = '';
+    } else if (step === 'results') {
+      document.getElementById('screen-results').classList.add('active');
+      wrap.style.display = 'none';
+      location.hash = 'results';
+      renderResults();
+    } else {
+      document.getElementById(`screen-${step}`).classList.add('active');
+      wrap.style.display = 'block';
+      document.getElementById('progress-bar').value = step;
+      document.getElementById('step-label').textContent = `Step ${step} of 5`;
+      document.getElementById('step-name').textContent = stepMeta[step].label;
+      location.hash = stepMeta[step].hash;
+    }
+  }
+
+  function select(step, el, value) {
+    document.querySelectorAll(`#opts-${step} .option-card`).forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    selections[step] = { label: stepMeta[step].label, value };
+    document.getElementById(`btn-${step}`).disabled = false;
+  }
+
+  function stopAndRestart() {
+    window.DD_RUM && window.DD_RUM.onReady(function() {
+      console.log('[DD RUM] Stopping session');
+      window.DD_RUM.stopSession();
+      console.log('[DD RUM] Session stopped');
+    });
+    Object.keys(selections).forEach(k => delete selections[k]);
+    document.querySelectorAll('.option-card.selected').forEach(c => c.classList.remove('selected'));
+    for (let i = 1; i <= 5; i++) document.getElementById(`btn-${i}`).disabled = true;
+    console.log('[Wizard] Selections cleared');
+    goTo(0);
+  }
+
+  function renderResults() {
+    const list = document.getElementById('result-list');
+    list.innerHTML = Object.values(selections).map(s =>
+      `<li><span class="step-label">${s.label}</span><span class="step-value">${s.value}</span></li>`
+    ).join('');
+    const order = { pizza_order: Object.fromEntries(Object.values(selections).map(s => [s.label.toLowerCase(), s.value])) };
+    window.DD_RUM && window.DD_RUM.onReady(function() {
+      console.log('[DD RUM] Action fired: pizza_order_submitted', order);
+      window.DD_RUM.addAction('pizza_order_submitted', order);
+    });
+  }
+
+  // --- Filter state ---
+  const activeFilters = new Set(['view', 'action', 'error', 'long_task']);
+
+  function toggleFilter(type) {
+    if (activeFilters.has(type)) activeFilters.delete(type);
+    else activeFilters.add(type);
+    document.querySelectorAll('.filter-btn').forEach(b => {
+      b.classList.toggle('active', activeFilters.has(b.textContent.trim()));
+    });
+    rerenderTable();
+  }
+
+  // --- Event store ---
+  const rumEvents = [];
+
+  function getColHeaders(type) {
+    if (type === 'view')   return ['path', 'hash'];
+    if (type === 'action') return ['name', 'payload'];
+    if (type === 'error')  return ['message', 'source'];
+    if (type === 'long_task') return ['duration', ''];
+    return ['detail', ''];
+  }
+
+  function getColValues(event) {
+    const t = event.type;
+    if (t === 'view') {
+      const url = event.view?.url || '';
+      try {
+        const u = new URL(url);
+        return [u.pathname, u.hash || '—'];
+      } catch { return [url, '—']; }
+    }
+    if (t === 'action') {
+      const name = event.action?.target?.name || event.action?.type || '—';
+      const ctx = event.context ? JSON.stringify(event.context) : '—';
+      return [name, ctx];
+    }
+    if (t === 'error') {
+      return [event.error?.message || '—', event.error?.source || '—'];
+    }
+    if (t === 'long_task') {
+      const ms = event.long_task?.duration != null ? Math.round(event.long_task.duration / 1e6) + 'ms' : '—';
+      return [ms, ''];
+    }
+    return [JSON.stringify(event).slice(0, 60), ''];
+  }
+
+  function rerenderTable() {
+    const tbody = document.getElementById('rum-tbody');
+    const visible = rumEvents.filter(e => activeFilters.has(e.type));
+    if (visible.length === 0) {
+      tbody.innerHTML = '<tr id="rum-empty-row"><td colspan="4">No events match current filters.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = visible.map(e => {
+      const tc = ['view','action','resource','error','long_task'].includes(e.type) ? e.type : 'other';
+      const [a, b] = e.cols;
+      const aEsc = a.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const bEsc = b.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return `<tr>
+        <td>${e.time}</td>
+        <td><span class="type-badge ${tc}">${e.type}</span></td>
+        <td class="wrap" title="${aEsc}">${aEsc}</td>
+        <td class="wrap" title="${bEsc}">${bEsc}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function logRumEvent(event) {
+    const emptyRow = document.getElementById('rum-empty-row');
+    if (emptyRow) emptyRow.remove();
+
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const cols = getColValues(event);
+    rumEvents.push({ type: event.type || 'other', time, cols });
+    rerenderTable();
+
+    const wrap = document.getElementById('rum-table-wrap');
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+
+  function clearLog() {
+    rumEvents.length = 0;
+    document.getElementById('rum-tbody').innerHTML =
+      '<tr id="rum-empty-row"><td colspan="4">Waiting for events…</td></tr>';
+  }
+</script>
+</body>
+</html>

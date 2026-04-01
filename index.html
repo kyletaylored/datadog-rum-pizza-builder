@@ -35,8 +35,9 @@
   .progress-labels { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--pico-muted-color); margin-bottom: 0.4rem; }
   progress { width: 100%; }
 
-  .options { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin: 1.5rem 0; }
-  .option-card { border: 2px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); padding: 1rem; cursor: pointer; transition: border-color 0.15s, background 0.15s; text-align: center; user-select: none; }
+  .options { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin: 1.5rem 0; }
+  @media (max-width: 500px) { .options { grid-template-columns: repeat(2, 1fr); } }
+  .option-card { border: 2px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); padding: 0.75rem 0.5rem; cursor: pointer; transition: border-color 0.15s, background 0.15s; text-align: center; user-select: none; }
   .option-card:hover { border-color: var(--pico-primary); }
   .option-card.selected { border-color: var(--pico-primary); background: var(--pico-primary-background); }
   .option-card .emoji { font-size: 2rem; display: block; margin-bottom: 0.4rem; }

@@ -28,24 +28,10 @@
   })
 </script>
 <style>
-  body { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; }
+  body { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
 
-  /* Two-column layout */
-  .page-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 600px) 1fr;
-    gap: 2.5rem;
-    align-items: start;
-  }
-  @media (max-width: 900px) {
-    .page-layout { grid-template-columns: 1fr; }
-    .sidebar { position: static !important; }
-  }
-
-  /* Wizard column */
-  .wizard-col h1 { text-align: center; margin-bottom: 0.25rem; }
-  .wizard-col .subtitle { text-align: center; color: var(--pico-muted-color); margin-bottom: 2rem; }
-  .progress-wrap, .screen { max-width: 560px; margin-left: auto; margin-right: auto; }
+  h1 { text-align: center; margin-bottom: 0.25rem; }
+  .subtitle { text-align: center; color: var(--pico-muted-color); margin-bottom: 2rem; }
   .progress-labels { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--pico-muted-color); margin-bottom: 0.4rem; }
   progress { width: 100%; }
 
@@ -107,49 +93,71 @@
   .col-a     { width: 38%; }
   .col-b     { width: calc(62% - 134px); }
 
-  /* Sidebar */
-  .sidebar {
-    position: sticky;
-    top: 1.5rem;
+  /* Collapsible info sections */
+  .info-sections {
+    margin: 2.5rem 0;
+    border: 1px solid var(--pico-muted-border-color);
+    border-radius: 8px;
+    overflow: hidden;
     font-size: 0.82rem;
     line-height: 1.55;
   }
-  .sidebar-heading {
+  .info-sections-heading {
     font-size: 0.68rem;
     text-transform: uppercase;
     letter-spacing: 0.09em;
     color: var(--pico-muted-color);
     font-weight: 700;
-    margin: 0 0 1rem;
+    margin: 0 0 0.75rem;
   }
-  .sidebar-section {
-    border: 1px solid var(--pico-muted-border-color);
-    border-radius: 8px;
-    padding: 1rem 1.1rem;
-    margin-bottom: 1rem;
+  .info-sections details {
+    border-bottom: 1px solid var(--pico-muted-border-color);
+    margin: 0;
   }
-  .sidebar-section h3 {
+  .info-sections details:last-child { border-bottom: none; }
+  .info-sections summary {
+    padding: 0.8rem 1.1rem;
     font-size: 0.88rem;
-    font-weight: 700;
-    margin: 0 0 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
     display: flex;
     align-items: center;
-    gap: 0.45rem;
+    gap: 0.5rem;
+    user-select: none;
   }
-  .sidebar-section p {
+  .info-sections summary::-webkit-details-marker { display: none; }
+  .info-sections summary::after {
+    content: '›';
+    margin-left: auto;
+    font-size: 1.1rem;
+    color: var(--pico-muted-color);
+    transform: rotate(90deg);
+    display: inline-block;
+    transition: transform 0.15s;
+  }
+  .info-sections details[open] > summary::after { transform: rotate(270deg); }
+  .info-sections details[open] > summary {
+    background: var(--pico-card-sectionning-background-color);
+    border-bottom: 1px solid var(--pico-muted-border-color);
+  }
+  .details-body {
+    padding: 1rem 1.1rem;
+  }
+  .details-body p {
     margin: 0 0 0.6rem;
     color: var(--pico-muted-color);
     font-size: 0.79rem;
   }
-  .sidebar-section p:last-child { margin-bottom: 0; }
-  .sidebar code {
+  .details-body p:last-child { margin-bottom: 0; }
+  .info-sections code {
     font-size: 0.72rem;
     background: var(--pico-card-sectionning-background-color);
     padding: 0.1em 0.35em;
     border-radius: 3px;
     font-family: monospace;
   }
-  .sidebar pre {
+  .info-sections pre {
     background: var(--pico-card-sectionning-background-color);
     border: 1px solid var(--pico-muted-border-color);
     border-radius: 5px;
@@ -196,13 +204,10 @@
 </head>
 <body>
 
-<div class="page-layout">
+<h1>🍕 Pizza Builder</h1>
+<p class="subtitle">Craft your perfect pie in 5 easy steps</p>
 
-  <!-- Wizard column -->
-  <div class="wizard-col">
-
-    <h1>🍕 Pizza Builder</h1>
-    <p class="subtitle">Craft your perfect pie in 5 easy steps</p>
+<div>
 
     <div class="progress-wrap" id="progress-wrap" style="display:none">
       <div class="progress-labels">
@@ -300,6 +305,73 @@
       </div>
     </div>
 
+    <!-- How this works in Datadog -->
+    <div class="info-sections">
+
+      <!-- Fragment View Tracking -->
+      <details>
+        <summary><span class="sidebar-tag tag-view">View</span> Fragment-based view tracking</summary>
+        <div class="details-body">
+          <p>Each time this wizard changes <code>location.hash</code>, the RUM SDK records a new <strong>View</strong> event. No page reload needed — the SDK detects hash changes automatically.</p>
+          <p>In <strong>RUM › Explorer</strong>, filter to view events and group by <code>@view.url_hash</code> to see per-step metrics: load time, action count, frustration signals, and drop-off.</p>
+          <pre>source:browser service:datadog-demo-app
+@type:view
+| stats count() by @view.url_hash</pre>
+          <p>Each hash maps to a named step:</p>
+          <div class="sidebar-steps">
+            <span class="step-chip">#crust</span><span class="arrow">→</span>
+            <span class="step-chip">#sauce</span><span class="arrow">→</span>
+            <span class="step-chip">#cheese</span><span class="arrow">→</span>
+            <span class="step-chip">#toppings</span><span class="arrow">→</span>
+            <span class="step-chip">#size</span><span class="arrow">→</span>
+            <span class="step-chip">#results</span>
+          </div>
+        </div>
+      </details>
+
+      <!-- Funnel Chart -->
+      <details>
+        <summary><span class="sidebar-tag tag-funnel">Funnel</span> Conversion funnel by view</summary>
+        <div class="details-body">
+          <p>RUM Analytics has a native <strong>Funnel</strong> visualization. Define each step as a view filter on <code>@view.url_hash</code> to see the conversion rate and absolute drop-off between steps.</p>
+          <p>Go to <strong>RUM › Analytics</strong>, set the visualization to <em>Funnel</em>, then add steps:</p>
+          <pre>Step 1  @view.url_hash:#crust
+Step 2  @view.url_hash:#sauce
+Step 3  @view.url_hash:#cheese
+Step 4  @view.url_hash:#toppings
+Step 5  @view.url_hash:#size
+Step 6  @view.url_hash:#results</pre>
+          <p>The funnel shows the percentage of sessions that reached each step, making it easy to spot where users abandon the wizard.</p>
+        </div>
+      </details>
+
+      <!-- Custom Metrics -->
+      <details>
+        <summary><span class="sidebar-tag tag-metric">Metric</span> Custom metrics from order actions</summary>
+        <div class="details-body">
+          <p>When a user completes the wizard, this app fires a custom RUM action:</p>
+          <pre>DD_RUM.addAction('pizza_order_submitted', {
+  pizza_order: {
+    crust:    "Hand-Tossed",
+    sauce:    "BBQ",
+    cheese:   "Mozzarella",
+    toppings: "Pepperoni",
+    size:     "Large (16 in)"
+  }
+})</pre>
+          <p>In <strong>RUM › Generate Metrics</strong>, create a count metric from this action to track submission volume over time:</p>
+          <pre>Event type:  Action
+Filter:      @action.target.name:pizza_order_submitted
+Metric name: rum.pizza_order.submissions
+Group by:    @context.pizza_order.crust
+             @context.pizza_order.size
+             @context.pizza_order.sauce</pre>
+          <p>The resulting metric can be used in <strong>dashboards</strong>, <strong>monitors</strong>, and <strong>SLOs</strong> — for example, alerting if submission volume drops below a threshold, or graphing a breakdown of popular crust types over time.</p>
+        </div>
+      </details>
+
+    </div><!-- /.info-sections -->
+
     <!-- RUM Event Log -->
     <div id="rum-log-wrap">
       <div id="rum-log-header">
@@ -334,84 +406,7 @@
       </div>
     </div>
 
-  </div><!-- /.wizard-col -->
-
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <p class="sidebar-heading">How this works in Datadog</p>
-
-    <!-- Fragment View Tracking -->
-    <div class="sidebar-section">
-      <h3><span class="sidebar-tag tag-view">View</span> Fragment-based view tracking</h3>
-      <p>Each time this wizard changes <code>location.hash</code>, the RUM SDK records a new <strong>View</strong> event. No page reload needed — the SDK detects hash changes automatically.</p>
-      <p>In <strong>RUM &rsaquo; Explorer</strong>, filter to view events and group by <code>@view.url_hash</code> to see per-step metrics: load time, action count, frustration signals, and drop-off.</p>
-      <pre>source:browser service:datadog-demo-app
-@type:view
-| stats count() by @view.url_hash</pre>
-      <p>Each hash maps to a named step:</p>
-      <div class="sidebar-steps">
-        <span class="step-chip">#crust</span>
-        <span class="arrow">→</span>
-        <span class="step-chip">#sauce</span>
-        <span class="arrow">→</span>
-        <span class="step-chip">#cheese</span>
-        <span class="arrow">→</span>
-        <span class="step-chip">#toppings</span>
-        <span class="arrow">→</span>
-        <span class="step-chip">#size</span>
-        <span class="arrow">→</span>
-        <span class="step-chip">#results</span>
-      </div>
-    </div>
-
-    <!-- Funnel Chart -->
-    <div class="sidebar-section">
-      <h3><span class="sidebar-tag tag-funnel">Funnel</span> Conversion funnel by view</h3>
-      <p>RUM Analytics has a native <strong>Funnel</strong> visualization. Define each step as a view filter on <code>@view.url_hash</code> to see the conversion rate and absolute drop-off between steps.</p>
-      <p>Go to <strong>RUM &rsaquo; Analytics</strong>, set the visualization to <em>Funnel</em>, then add steps:</p>
-      <pre>Step 1  @view.url_hash:#crust
-Step 2  @view.url_hash:#sauce
-Step 3  @view.url_hash:#cheese
-Step 4  @view.url_hash:#toppings
-Step 5  @view.url_hash:#size
-Step 6  @view.url_hash:#results</pre>
-      <p>The funnel shows the percentage of sessions that reached each step, making it easy to spot where users abandon the wizard.</p>
-    </div>
-
-    <!-- Sankey / Flow -->
-    <div class="sidebar-section">
-      <h3><span class="sidebar-tag tag-funnel">Sankey</span> Session flow &amp; path analysis</h3>
-      <p>To see <em>where users go after dropping off</em> — not just that they left — use <strong>RUM &rsaquo; Analytics &rsaquo; Sankey</strong>. It visualizes the actual navigation paths taken across sessions, including back-navigation loops and exits.</p>
-      <p>Set the source dimension to <code>@view.url_hash</code> with a filter of <code>service:datadog-demo-app</code>. The Sankey diagram will show relative flow volume between each wizard step and surface unexpected paths (e.g. users jumping from <code>#size</code> back to <code>#crust</code>).</p>
-      <p>Pair with <code>@session.frustration.count &gt; 0</code> to highlight steps where users rage-click or dead-click before leaving.</p>
-    </div>
-
-    <!-- Custom Metrics -->
-    <div class="sidebar-section">
-      <h3><span class="sidebar-tag tag-metric">Metric</span> Custom metrics from order actions</h3>
-      <p>When a user completes the wizard, this app fires a custom RUM action:</p>
-      <pre>DD_RUM.addAction('pizza_order_submitted', {
-  pizza_order: {
-    crust:    "Hand-Tossed",
-    sauce:    "BBQ",
-    cheese:   "Mozzarella",
-    toppings: "Pepperoni",
-    size:     "Large (16 in)"
-  }
-})</pre>
-      <p>In <strong>RUM &rsaquo; Generate Metrics</strong>, create a count metric from this action to track submission volume over time:</p>
-      <pre>Event type:  Action
-Filter:      @action.target.name:pizza_order_submitted
-Metric name: rum.pizza_order.submissions
-Group by:    @context.pizza_order.crust
-             @context.pizza_order.size
-             @context.pizza_order.sauce</pre>
-      <p>The resulting metric can be used in <strong>dashboards</strong>, <strong>monitors</strong>, and <strong>SLOs</strong> — for example, alerting if submission volume drops below a threshold, or graphing a breakdown of popular crust types over time.</p>
-    </div>
-
-  </aside><!-- /.sidebar -->
-
-</div><!-- /.page-layout -->
+</div>
 
 <script>
   const stepMeta = [

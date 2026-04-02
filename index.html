@@ -115,22 +115,20 @@
       </details>
 
       <details class="sidebar-section">
-        <summary><span class="sidebar-tag tag-funnel">Funnel</span><span class="sidebar-section-title">Conversion funnel by view</span></summary>
+        <summary><span class="sidebar-tag tag-funnel">Funnel</span><span class="sidebar-section-title">Conversion funnel by action</span></summary>
         <div class="sidebar-section-body">
-          <p>RUM Analytics has a native <strong>Funnel</strong> visualization that measures session-level conversion across a sequence of views. Because each wizard step is a distinct view (via URL hash), you can model the entire flow as a funnel without any custom instrumentation beyond what the SDK already captures.</p>
-          <p>Go to <strong>RUM › Analytics</strong>, set the visualization to <em>Funnel</em>, then add one step per hash:</p>
-          <pre>Step 1  @view.url_hash:#crust
-Step 2  @view.url_hash:#sauce
-Step 3  @view.url_hash:#cheese
-Step 4  @view.url_hash:#toppings
-Step 5  @view.url_hash:#size
-Step 6  @view.url_hash:#results</pre>
-          <p>The funnel shows the percentage and absolute count of sessions that reached each step. To understand <em>why</em> users dropped off at a step, click into that step and switch to the <strong>Sessions</strong> view — you can inspect individual session replays and see whether an error event was present on that view hash.</p>
+          <p>In <strong>RUM › Explorer</strong>, set the scope to <em>Sessions</em> and switch the visualization to <strong>Funnel</strong>. Each funnel step can be a <em>View</em> or an <em>Action</em>.</p>
+          <p>For this wizard, the most meaningful action-based funnel tracks the three key events across the full flow:</p>
+          <pre>Step 1  Action: click on Start Building
+Step 2  Action: click on See My Pizza
+Step 3  Action: pizza_order_submitted</pre>
+          <p>This matches exactly what Datadog shows — sessions that clicked <em>Start Building</em>, then reached the final step, then successfully fired the custom submission action. The drop-off between steps tells you where users abandoned and how many made it through end-to-end.</p>
+          <p>To investigate a drop-off step, click into it and review individual sessions — session replays will show whether an error blocked the user or they simply left.</p>
         </div>
       </details>
 
       <details class="sidebar-section">
-        <summary><span class="sidebar-tag tag-metric">Metric</span><span class="sidebar-section-title">Custom metrics from order actions</span></summary>
+        <summary><span class="sidebar-tag tag-metric">Metric</span><span class="sidebar-section-title">Custom metrics from actions</span></summary>
         <div class="sidebar-section-body">
           <p>When a user reaches the results screen, this app fires a custom RUM <strong>Action</strong> with the full order as context attributes:</p>
           <pre>DD_RUM.addAction('pizza_order_submitted', {

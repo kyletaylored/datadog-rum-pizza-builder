@@ -116,7 +116,7 @@ html, body {
 
 .sidebar-section > summary {
   padding: 0.75rem 1.25rem;
-  font-size: 0.83rem;
+  font-size: 0.7rem;
   font-weight: 600;
   cursor: pointer;
   list-style: none;
@@ -353,10 +353,10 @@ table#rum-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; fo
 .type-badge.other     { background: #f3f4f6; color: #6b7280; }
 
 /* Column widths */
-.col-time { width: 80px; }
+.col-time { width: 100px; }
 .col-type { width: 90px; }
-.col-a    { width: 42%; }
-.col-b    { width: calc(58% - 170px); }
+.col-a    { width: 40%; }
+.col-b    { width: calc(60% - 190px); }
 
 /* ============================================================
    Sidebar tags & step chips
@@ -365,14 +365,15 @@ table#rum-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; fo
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 52px;
+  width: 70px;
   font-size: 0.62rem;
   font-weight: 700;
-  padding: 1px 6px;
+  padding: 1px 0;
   border-radius: 3px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 .tag-view   { background: #dbeafe; color: #1d4ed8; }
 .tag-action { background: #dcfce7; color: #15803d; }

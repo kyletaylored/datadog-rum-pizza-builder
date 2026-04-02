@@ -190,12 +190,8 @@
       <details>
         <summary><span class="sidebar-tag tag-view">View</span> Fragment-based view tracking</summary>
         <div class="details-body">
-          <p>Each time this wizard changes <code>location.hash</code>, the RUM SDK records a new <strong>View</strong> event. No page reload needed — the SDK detects hash changes automatically.</p>
-          <p>In <strong>RUM › Explorer</strong>, filter to view events and group by <code>@view.url_hash</code> to see per-step metrics: load time, action count, frustration signals, and drop-off.</p>
-          <pre>source:browser service:datadog-demo-app
-@type:view
-| stats count() by @view.url_hash</pre>
-          <p>Each hash maps to a named step:</p>
+          <p>Each time this wizard changes <code>location.hash</code>, the RUM SDK records a new <strong>View</strong> event — no page reload needed. The SDK detects hash changes automatically and starts a fresh view with its own load time, action count, and frustration signal tracking.</p>
+          <p>In <strong>RUM › Explorer</strong>, set the event type to <em>Views</em> and group by <code>@view.url_hash</code> to see per-step engagement. Each hash is a named wizard step:</p>
           <div class="sidebar-steps">
             <span class="step-chip">#crust</span><span class="arrow">→</span>
             <span class="step-chip">#sauce</span><span class="arrow">→</span>
@@ -204,6 +200,9 @@
             <span class="step-chip">#size</span><span class="arrow">→</span>
             <span class="step-chip">#results</span>
           </div>
+          <p>You can also correlate view events with <strong>error</strong> events on the same hash to understand whether a drop-off was caused by a page problem or the user simply leaving.</p>
+          <pre>source:browser service:datadog-demo-app @type:view
+| stats count() by @view.url_hash</pre>
         </div>
       </details>
 
@@ -211,15 +210,15 @@
       <details>
         <summary><span class="sidebar-tag tag-funnel">Funnel</span> Conversion funnel by view</summary>
         <div class="details-body">
-          <p>RUM Analytics has a native <strong>Funnel</strong> visualization. Define each step as a view filter on <code>@view.url_hash</code> to see the conversion rate and absolute drop-off between steps.</p>
-          <p>Go to <strong>RUM › Analytics</strong>, set the visualization to <em>Funnel</em>, then add steps:</p>
+          <p>RUM Analytics has a native <strong>Funnel</strong> visualization that measures session-level conversion across a sequence of views. Because each wizard step is a distinct view (via URL hash), you can model the entire flow as a funnel without any custom instrumentation beyond what the SDK already captures.</p>
+          <p>Go to <strong>RUM › Analytics</strong>, set the visualization to <em>Funnel</em>, then add one step per hash:</p>
           <pre>Step 1  @view.url_hash:#crust
 Step 2  @view.url_hash:#sauce
 Step 3  @view.url_hash:#cheese
 Step 4  @view.url_hash:#toppings
 Step 5  @view.url_hash:#size
 Step 6  @view.url_hash:#results</pre>
-          <p>The funnel shows the percentage of sessions that reached each step, making it easy to spot where users abandon the wizard.</p>
+          <p>The funnel shows the percentage and absolute count of sessions that reached each step. To understand <em>why</em> users dropped off at a step, click into that step and switch to the <strong>Sessions</strong> view — you can inspect individual session replays and see whether an error event was present on that view hash.</p>
         </div>
       </details>
 
@@ -227,7 +226,7 @@ Step 6  @view.url_hash:#results</pre>
       <details>
         <summary><span class="sidebar-tag tag-metric">Metric</span> Custom metrics from order actions</summary>
         <div class="details-body">
-          <p>When a user completes the wizard, this app fires a custom RUM action:</p>
+          <p>When a user reaches the results screen, this app fires a custom RUM <strong>Action</strong> with the full order as context attributes:</p>
           <pre>DD_RUM.addAction('pizza_order_submitted', {
   pizza_order: {
     crust:    "Hand-Tossed",
@@ -237,14 +236,18 @@ Step 6  @view.url_hash:#results</pre>
     size:     "Large (16 in)"
   }
 })</pre>
-          <p>In <strong>RUM › Generate Metrics</strong>, create a count metric from this action to track submission volume over time:</p>
+          <p>In <strong>RUM › Generate Metrics</strong>, create a <em>count</em> metric from this action. The metric used in the Results dashboard is:</p>
           <pre>Event type:  Action
 Filter:      @action.target.name:pizza_order_submitted
 Metric name: rum.pizza_order.submissions
 Group by:    @context.pizza_order.crust
+             @context.pizza_order.sauce
+             @context.pizza_order.cheese
+             @context.pizza_order.toppings
              @context.pizza_order.size
-             @context.pizza_order.sauce</pre>
-          <p>The resulting metric can be used in <strong>dashboards</strong>, <strong>monitors</strong>, and <strong>SLOs</strong> — for example, alerting if submission volume drops below a threshold, or graphing a breakdown of popular crust types over time.</p>
+             @geo.country</pre>
+          <p>The <code>@geo.country</code> dimension comes from RUM's automatic geo-enrichment of the session — it is not part of the action payload. The SDK resolves it from the user's IP address and attaches it to every event, making it available as a metric tag for free.</p>
+          <p>Once the metric is generating, the <strong>Results</strong> tab shows it broken down across all six dimensions using <em>toplist</em>, <em>timeseries</em>, <em>sunburst</em>, and <em>geomap</em> widgets — each filterable via dashboard template variables for size, sauce, toppings, cheese, crust, and country.</p>
         </div>
       </details>
 

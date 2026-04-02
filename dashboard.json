@@ -1,0 +1,504 @@
+{
+    "title": "Pizza Order Trends",
+    "description": "RUM-generated metrics tracking pizza order submissions by size, sauce, toppings, cheese, crust, and geography.",
+    "widgets": [
+        {
+            "id": 3247729241571057,
+            "definition": {
+                "title": "Overview",
+                "background_color": "vivid_orange",
+                "show_title": true,
+                "type": "group",
+                "layout_type": "ordered",
+                "widgets": [
+                    {
+                        "id": 8389653085454726,
+                        "definition": {
+                            "title": "Total Pizza Submissions",
+                            "type": "query_value",
+                            "requests": [
+                                {
+                                    "queries": [
+                                        {
+                                            "data_source": "metrics",
+                                            "name": "query1",
+                                            "query": "sum:rum.pizza_order.submissions{$size,$sauce,$toppings,$cheese,$crust,$country}"
+                                        }
+                                    ],
+                                    "formulas": [
+                                        {
+                                            "formula": "query1"
+                                        }
+                                    ],
+                                    "response_format": "scalar"
+                                }
+                            ],
+                            "autoscale": true,
+                            "precision": 0
+                        },
+                        "layout": {
+                            "x": 0,
+                            "y": 0,
+                            "width": 3,
+                            "height": 3
+                        }
+                    },
+                    {
+                        "id": 4230373396503515,
+                        "definition": {
+                            "title": "Pizza Submissions Over Time",
+                            "show_legend": false,
+                            "type": "timeseries",
+                            "requests": [
+                                {
+                                    "queries": [
+                                        {
+                                            "data_source": "metrics",
+                                            "name": "query1",
+                                            "query": "sum:rum.pizza_order.submissions{$size,$sauce,$toppings,$cheese,$crust,$country}"
+                                        }
+                                    ],
+                                    "formulas": [
+                                        {
+                                            "formula": "query1"
+                                        }
+                                    ],
+                                    "response_format": "timeseries",
+                                    "style": {
+                                        "palette": "orange",
+                                        "line_type": "solid",
+                                        "line_width": "normal"
+                                    },
+                                    "display_type": "bars"
+                                }
+                            ]
+                        },
+                        "layout": {
+                            "x": 3,
+                            "y": 0,
+                            "width": 9,
+                            "height": 3
+                        }
+                    }
+                ]
+            },
+            "layout": {
+                "x": 0,
+                "y": 0,
+                "width": 12,
+                "height": 4
+            }
+        },
+        {
+            "id": 4977829522644732,
+            "definition": {
+                "title": "Order Breakdown",
+                "background_color": "yellow",
+                "show_title": true,
+                "type": "group",
+                "layout_type": "ordered",
+                "widgets": [
+                    {
+                        "id": 8606490226202127,
+                        "definition": {
+                            "title": "Submissions by Size",
+                            "type": "toplist",
+                            "requests": [
+                                {
+                                    "queries": [
+                                        {
+                                            "data_source": "metrics",
+                                            "name": "query1",
+                                            "query": "sum:rum.pizza_order.submissions{$size,$sauce,$toppings,$cheese,$crust,$country} by {context.pizza_order.size}"
+                                        }
+                                    ],
+                                    "response_format": "scalar",
+                                    "formulas": [
+                                        {
+                                            "formula": "query1"
+                                        }
+                                    ],
+                                    "sort": {
+                                        "order_by": [
+                                            {
+                                                "type": "formula",
+                                                "index": 0,
+                                                "order": "desc"
+                                            }
+                                        ],
+                                        "count": 10
+                                    }
+                                }
+                            ],
+                            "style": {
+                                "palette": "datadog16"
+                            }
+                        },
+                        "layout": {
+                            "x": 0,
+                            "y": 0,
+                            "width": 4,
+                            "height": 3
+                        }
+                    },
+                    {
+                        "id": 2339582824713617,
+                        "definition": {
+                            "title": "Submissions by Sauce",
+                            "type": "toplist",
+                            "requests": [
+                                {
+                                    "queries": [
+                                        {
+                                            "data_source": "metrics",
+                                            "name": "query1",
+                                            "query": "sum:rum.pizza_order.submissions{$size,$sauce,$toppings,$cheese,$crust,$country} by {context.pizza_order.sauce}"
+                                        }
+                                    ],
+                                    "response_format": "scalar",
+                                    "formulas": [
+                                        {
+                                            "formula": "query1"
+                                        }
+                                    ],
+                                    "sort": {
+                                        "order_by": [
+                                            {
+                                                "type": "formula",
+                                                "index": 0,
+                                                "order": "desc"
+                                            }
+                                        ],
+                                        "count": 10
+                                    }
+                                }
+                            ],
+                            "style": {
+                                "palette": "datadog16"
+                            }
+                        },
+                        "layout": {
+                            "x": 4,
+                            "y": 0,
+                            "width": 4,
+                            "height": 3
+                        }
+                    },
+                    {
+                        "id": 4612837657382910,
+                        "definition": {
+                            "title": "Submissions by Toppings",
+                            "type": "toplist",
+                            "requests": [
+                                {
+                                    "queries": [
+                                        {
+                                            "data_source": "metrics",
+                                            "name": "query1",
+                                            "query": "sum:rum.pizza_order.submissions{$size,$sauce,$toppings,$cheese,$crust,$country} by {context.pizza_order.toppings}"
+                                        }
+                                    ],
+                                    "response_format": "scalar",
+                                    "formulas": [
+                                        {
+                                            "formula": "query1"
+                                        }
+                                    ],
+                                    "sort": {
+                                        "order_by": [
+                                            {
+                                                "type": "formula",
+                                                "index": 0,
+                                                "order": "desc"
+                                            }
+                                        ],
+                                        "count": 10
+                                    }
+                                }
+                            ],
+                            "style": {
+                                "palette": "datadog16"
+                            }
+                        },
+                        "layout": {
+                            "x": 8,
+                            "y": 0,
+                            "width": 4,
+                            "height": 3
+                        }
+                    },
+                    {
+                        "id": 210050080305476,
+                        "definition": {
+                            "title": "Submissions by Cheese",
+                            "type": "toplist",
+                            "requests": [
+                                {
+                                    "queries": [
+                                        {
+                                            "data_source": "metrics",
+                                            "name": "query1",
+                                            "query": "sum:rum.pizza_order.submissions{$size,$sauce,$toppings,$cheese,$crust,$country} by {context.pizza_order.cheese}"
+                                        }
+                                    ],
+                                    "response_format": "scalar",
+                                    "formulas": [
+                                        {
+                                            "formula": "query1"
+                                        }
+                                    ],
+                                    "sort": {
+                                        "order_by": [
+                                            {
+                                                "type": "formula",
+                                                "index": 0,
+                                                "order": "desc"
+                                            }
+                                        ],
+                                        "count": 10
+                                    }
+                                }
+                            ],
+                            "style": {
+                                "palette": "datadog16"
+                            }
+                        },
+                        "layout": {
+                            "x": 0,
+                            "y": 3,
+                            "width": 4,
+                            "height": 3
+                        }
+                    },
+                    {
+                        "id": 2625161776592884,
+                        "definition": {
+                            "title": "Submissions by Crust",
+                            "type": "toplist",
+                            "requests": [
+                                {
+                                    "queries": [
+                                        {
+                                            "data_source": "metrics",
+                                            "name": "query1",
+                                            "query": "sum:rum.pizza_order.submissions{$size,$sauce,$toppings,$cheese,$crust,$country} by {context.pizza_order.crust}"
+                                        }
+                                    ],
+                                    "response_format": "scalar",
+                                    "formulas": [
+                                        {
+                                            "formula": "query1"
+                                        }
+                                    ],
+                                    "sort": {
+                                        "order_by": [
+                                            {
+                                                "type": "formula",
+                                                "index": 0,
+                                                "order": "desc"
+                                            }
+                                        ],
+                                        "count": 10
+                                    }
+                                }
+                            ],
+                            "style": {
+                                "palette": "datadog16"
+                            }
+                        },
+                        "layout": {
+                            "x": 4,
+                            "y": 3,
+                            "width": 4,
+                            "height": 3
+                        }
+                    },
+                    {
+                        "id": 760148726747028,
+                        "definition": {
+                            "title": "Submissions by Size and Crust",
+                            "requests": [
+                                {
+                                    "queries": [
+                                        {
+                                            "data_source": "metrics",
+                                            "name": "query1",
+                                            "query": "sum:rum.pizza_order.submissions{$size,$sauce,$toppings,$cheese,$crust,$country} by {context.pizza_order.size,context.pizza_order.crust}"
+                                        }
+                                    ],
+                                    "response_format": "scalar",
+                                    "style": {
+                                        "palette": "datadog16"
+                                    },
+                                    "formulas": [
+                                        {
+                                            "formula": "query1"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "type": "sunburst",
+                            "legend": {
+                                "type": "automatic"
+                            }
+                        },
+                        "layout": {
+                            "x": 8,
+                            "y": 3,
+                            "width": 4,
+                            "height": 3
+                        }
+                    }
+                ]
+            },
+            "layout": {
+                "x": 0,
+                "y": 4,
+                "width": 12,
+                "height": 7
+            }
+        },
+        {
+            "id": 6161763004634427,
+            "definition": {
+                "title": "Geographic Distribution",
+                "background_color": "green",
+                "show_title": true,
+                "type": "group",
+                "layout_type": "ordered",
+                "widgets": [
+                    {
+                        "id": 8255154842228080,
+                        "definition": {
+                            "title": "Submissions by Country",
+                            "time": {},
+                            "type": "geomap",
+                            "requests": [
+                                {
+                                    "queries": [
+                                        {
+                                            "data_source": "metrics",
+                                            "name": "query1",
+                                            "query": "sum:rum.pizza_order.submissions{$size,$sauce,$toppings,$cheese,$crust,$country} by {geo.country_iso_code}"
+                                        }
+                                    ],
+                                    "response_format": "scalar",
+                                    "formulas": [
+                                        {
+                                            "formula": "query1"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "style": {
+                                "palette": "hostmap_blues",
+                                "palette_flip": false
+                            },
+                            "view": {
+                                "focus": "WORLD"
+                            }
+                        },
+                        "layout": {
+                            "x": 0,
+                            "y": 0,
+                            "width": 8,
+                            "height": 4
+                        }
+                    },
+                    {
+                        "id": 5598408297694883,
+                        "definition": {
+                            "title": "Top Countries by Submissions",
+                            "type": "toplist",
+                            "requests": [
+                                {
+                                    "queries": [
+                                        {
+                                            "data_source": "metrics",
+                                            "name": "query1",
+                                            "query": "sum:rum.pizza_order.submissions{$size,$sauce,$toppings,$cheese,$crust,$country} by {geo.country}"
+                                        }
+                                    ],
+                                    "response_format": "scalar",
+                                    "formulas": [
+                                        {
+                                            "formula": "query1"
+                                        }
+                                    ],
+                                    "sort": {
+                                        "order_by": [
+                                            {
+                                                "type": "formula",
+                                                "index": 0,
+                                                "order": "desc"
+                                            }
+                                        ],
+                                        "count": 10
+                                    }
+                                }
+                            ],
+                            "style": {
+                                "palette": "datadog16"
+                            }
+                        },
+                        "layout": {
+                            "x": 8,
+                            "y": 0,
+                            "width": 4,
+                            "height": 4
+                        }
+                    }
+                ]
+            },
+            "layout": {
+                "x": 0,
+                "y": 11,
+                "width": 12,
+                "height": 5,
+                "is_column_break": true
+            }
+        }
+    ],
+    "template_variables": [
+        {
+            "name": "size",
+            "prefix": "context.pizza_order.size",
+            "available_values": [],
+            "default": "*"
+        },
+        {
+            "name": "sauce",
+            "prefix": "context.pizza_order.sauce",
+            "available_values": [],
+            "default": "*"
+        },
+        {
+            "name": "toppings",
+            "prefix": "context.pizza_order.toppings",
+            "available_values": [],
+            "default": "*"
+        },
+        {
+            "name": "cheese",
+            "prefix": "context.pizza_order.cheese",
+            "available_values": [],
+            "default": "*"
+        },
+        {
+            "name": "crust",
+            "prefix": "context.pizza_order.crust",
+            "available_values": [],
+            "default": "*"
+        },
+        {
+            "name": "country",
+            "prefix": "geo.country",
+            "available_values": [],
+            "default": "*"
+        }
+    ],
+    "layout_type": "ordered",
+    "notify_list": [],
+    "pause_auto_refresh": false,
+    "reflow_type": "fixed"
+}

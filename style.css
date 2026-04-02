@@ -149,10 +149,10 @@ table#rum-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; fo
 .type-badge.other     { background: #f3f4f6; color: #6b7280; }
 
 /* Column widths */
-.col-time { width: 62px; }
-.col-type { width: 72px; }
-.col-a    { width: 38%; }
-.col-b    { width: calc(62% - 134px); }
+.col-time { width: 80px; }
+.col-type { width: 90px; }
+.col-a    { width: 42%; }
+.col-b    { width: calc(58% - 170px); }
 
 /* ============================================================
    Collapsible info sections

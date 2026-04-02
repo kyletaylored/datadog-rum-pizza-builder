@@ -1,3 +1,22 @@
+/**
+ * Switch between the top-level page tabs ("build" and "results-tab").
+ * Updates button aria state, active class, and panel visibility.
+ *
+ * @param {'build'|'results-tab'} tab - The tab identifier to activate
+ */
+function switchTab(tab) {
+  const panels = { 'build': 'tab-build', 'results-tab': 'tab-results' };
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    const isActive = (i === 0 && tab === 'build') || (i === 1 && tab === 'results-tab');
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-selected', isActive);
+  });
+  Object.values(panels).forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  document.getElementById(panels[tab]).style.display = 'block';
+}
+
 // Clear any stale fragment left over from a previous session on page load.
 if (window.location.hash) {
   history.replaceState(null, '', window.location.pathname);

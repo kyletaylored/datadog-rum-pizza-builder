@@ -68,7 +68,12 @@
 <h1>🍕 Pizza Builder</h1>
 <p class="subtitle">Craft your perfect pie in 5 easy steps</p>
 
-<div>
+<nav class="tab-nav" role="tablist">
+  <button class="tab-btn active" role="tab" aria-selected="true"  aria-controls="tab-build"   onclick="switchTab('build')">Build</button>
+  <button class="tab-btn"        role="tab" aria-selected="false" aria-controls="tab-results" onclick="switchTab('results-tab')">Results</button>
+</nav>
+
+<div id="tab-build" role="tabpanel">
 
     <div class="progress-wrap" id="progress-wrap" style="display:none">
       <div class="progress-labels">
@@ -267,7 +272,16 @@ Group by:    @context.pizza_order.crust
       </div>
     </div>
 
-</div>
+</div><!-- /#tab-build -->
+
+<div id="tab-results" role="tabpanel" style="display:none">
+  <iframe
+    src="https://p.datadoghq.com/sb/embed/2bbb2f98-12da-11ef-8e28-da7ad0900002-025183052842e2e0e2253a3d191e6fda"
+    title="Pizza Order Submissions Dashboard"
+    class="dashboard-iframe"
+    allowfullscreen>
+  </iframe>
+</div><!-- /#tab-results -->
 
 <script src="app.js"></script>
 

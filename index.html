@@ -135,12 +135,18 @@
     background-image: none;
     margin-left: auto;
     font-size: 1.1rem;
+    line-height: 1;
+    width: 1em;
+    height: 1em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     color: var(--pico-muted-color);
-    transform: rotate(90deg);
-    display: inline-block;
+    transform: rotate(0deg);
+    transform-origin: center center;
     transition: transform 0.15s;
   }
-  .info-sections details[open] > summary::after { transform: rotate(270deg); }
+  .info-sections details[open] > summary::after { transform: rotate(90deg); }
   .info-sections details[open] > summary {
     background: var(--pico-card-sectionning-background-color);
     border-bottom: 1px solid var(--pico-muted-border-color);

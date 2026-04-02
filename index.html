@@ -129,8 +129,10 @@
   }
   .info-sections summary::-webkit-details-marker { display: none; }
   .info-sections summary::marker { display: none; content: ''; }
+  .info-sections summary::before { display: none; content: none; }
   .info-sections summary::after {
     content: '›';
+    background-image: none;
     margin-left: auto;
     font-size: 1.1rem;
     color: var(--pico-muted-color);
@@ -166,7 +168,7 @@
     padding: 0.6rem 0.75rem;
     font-size: 0.69rem;
     overflow-x: auto;
-    margin: 0.6rem 0 0;
+    margin: 0.6rem 0 0.6rem;
     white-space: pre;
     line-height: 1.5;
     font-family: monospace;

@@ -436,6 +436,19 @@ Group by:    @context.pizza_order.crust
 </div>
 
 <script>
+  // Shuffle option cards for Datadog Synthetics so the test's "always click first"
+  // behavior produces randomized selections across runs.
+  if (/DatadogSynthetics/i.test(navigator.userAgent)) {
+    document.querySelectorAll('.options').forEach(grid => {
+      const cards = [...grid.children];
+      for (let i = cards.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        grid.appendChild(cards[j]);
+        cards.splice(j, 1);
+      }
+    });
+  }
+
   const stepMeta = [
     null,
     { hash: 'crust',    label: 'Crust'    },

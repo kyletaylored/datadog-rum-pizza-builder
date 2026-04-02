@@ -65,7 +65,7 @@
 /* ============================================================
    Base layout
    ============================================================ */
-body { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+body { padding: 2rem 0; }
 
 h1 { text-align: center; margin-bottom: 0.25rem; }
 .subtitle { text-align: center; color: var(--pico-muted-color); margin-bottom: 2rem; }

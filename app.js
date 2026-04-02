@@ -1,11 +1,52 @@
 /**
+ * Whether the current session is a Datadog Synthetics browser test,
+ * detected via the user agent string injected by the test runner.
+ *
+ * @type {boolean}
+ */
+const isSynthetics = /DatadogSynthetics/i.test(navigator.userAgent);
+
+/**
+ * For Synthetics runs: the wizard step at which a simulated error will fire,
+ * blocking the test from completing the wizard. Set once at page load.
+ *
+ * - 40% of runs complete cleanly (null).
+ * - 60% of runs fail at a randomly chosen step between 2 and 5, simulating
+ *   users who abandon mid-wizard due to an error.
+ *
+ * Step 1 is excluded so the test always gets past the first choice before
+ * any failure, producing richer partial-funnel data.
+ *
+ * @type {number|null}
+ */
+const syntheticFailStep = (() => {
+  if (!isSynthetics) return null;
+  if (Math.random() < 0.4) return null;
+  return Math.floor(Math.random() * 4) + 2; // 2, 3, 4, or 5
+})();
+
+/**
+ * Simulated error messages used by `injectStepError()` to generate varied
+ * error payloads in RUM across synthetic runs.
+ *
+ * @type {string[]}
+ */
+const syntheticErrors = [
+  'Failed to fetch pricing data: NetworkError when attempting to fetch resource',
+  'TypeError: Cannot read properties of undefined (reading "availability")',
+  'Unhandled Promise Rejection: timeout exceeded loading ingredient options',
+  'RangeError: Invalid inventory count returned from menu service',
+  'Error: Session validation failed — please try again',
+];
+
+/**
  * Shuffle option cards for Datadog Synthetics runs so that the test's
  * "always click first card" behavior produces randomized selections
  * across runs, generating varied data in RUM.
  *
- * Only activates when `navigator.userAgent` contains "DatadogSynthetics".
+ * Only activates for Synthetics user agents.
  */
-if (/DatadogSynthetics/i.test(navigator.userAgent)) {
+if (isSynthetics) {
   document.querySelectorAll('.options').forEach(grid => {
     const cards = [...grid.children];
     for (let i = cards.length - 1; i > 0; i--) {
@@ -14,6 +55,46 @@ if (/DatadogSynthetics/i.test(navigator.userAgent)) {
       cards.splice(j, 1);
     }
   });
+}
+
+/**
+ * Inject a simulated error into the current wizard step screen, disabling
+ * the Continue button so the synthetic test cannot proceed. Also throws a
+ * real JS Error so Datadog RUM captures it as an error event with a message,
+ * source, and stack trace — visible in RUM Explorer and usable in funnel
+ * drop-off analysis.
+ *
+ * @param {number} step - The step number where the error is being injected
+ */
+function injectStepError(step) {
+  const screen = document.getElementById(`screen-${step}`);
+  const btnRow = screen.querySelector('.btn-row');
+  const continueBtn = document.getElementById(`btn-${step}`);
+
+  // Pick a random error message for variety across runs.
+  const message = syntheticErrors[Math.floor(Math.random() * syntheticErrors.length)];
+
+  // Render an error banner above the button row.
+  const banner = document.createElement('div');
+  banner.setAttribute('role', 'alert');
+  banner.style.cssText = [
+    'background:#fee2e2',
+    'border:1px solid #fca5a5',
+    'color:#991b1b',
+    'border-radius:6px',
+    'padding:0.75rem 1rem',
+    'font-size:0.8rem',
+    'margin-bottom:0.75rem',
+    'line-height:1.4',
+  ].join(';');
+  banner.innerHTML = `<strong>Something went wrong.</strong><br>${message}`;
+  btnRow.before(banner);
+
+  // Disable the continue button so the test cannot advance.
+  if (continueBtn) continueBtn.disabled = true;
+
+  // Throw so RUM captures a real error event for this view.
+  throw new Error(message);
 }
 
 /**
@@ -63,6 +144,12 @@ function goTo(step) {
     document.getElementById('step-label').textContent = `Step ${step} of 5`;
     document.getElementById('step-name').textContent = stepMeta[step].label;
     location.hash = stepMeta[step].hash;
+
+    // For Synthetics runs: inject a blocking error at the predetermined step.
+    // The throw stops execution here, leaving the wizard frozen on this screen.
+    if (syntheticFailStep === step) {
+      injectStepError(step);
+    }
   }
 }
 

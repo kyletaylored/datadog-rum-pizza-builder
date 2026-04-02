@@ -44,6 +44,23 @@
     });
   })
 </script>
+<script>
+  (function(h,o,u,n,d) {
+    h=h[d]=h[d]||{q:[],onReady:function(c){h.q.push(c)}}
+    d=o.createElement(u);d.async=1;d.src=n;d.crossOrigin=''
+    n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
+  })(window,document,'script','https://www.datadoghq-browser-agent.com/us1/v6/datadog-logs.js','DD_LOGS')
+  window.DD_LOGS.onReady(function() {
+    window.DD_LOGS.init({
+      clientToken: 'pub067eb57994325a05bf401b11a686e8e3',
+      site: 'datadoghq.com',
+      service: 'datadog-demo-app',
+      env: 'demo',
+      forwardErrorsToLogs: true,
+      sessionSampleRate: 100,
+    });
+  })
+</script>
 <style>
   body { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
 

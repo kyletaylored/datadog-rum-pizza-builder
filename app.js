@@ -186,20 +186,97 @@ function stopAndRestart() {
 }
 
 /**
- * Render the order summary screen and fire the `pizza_order_submitted`
- * custom RUM action with the full order payload as context attributes.
- * These attributes are queryable in RUM Explorer as `@context.pizza_order.*`.
+ * Render the order summary screen, fire the `pizza_order_submitted` custom
+ * RUM action, and send a `info` log to Datadog Logs with the full order
+ * payload including a generated order ID and fake customer identity.
+ *
+ * RUM action attributes are queryable as `@context.pizza_order.*`.
+ * Log attributes are queryable as `@order_id`, `@customer.*`, `@pizza_order.*`.
  */
 function renderResults() {
   const list = document.getElementById('result-list');
   list.innerHTML = Object.values(selections).map(s =>
     `<li><span class="step-label">${s.label}</span><span class="step-value">${s.value}</span></li>`
   ).join('');
-  const order = { pizza_order: Object.fromEntries(Object.values(selections).map(s => [s.label.toLowerCase(), s.value])) };
+
+  const pizzaOrder = Object.fromEntries(Object.values(selections).map(s => [s.label.toLowerCase(), s.value]));
+  const { orderId, customer } = generateFakeOrderIdentity();
+
   window.DD_RUM && window.DD_RUM.onReady(function() {
-    console.log('[DD RUM] Action fired: pizza_order_submitted', order);
-    window.DD_RUM.addAction('pizza_order_submitted', order);
+    console.log('[DD RUM] Action fired: pizza_order_submitted', { pizza_order: pizzaOrder });
+    window.DD_RUM.addAction('pizza_order_submitted', { pizza_order: pizzaOrder });
   });
+
+  window.DD_LOGS && window.DD_LOGS.onReady(function() {
+    const logPayload = {
+      order_id:    orderId,
+      customer,
+      pizza_order: pizzaOrder,
+    };
+    console.log('[DD LOGS] Order submitted', logPayload);
+    window.DD_LOGS.logger.info('pizza_order_submitted', logPayload);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Fake order data generator
+// ---------------------------------------------------------------------------
+
+/**
+ * Pools of fake data used to generate randomized order identities.
+ * These are entirely fictional and used only to produce varied log payloads.
+ */
+const _fakeData = {
+  firstNames: ['Alex','Jordan','Morgan','Taylor','Casey','Riley','Quinn','Avery','Drew','Skyler','Jamie','Parker','Reese','Sage','Blake'],
+  lastNames:  ['Smith','Johnson','Williams','Brown','Jones','Garcia','Miller','Davis','Wilson','Anderson','Thomas','Moore','Martin','Lee','White'],
+  streets:    ['Maple St','Oak Ave','Pine Rd','Elm Dr','Cedar Ln','Birch Blvd','Walnut Way','Spruce Ct','Willow Pl','Ash St'],
+  cities: [
+    { city: 'Austin',       state: 'TX', zip: '78701' },
+    { city: 'Portland',     state: 'OR', zip: '97201' },
+    { city: 'Denver',       state: 'CO', zip: '80201' },
+    { city: 'Nashville',    state: 'TN', zip: '37201' },
+    { city: 'Chicago',      state: 'IL', zip: '60601' },
+    { city: 'Phoenix',      state: 'AZ', zip: '85001' },
+    { city: 'Atlanta',      state: 'GA', zip: '30301' },
+    { city: 'Seattle',      state: 'WA', zip: '98101' },
+    { city: 'Miami',        state: 'FL', zip: '33101' },
+    { city: 'Minneapolis',  state: 'MN', zip: '55401' },
+  ],
+};
+
+/**
+ * Pick a random element from an array.
+ *
+ * @template T
+ * @param {T[]} arr
+ * @returns {T}
+ */
+function _pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/**
+ * Generate a fake customer order identity for log enrichment.
+ * All data is randomly composed from fictional pools — no real PII.
+ *
+ * @returns {{orderId: string, customer: {name: string, email: string, address: string}}}
+ */
+function generateFakeOrderIdentity() {
+  const first  = _pick(_fakeData.firstNames);
+  const last   = _pick(_fakeData.lastNames);
+  const number = Math.floor(Math.random() * 9000) + 100;
+  const street = _pick(_fakeData.streets);
+  const locale = _pick(_fakeData.cities);
+  const orderId = 'ORD-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+
+  return {
+    orderId,
+    customer: {
+      name:    `${first} ${last}`,
+      email:   `${first.toLowerCase()}.${last.toLowerCase()}@example.com`,
+      address: `${number} ${street}, ${locale.city}, ${locale.state} ${locale.zip}`,
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------

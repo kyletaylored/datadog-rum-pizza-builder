@@ -71,126 +71,33 @@
 </script>
 </head>
 <body>
-<main class="container">
 
-<div class="page-header">
-  <div class="page-header-title">
-    <h1>🍕 Pizza Builder</h1>
-    <p class="subtitle">Craft your perfect pie in 5 easy steps</p>
-  </div>
-  <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark mode">🌙</button>
-</div>
+<div class="training-layout">
 
-<nav class="tab-nav" role="tablist">
-  <button class="tab-btn active" role="tab" aria-selected="true"  aria-controls="tab-build"   onclick="switchTab('build')">Build</button>
-  <button class="tab-btn"        role="tab" aria-selected="false" aria-controls="tab-results" onclick="switchTab('results-tab')">Results</button>
-</nav>
+  <!-- ===== LEFT SIDEBAR ===== -->
+  <aside class="training-sidebar">
 
-<div id="tab-build" role="tabpanel">
-
-    <div class="progress-wrap" id="progress-wrap" style="display:none">
-      <div class="progress-labels">
-        <span id="step-label">Step 1 of 5</span>
-        <span id="step-name"></span>
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <span class="sidebar-logo">🍕</span>
+        <div>
+          <div class="sidebar-title">RUM Pizza Builder</div>
+          <div class="sidebar-subtitle">Datadog RUM Training</div>
+        </div>
       </div>
-      <progress id="progress-bar" value="0" max="5"></progress>
+      <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark mode">🌙</button>
     </div>
 
-    <div class="screen active" id="screen-start">
-      <div id="start-screen">
-        <div class="pizza-hero">🍕</div>
-        <h2>Ready to build your pizza?</h2>
-        <p>Choose your crust, sauce, cheese, toppings, and size — we'll handle the rest.</p>
-        <button onclick="goTo(1)">Start Building</button>
-      </div>
+    <div class="sidebar-intro">
+      <p>This interactive demo shows how Datadog Real User Monitoring captures user behavior in a single-page app — without any page reloads. Work through the pizza wizard and watch RUM events appear in real time.</p>
     </div>
 
-    <div class="screen" id="screen-1">
-      <h2>Choose your crust</h2>
-      <div class="options" id="opts-1">
-        <div class="option-card" onclick="select(1,this,'Thin & Crispy')"><span class="emoji">🥨</span><div class="label">Thin & Crispy</div><div class="desc">Light and snappy</div></div>
-        <div class="option-card" onclick="select(1,this,'Hand-Tossed')"><span class="emoji">🫓</span><div class="label">Hand-Tossed</div><div class="desc">Classic and chewy</div></div>
-        <div class="option-card" onclick="select(1,this,'Deep Dish')"><span class="emoji">🍞</span><div class="label">Deep Dish</div><div class="desc">Thick and doughy</div></div>
-        <div class="option-card" onclick="select(1,this,'Gluten-Free')"><span class="emoji">🌾</span><div class="label">Gluten-Free</div><div class="desc">Light rice crust</div></div>
-      </div>
-      <div class="btn-row">
-        <button class="secondary outline" onclick="goTo(0)">Back</button>
-        <button id="btn-1" disabled onclick="goTo(2)">Continue</button>
-      </div>
-    </div>
+    <nav class="sidebar-nav">
+      <p class="sidebar-nav-label">Training topics</p>
 
-    <div class="screen" id="screen-2">
-      <h2>Pick your sauce</h2>
-      <div class="options" id="opts-2">
-        <div class="option-card" onclick="select(2,this,'Classic Tomato')"><span class="emoji">🍅</span><div class="label">Classic Tomato</div><div class="desc">Rich marinara</div></div>
-        <div class="option-card" onclick="select(2,this,'White Garlic')"><span class="emoji">🧄</span><div class="label">White Garlic</div><div class="desc">Creamy alfredo</div></div>
-        <div class="option-card" onclick="select(2,this,'BBQ')"><span class="emoji">🔥</span><div class="label">BBQ</div><div class="desc">Smoky and sweet</div></div>
-        <div class="option-card" onclick="select(2,this,'Pesto')"><span class="emoji">🌿</span><div class="label">Pesto</div><div class="desc">Fresh basil blend</div></div>
-      </div>
-      <div class="btn-row">
-        <button class="secondary outline" onclick="goTo(1)">Back</button>
-        <button id="btn-2" disabled onclick="goTo(3)">Continue</button>
-      </div>
-    </div>
-
-    <div class="screen" id="screen-3">
-      <h2>Select your cheese</h2>
-      <div class="options" id="opts-3">
-        <div class="option-card" onclick="select(3,this,'Mozzarella')"><span class="emoji">🧀</span><div class="label">Mozzarella</div><div class="desc">The OG melt</div></div>
-        <div class="option-card" onclick="select(3,this,'Four Cheese')"><span class="emoji">🫕</span><div class="label">Four Cheese</div><div class="desc">Mozz, provolone, parmesan, romano</div></div>
-        <div class="option-card" onclick="select(3,this,'Vegan')"><span class="emoji">🌱</span><div class="label">Vegan</div><div class="desc">Cashew-based</div></div>
-        <div class="option-card" onclick="select(3,this,'No Cheese')"><span class="emoji">🚫</span><div class="label">No Cheese</div><div class="desc">Sauce only</div></div>
-      </div>
-      <div class="btn-row">
-        <button class="secondary outline" onclick="goTo(2)">Back</button>
-        <button id="btn-3" disabled onclick="goTo(4)">Continue</button>
-      </div>
-    </div>
-
-    <div class="screen" id="screen-4">
-      <h2>Add your toppings</h2>
-      <div class="options" id="opts-4">
-        <div class="option-card" onclick="select(4,this,'Pepperoni')"><span class="emoji">🍖</span><div class="label">Pepperoni</div><div class="desc">A classic</div></div>
-        <div class="option-card" onclick="select(4,this,'Mushrooms')"><span class="emoji">🍄</span><div class="label">Mushrooms</div><div class="desc">Earthy and savory</div></div>
-        <div class="option-card" onclick="select(4,this,'Bell Peppers')"><span class="emoji">🫑</span><div class="label">Bell Peppers</div><div class="desc">Crisp and sweet</div></div>
-        <div class="option-card" onclick="select(4,this,'Jalapeños')"><span class="emoji">🌶️</span><div class="label">Jalapeños</div><div class="desc">Bring the heat</div></div>
-      </div>
-      <div class="btn-row">
-        <button class="secondary outline" onclick="goTo(3)">Back</button>
-        <button id="btn-4" disabled onclick="goTo(5)">Continue</button>
-      </div>
-    </div>
-
-    <div class="screen" id="screen-5">
-      <h2>Choose your size</h2>
-      <div class="options" id="opts-5">
-        <div class="option-card" onclick="select(5,this,'Personal (6 in)')"><span class="emoji">🤏</span><div class="label">Personal</div><div class="desc">6" · 4 slices</div></div>
-        <div class="option-card" onclick="select(5,this,'Medium (12 in)')"><span class="emoji">✋</span><div class="label">Medium</div><div class="desc">12" · 8 slices</div></div>
-        <div class="option-card" onclick="select(5,this,'Large (16 in)')"><span class="emoji">🙌</span><div class="label">Large</div><div class="desc">16" · 10 slices</div></div>
-        <div class="option-card" onclick="select(5,this,'XL Party (20 in)')"><span class="emoji">🎉</span><div class="label">XL Party</div><div class="desc">20" · 12 slices</div></div>
-      </div>
-      <div class="btn-row">
-        <button class="secondary outline" onclick="goTo(4)">Back</button>
-        <button id="btn-5" disabled onclick="goTo('results')">See My Pizza</button>
-      </div>
-    </div>
-
-    <div class="screen" id="screen-results">
-      <h2>🎉 Your Pizza Order</h2>
-      <p>Here's what you built:</p>
-      <ul class="result-list" id="result-list"></ul>
-      <div class="btn-row" style="justify-content:center; margin-top:2rem">
-        <button onclick="stopAndRestart()">Start Over</button>
-      </div>
-    </div>
-
-    <!-- How this works in Datadog -->
-    <div class="info-sections">
-
-      <!-- Fragment View Tracking -->
-      <details>
-        <summary><span class="sidebar-tag tag-view">View</span> Fragment-based view tracking</summary>
-        <div class="details-body">
+      <details class="sidebar-section" open>
+        <summary><span class="sidebar-tag tag-view">View</span><span class="sidebar-section-title">Fragment-based view tracking</span></summary>
+        <div class="sidebar-section-body">
           <p>Each time this wizard changes <code>location.hash</code>, the RUM SDK records a new <strong>View</strong> event — no page reload needed. The SDK detects hash changes automatically and starts a fresh view with its own load time, action count, and frustration signal tracking.</p>
           <p>In <strong>RUM › Explorer</strong>, set the event type to <em>Views</em> and group by <code>@view.url_hash</code> to see per-step engagement. Each hash is a named wizard step:</p>
           <div class="sidebar-steps">
@@ -207,10 +114,9 @@
         </div>
       </details>
 
-      <!-- Funnel Chart -->
-      <details>
-        <summary><span class="sidebar-tag tag-funnel">Funnel</span> Conversion funnel by view</summary>
-        <div class="details-body">
+      <details class="sidebar-section">
+        <summary><span class="sidebar-tag tag-funnel">Funnel</span><span class="sidebar-section-title">Conversion funnel by view</span></summary>
+        <div class="sidebar-section-body">
           <p>RUM Analytics has a native <strong>Funnel</strong> visualization that measures session-level conversion across a sequence of views. Because each wizard step is a distinct view (via URL hash), you can model the entire flow as a funnel without any custom instrumentation beyond what the SDK already captures.</p>
           <p>Go to <strong>RUM › Analytics</strong>, set the visualization to <em>Funnel</em>, then add one step per hash:</p>
           <pre>Step 1  @view.url_hash:#crust
@@ -223,10 +129,9 @@ Step 6  @view.url_hash:#results</pre>
         </div>
       </details>
 
-      <!-- Custom Metrics -->
-      <details>
-        <summary><span class="sidebar-tag tag-metric">Metric</span> Custom metrics from order actions</summary>
-        <div class="details-body">
+      <details class="sidebar-section">
+        <summary><span class="sidebar-tag tag-metric">Metric</span><span class="sidebar-section-title">Custom metrics from order actions</span></summary>
+        <div class="sidebar-section-body">
           <p>When a user reaches the results screen, this app fires a custom RUM <strong>Action</strong> with the full order as context attributes:</p>
           <pre>DD_RUM.addAction('pizza_order_submitted', {
   pizza_order: {
@@ -248,79 +153,189 @@ Group by:    @context.pizza_order.crust
              @context.pizza_order.size
              @geo.country
              @geo.country_iso_code</pre>
-          <p>The <code>@geo.country</code> dimension comes from RUM's automatic geo-enrichment of the session — it is not part of the action payload. The SDK resolves it from the user's IP address and attaches it to every event, making it available as a metric tag for free.</p>
-          <p>Once the metric is generating, the <strong>Results</strong> tab shows it broken down across all six dimensions using <em>toplist</em>, <em>timeseries</em>, <em>sunburst</em>, and <em>geomap</em> widgets — each filterable via dashboard template variables for size, sauce, toppings, cheese, crust, and country.</p>
+          <p>The <code>@geo.country</code> dimension comes from RUM's automatic geo-enrichment — resolved from the user's IP and attached to every event for free.</p>
+          <p>The <strong>Results</strong> tab shows the metric broken down using <em>toplist</em>, <em>timeseries</em>, <em>sunburst</em>, and <em>geomap</em> widgets, each filterable via dashboard template variables.</p>
         </div>
       </details>
 
-      <!-- Synthetics & SLO -->
-      <details>
-        <summary><span class="sidebar-tag tag-slo">SLO</span> Synthetic tests &amp; error budget</summary>
-        <div class="details-body">
-          <p>A Datadog <strong>Browser Synthetic test</strong> runs against this app on a schedule, simulating a user going through the wizard from start to finish. On each run the test clicks <em>Start Building</em>, selects the first option on each step, and clicks <em>Continue</em> until it reaches the results screen.</p>
-          <p>To generate realistic data, the app randomizes the order of options on each step when it detects the Synthetics user agent — so "first option" produces a different pizza every run. On roughly 60% of runs, a simulated JS error is injected at a random step, blocking the test from completing. This intentionally produces a mix of pass and fail results.</p>
-          <p>An <strong>SLO</strong> is defined on top of the synthetic monitor, measuring the wizard completion rate over a rolling window:</p>
+      <details class="sidebar-section">
+        <summary><span class="sidebar-tag tag-slo">SLO</span><span class="sidebar-section-title">Synthetic tests &amp; error budget</span></summary>
+        <div class="sidebar-section-body">
+          <p>A Datadog <strong>Browser Synthetic test</strong> runs against this app on a schedule, simulating the full wizard from start to finish. Option order is randomized per run so "always click first" produces varied data.</p>
+          <p>On ~60% of runs, a simulated JS error is injected at a random step, blocking completion and producing intentional funnel drop-off for training purposes.</p>
+          <p>An <strong>SLO</strong> tracks completion rate over a rolling window:</p>
           <pre>SLO type:   Monitor-based
-Monitor:    Browser test — pizza wizard end-to-end
 Target:     99% uptime (1% error budget)
 Window:     7-day rolling</pre>
-          <p>The <strong>Results</strong> dashboard includes an SLO widget showing current status, remaining error budget, and history. When the synthetic failure rate exceeds the error budget, it signals that something in the wizard flow is broken beyond the simulated noise — worth investigating in the RUM funnel and session replays to find the real cause.</p>
+          <p>The Results dashboard includes an SLO widget. A breach beyond the simulated noise level signals a real problem — investigate in the RUM funnel and session replays.</p>
         </div>
       </details>
+    </nav>
 
-    </div><!-- /.info-sections -->
+    <footer class="sidebar-footer">
+      Built by <a href="https://github.com/kyletaylored" target="_blank" rel="noopener">Kyle Taylor</a> &middot;
+      <a href="https://www.datadoghq.com" target="_blank" rel="noopener">Datadog</a> &middot;
+      <a href="https://github.com/kyletaylored/datadog-rum-pizza-builder" target="_blank" rel="noopener">GitHub</a>
+    </footer>
 
-    <!-- RUM Event Log -->
-    <div id="rum-log-wrap">
-      <div id="rum-log-header">
-        <h3>Datadog RUM events</h3>
-        <div class="log-controls">
-          <button class="filter-btn view active"      onclick="toggleFilter('view')">view</button>
-          <button class="filter-btn action active"    onclick="toggleFilter('action')">action</button>
-          <button class="filter-btn resource"         onclick="toggleFilter('resource')">resource</button>
-          <button class="filter-btn error active"     onclick="toggleFilter('error')">error</button>
-          <button class="filter-btn long_task active" onclick="toggleFilter('long_task')">long_task</button>
-          <button class="secondary outline" id="clear-log-btn" onclick="clearLog()">Clear</button>
+  </aside><!-- /.training-sidebar -->
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <div class="training-main">
+
+    <nav class="tab-nav" role="tablist">
+      <button class="tab-btn active" role="tab" aria-selected="true"  aria-controls="tab-build"   onclick="switchTab('build')">🍕 Build</button>
+      <button class="tab-btn"        role="tab" aria-selected="false" aria-controls="tab-results" onclick="switchTab('results-tab')">📊 Results</button>
+    </nav>
+
+    <!-- Build tab -->
+    <div id="tab-build" role="tabpanel" class="tab-panel">
+
+      <div class="progress-wrap" id="progress-wrap" style="display:none">
+        <div class="progress-labels">
+          <span id="step-label">Step 1 of 5</span>
+          <span id="step-name"></span>
+        </div>
+        <progress id="progress-bar" value="0" max="5"></progress>
+      </div>
+
+      <div class="screen active" id="screen-start">
+        <div id="start-screen">
+          <div class="pizza-hero">🍕</div>
+          <h2>Ready to build your pizza?</h2>
+          <p>Choose your crust, sauce, cheese, toppings, and size — we'll handle the rest.</p>
+          <button onclick="goTo(1)">Start Building</button>
         </div>
       </div>
 
-      <div id="rum-table-wrap">
-        <table id="rum-table">
-          <colgroup>
-            <col class="col-time"><col class="col-type"><col class="col-a"><col class="col-b">
-          </colgroup>
-          <thead id="rum-thead">
-            <tr>
-              <th>time</th>
-              <th>type</th>
-              <th id="col-a-head">path / name</th>
-              <th id="col-b-head">hash / payload</th>
-            </tr>
-          </thead>
-          <tbody id="rum-tbody">
-            <tr id="rum-empty-row"><td colspan="4">Waiting for events…</td></tr>
-          </tbody>
-        </table>
+      <div class="screen" id="screen-1">
+        <h2>Choose your crust</h2>
+        <div class="options" id="opts-1">
+          <div class="option-card" onclick="select(1,this,'Thin & Crispy')"><span class="emoji">🥨</span><div class="label">Thin & Crispy</div><div class="desc">Light and snappy</div></div>
+          <div class="option-card" onclick="select(1,this,'Hand-Tossed')"><span class="emoji">🫓</span><div class="label">Hand-Tossed</div><div class="desc">Classic and chewy</div></div>
+          <div class="option-card" onclick="select(1,this,'Deep Dish')"><span class="emoji">🍞</span><div class="label">Deep Dish</div><div class="desc">Thick and doughy</div></div>
+          <div class="option-card" onclick="select(1,this,'Gluten-Free')"><span class="emoji">🌾</span><div class="label">Gluten-Free</div><div class="desc">Light rice crust</div></div>
+        </div>
+        <div class="btn-row">
+          <button class="secondary outline" onclick="goTo(0)">Back</button>
+          <button id="btn-1" disabled onclick="goTo(2)">Continue</button>
+        </div>
       </div>
-    </div>
 
-</div><!-- /#tab-build -->
+      <div class="screen" id="screen-2">
+        <h2>Pick your sauce</h2>
+        <div class="options" id="opts-2">
+          <div class="option-card" onclick="select(2,this,'Classic Tomato')"><span class="emoji">🍅</span><div class="label">Classic Tomato</div><div class="desc">Rich marinara</div></div>
+          <div class="option-card" onclick="select(2,this,'White Garlic')"><span class="emoji">🧄</span><div class="label">White Garlic</div><div class="desc">Creamy alfredo</div></div>
+          <div class="option-card" onclick="select(2,this,'BBQ')"><span class="emoji">🔥</span><div class="label">BBQ</div><div class="desc">Smoky and sweet</div></div>
+          <div class="option-card" onclick="select(2,this,'Pesto')"><span class="emoji">🌿</span><div class="label">Pesto</div><div class="desc">Fresh basil blend</div></div>
+        </div>
+        <div class="btn-row">
+          <button class="secondary outline" onclick="goTo(1)">Back</button>
+          <button id="btn-2" disabled onclick="goTo(3)">Continue</button>
+        </div>
+      </div>
 
-<div id="tab-results" role="tabpanel" style="display:none">
-  <iframe
-    src="https://p.datadoghq.com/sb/embed/2bbb2f98-12da-11ef-8e28-da7ad0900002-025183052842e2e0e2253a3d191e6fda"
-    title="Pizza Order Submissions Dashboard"
-    class="dashboard-iframe"
-    allowfullscreen>
-  </iframe>
-</div><!-- /#tab-results -->
+      <div class="screen" id="screen-3">
+        <h2>Select your cheese</h2>
+        <div class="options" id="opts-3">
+          <div class="option-card" onclick="select(3,this,'Mozzarella')"><span class="emoji">🧀</span><div class="label">Mozzarella</div><div class="desc">The OG melt</div></div>
+          <div class="option-card" onclick="select(3,this,'Four Cheese')"><span class="emoji">🫕</span><div class="label">Four Cheese</div><div class="desc">Mozz, provolone, parmesan, romano</div></div>
+          <div class="option-card" onclick="select(3,this,'Vegan')"><span class="emoji">🌱</span><div class="label">Vegan</div><div class="desc">Cashew-based</div></div>
+          <div class="option-card" onclick="select(3,this,'No Cheese')"><span class="emoji">🚫</span><div class="label">No Cheese</div><div class="desc">Sauce only</div></div>
+        </div>
+        <div class="btn-row">
+          <button class="secondary outline" onclick="goTo(2)">Back</button>
+          <button id="btn-3" disabled onclick="goTo(4)">Continue</button>
+        </div>
+      </div>
+
+      <div class="screen" id="screen-4">
+        <h2>Add your toppings</h2>
+        <div class="options" id="opts-4">
+          <div class="option-card" onclick="select(4,this,'Pepperoni')"><span class="emoji">🍖</span><div class="label">Pepperoni</div><div class="desc">A classic</div></div>
+          <div class="option-card" onclick="select(4,this,'Mushrooms')"><span class="emoji">🍄</span><div class="label">Mushrooms</div><div class="desc">Earthy and savory</div></div>
+          <div class="option-card" onclick="select(4,this,'Bell Peppers')"><span class="emoji">🫑</span><div class="label">Bell Peppers</div><div class="desc">Crisp and sweet</div></div>
+          <div class="option-card" onclick="select(4,this,'Jalapeños')"><span class="emoji">🌶️</span><div class="label">Jalapeños</div><div class="desc">Bring the heat</div></div>
+        </div>
+        <div class="btn-row">
+          <button class="secondary outline" onclick="goTo(3)">Back</button>
+          <button id="btn-4" disabled onclick="goTo(5)">Continue</button>
+        </div>
+      </div>
+
+      <div class="screen" id="screen-5">
+        <h2>Choose your size</h2>
+        <div class="options" id="opts-5">
+          <div class="option-card" onclick="select(5,this,'Personal (6 in)')"><span class="emoji">🤏</span><div class="label">Personal</div><div class="desc">6" · 4 slices</div></div>
+          <div class="option-card" onclick="select(5,this,'Medium (12 in)')"><span class="emoji">✋</span><div class="label">Medium</div><div class="desc">12" · 8 slices</div></div>
+          <div class="option-card" onclick="select(5,this,'Large (16 in)')"><span class="emoji">🙌</span><div class="label">Large</div><div class="desc">16" · 10 slices</div></div>
+          <div class="option-card" onclick="select(5,this,'XL Party (20 in)')"><span class="emoji">🎉</span><div class="label">XL Party</div><div class="desc">20" · 12 slices</div></div>
+        </div>
+        <div class="btn-row">
+          <button class="secondary outline" onclick="goTo(4)">Back</button>
+          <button id="btn-5" disabled onclick="goTo('results')">See My Pizza</button>
+        </div>
+      </div>
+
+      <div class="screen" id="screen-results">
+        <h2>🎉 Your Pizza Order</h2>
+        <p>Here's what you built:</p>
+        <ul class="result-list" id="result-list"></ul>
+        <div class="btn-row" style="justify-content:center; margin-top:2rem">
+          <button onclick="stopAndRestart()">Start Over</button>
+        </div>
+      </div>
+
+      <!-- RUM Event Log -->
+      <div id="rum-log-wrap">
+        <div id="rum-log-header">
+          <h3>Datadog RUM events</h3>
+          <div class="log-controls">
+            <button class="filter-btn view active"      onclick="toggleFilter('view')">view</button>
+            <button class="filter-btn action active"    onclick="toggleFilter('action')">action</button>
+            <button class="filter-btn resource"         onclick="toggleFilter('resource')">resource</button>
+            <button class="filter-btn error active"     onclick="toggleFilter('error')">error</button>
+            <button class="filter-btn long_task active" onclick="toggleFilter('long_task')">long_task</button>
+            <button class="secondary outline" id="clear-log-btn" onclick="clearLog()">Clear</button>
+          </div>
+        </div>
+        <div id="rum-table-wrap">
+          <table id="rum-table">
+            <colgroup>
+              <col class="col-time"><col class="col-type"><col class="col-a"><col class="col-b">
+            </colgroup>
+            <thead id="rum-thead">
+              <tr>
+                <th>time</th>
+                <th>type</th>
+                <th id="col-a-head">path / name</th>
+                <th id="col-b-head">hash / payload</th>
+              </tr>
+            </thead>
+            <tbody id="rum-tbody">
+              <tr id="rum-empty-row"><td colspan="4">Waiting for events…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /#tab-build -->
+
+    <!-- Results tab -->
+    <div id="tab-results" role="tabpanel" class="tab-panel" style="display:none">
+      <iframe
+        src="https://p.datadoghq.com/sb/embed/2bbb2f98-12da-11ef-8e28-da7ad0900002-025183052842e2e0e2253a3d191e6fda"
+        title="Pizza Order Submissions Dashboard"
+        class="dashboard-iframe"
+        allowfullscreen>
+      </iframe>
+    </div><!-- /#tab-results -->
+
+  </div><!-- /.training-main -->
+
+</div><!-- /.training-layout -->
 
 <script src="app.js"></script>
-
-<footer style="margin-top:3rem; padding-top:1.25rem; border-top:1px solid var(--pico-muted-border-color); text-align:center; font-size:0.75rem; color:var(--pico-muted-color);">
-  Built by <a href="https://github.com/kyletaylored" target="_blank" rel="noopener">Kyle Taylor</a> &middot; <a href="https://www.datadoghq.com" target="_blank" rel="noopener">Datadog</a> &middot; <a href="https://github.com/kyletaylored/datadog-rum-pizza-builder" target="_blank" rel="noopener">View on GitHub</a>
-</footer>
-
-</main>
 </body>
 </html>

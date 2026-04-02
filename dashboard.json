@@ -12,6 +12,29 @@
                 "layout_type": "ordered",
                 "widgets": [
                     {
+                        "id": 1065386781328229,
+                        "definition": {
+                            "title": "",
+                            "title_size": "16",
+                            "title_align": "left",
+                            "time": {},
+                            "type": "slo",
+                            "slo_id": "e5a69da1009a52cc90ae4e1e05986209",
+                            "view_type": "detail",
+                            "view_mode": "overall",
+                            "time_windows": [
+                                "global_time"
+                            ],
+                            "show_error_budget": true
+                        },
+                        "layout": {
+                            "x": 0,
+                            "y": 0,
+                            "width": 4,
+                            "height": 3
+                        }
+                    },
+                    {
                         "id": 8389653085454726,
                         "definition": {
                             "title": "Total Pizza Submissions",
@@ -37,7 +60,7 @@
                             "precision": 0
                         },
                         "layout": {
-                            "x": 0,
+                            "x": 4,
                             "y": 0,
                             "width": 3,
                             "height": 3
@@ -74,9 +97,9 @@
                             ]
                         },
                         "layout": {
-                            "x": 3,
+                            "x": 7,
                             "y": 0,
-                            "width": 9,
+                            "width": 5,
                             "height": 3
                         }
                     }
@@ -371,7 +394,6 @@
                         "id": 8255154842228080,
                         "definition": {
                             "title": "Submissions by Country",
-                            "time": {},
                             "type": "geomap",
                             "requests": [
                                 {
@@ -456,6 +478,102 @@
                 "width": 12,
                 "height": 5,
                 "is_column_break": true
+            }
+        },
+        {
+            "id": 4707280187983785,
+            "definition": {
+                "title": "Pizza Order Journey",
+                "title_size": "16",
+                "title_align": "left",
+                "time": {},
+                "requests": [
+                    {
+                        "request_type": "user_journey_funnel",
+                        "query": {
+                            "data_source": "product_analytics_journey",
+                            "search": {
+                                "expression": "node_0->node_1->node_2->node_3->node_4->node_5",
+                                "node_objects": {
+                                    "node_0": {
+                                        "data_source": "product_analytics",
+                                        "search": {
+                                            "query": "@type:action @action.name:\"click on Start Building\""
+                                        }
+                                    },
+                                    "node_1": {
+                                        "data_source": "product_analytics",
+                                        "search": {
+                                            "query": "@type:view @view.name:\"/datadog-rum-pizza-builder\" @view.url_hash:crust"
+                                        }
+                                    },
+                                    "node_2": {
+                                        "data_source": "product_analytics",
+                                        "search": {
+                                            "query": "@type:view @view.name:\"/datadog-rum-pizza-builder\" @view.url_hash:sauce"
+                                        }
+                                    },
+                                    "node_3": {
+                                        "data_source": "product_analytics",
+                                        "search": {
+                                            "query": "@type:view @view.name:\"/datadog-rum-pizza-builder\" @view.url_hash:cheese"
+                                        }
+                                    },
+                                    "node_4": {
+                                        "data_source": "product_analytics",
+                                        "search": {
+                                            "query": "@type:view @view.name:\"/datadog-rum-pizza-builder\" @view.url_hash:toppings"
+                                        }
+                                    },
+                                    "node_5": {
+                                        "data_source": "product_analytics",
+                                        "search": {
+                                            "query": "@type:view @view.name:\"/datadog-rum-pizza-builder\" @view.url_hash:results"
+                                        }
+                                    }
+                                },
+                                "filters": {
+                                    "string_filter": "@application.id:4a79b017-ea18-4839-9153-ce2b058b4db6",
+                                    "graph_filters": []
+                                },
+                                "join_keys": {
+                                    "primary": "@session.id"
+                                },
+                                "step_aliases": {
+                                    "node_1": "Crust -> Sauce",
+                                    "node_2": "Sauce -> Cheese",
+                                    "node_3": "Cheese -> Toppings",
+                                    "node_4": "Toppings -> Size",
+                                    "node_5": "Size -> Submit",
+                                    "node_0": "Start -> Crust"
+                                }
+                            },
+                            "compute": {
+                                "metric": "__dd.conversion",
+                                "aggregation": "count"
+                            },
+                            "group_by": [
+                                {
+                                    "facet": "@device.type",
+                                    "sort": {
+                                        "aggregation": "count",
+                                        "order": "desc",
+                                        "metric": "__dd.conversion"
+                                    },
+                                    "limit": 5
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "type": "funnel",
+                "grouped_display": "stacked"
+            },
+            "layout": {
+                "x": 0,
+                "y": 16,
+                "width": 12,
+                "height": 5
             }
         }
     ],

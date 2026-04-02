@@ -1,3 +1,8 @@
+// Clear any stale fragment left over from a previous session on page load.
+if (window.location.hash) {
+  history.replaceState(null, '', window.location.pathname);
+}
+
 /**
  * Whether the current session is a Datadog Synthetics browser test,
  * detected via the user agent string injected by the test runner.
@@ -131,7 +136,7 @@ function goTo(step) {
   if (step === 0) {
     document.getElementById('screen-start').classList.add('active');
     wrap.style.display = 'none';
-    location.hash = '';
+    history.replaceState(null, '', window.location.pathname);
   } else if (step === 'results') {
     document.getElementById('screen-results').classList.add('active');
     wrap.style.display = 'none';

@@ -62,11 +62,23 @@
   })
 </script>
 <link rel="stylesheet" href="style.css">
+<script>
+  // Apply saved theme before paint to avoid flash.
+  (function() {
+    var t = localStorage.getItem('theme');
+    if (t) document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
 </head>
 <body>
 
-<h1>🍕 Pizza Builder</h1>
-<p class="subtitle">Craft your perfect pie in 5 easy steps</p>
+<div class="page-header">
+  <div class="page-header-title">
+    <h1>🍕 Pizza Builder</h1>
+    <p class="subtitle">Craft your perfect pie in 5 easy steps</p>
+  </div>
+  <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark mode">🌙</button>
+</div>
 
 <nav class="tab-nav" role="tablist">
   <button class="tab-btn active" role="tab" aria-selected="true"  aria-controls="tab-build"   onclick="switchTab('build')">Build</button>

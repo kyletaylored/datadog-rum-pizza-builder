@@ -1,4 +1,27 @@
 /**
+ * Toggle between light and dark mode by setting `data-theme` on <html>.
+ * Persists the preference to localStorage so it survives page refreshes.
+ * Updates the toggle button icon to reflect the current mode.
+ */
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  const next = isDark ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  document.getElementById('theme-toggle').textContent = next === 'dark' ? '☀️' : '🌙';
+  localStorage.setItem('theme', next);
+}
+
+// Sync toggle button icon with the theme that was applied in <head>.
+(function() {
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.textContent = saved === 'dark' ? '☀️' : '🌙';
+  }
+})();
+
+/**
  * Switch between the top-level page tabs ("build" and "results-tab").
  * Updates button aria state, active class, and panel visibility.
  *

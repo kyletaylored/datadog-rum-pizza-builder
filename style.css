@@ -253,6 +253,7 @@ table#rum-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; fo
 .tag-action { background: #dcfce7; color: #15803d; }
 .tag-metric { background: #fef3c7; color: #92400e; }
 .tag-funnel { background: #f3e8ff; color: #6d28d9; }
+.tag-slo    { background: #fce7f3; color: #9d174d; }
 
 .sidebar-steps {
   display: flex;

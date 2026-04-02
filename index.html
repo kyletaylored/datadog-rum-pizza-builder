@@ -253,6 +253,21 @@ Group by:    @context.pizza_order.crust
         </div>
       </details>
 
+      <!-- Synthetics & SLO -->
+      <details>
+        <summary><span class="sidebar-tag tag-slo">SLO</span> Synthetic tests &amp; error budget</summary>
+        <div class="details-body">
+          <p>A Datadog <strong>Browser Synthetic test</strong> runs against this app on a schedule, simulating a user going through the wizard from start to finish. On each run the test clicks <em>Start Building</em>, selects the first option on each step, and clicks <em>Continue</em> until it reaches the results screen.</p>
+          <p>To generate realistic data, the app randomizes the order of options on each step when it detects the Synthetics user agent — so "first option" produces a different pizza every run. On roughly 60% of runs, a simulated JS error is injected at a random step, blocking the test from completing. This intentionally produces a mix of pass and fail results.</p>
+          <p>An <strong>SLO</strong> is defined on top of the synthetic monitor, measuring the wizard completion rate over a rolling window:</p>
+          <pre>SLO type:   Monitor-based
+Monitor:    Browser test — pizza wizard end-to-end
+Target:     99% uptime (1% error budget)
+Window:     7-day rolling</pre>
+          <p>The <strong>Results</strong> dashboard includes an SLO widget showing current status, remaining error budget, and history. When the synthetic failure rate exceeds the error budget, it signals that something in the wizard flow is broken beyond the simulated noise — worth investigating in the RUM funnel and session replays to find the real cause.</p>
+        </div>
+      </details>
+
     </div><!-- /.info-sections -->
 
     <!-- RUM Event Log -->

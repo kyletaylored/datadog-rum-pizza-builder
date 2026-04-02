@@ -73,6 +73,14 @@ const syntheticFailStep = (() => {
 })();
 
 /**
+ * The step number that has been killed by a synthetic error injection, if any.
+ * Used by `select()` to prevent re-enabling the Continue button after an error.
+ *
+ * @type {number|null}
+ */
+let erroredStep = null;
+
+/**
  * Simulated error messages used by `injectStepError()` to generate varied
  * error payloads in RUM across synthetic runs.
  *
@@ -136,6 +144,9 @@ function injectStepError(step) {
   ].join(';');
   banner.innerHTML = `<strong>Something went wrong.</strong><br>${message}`;
   btnRow.before(banner);
+
+  // Record the errored step so select() cannot re-enable the button.
+  erroredStep = step;
 
   // Disable the continue button so the test cannot advance.
   if (continueBtn) continueBtn.disabled = true;
@@ -211,7 +222,10 @@ function select(step, el, value) {
   document.querySelectorAll(`#opts-${step} .option-card`).forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
   selections[step] = { label: stepMeta[step].label, value };
-  document.getElementById(`btn-${step}`).disabled = false;
+  // Don't re-enable the button if this step has been killed by an error.
+  if (step !== erroredStep) {
+    document.getElementById(`btn-${step}`).disabled = false;
+  }
 }
 
 /**
@@ -228,6 +242,7 @@ function stopAndRestart() {
   Object.keys(selections).forEach(k => delete selections[k]);
   document.querySelectorAll('.option-card.selected').forEach(c => c.classList.remove('selected'));
   for (let i = 1; i <= 5; i++) document.getElementById(`btn-${i}`).disabled = true;
+  erroredStep = null;
   console.log('[Wizard] Selections cleared');
   goTo(0);
 }

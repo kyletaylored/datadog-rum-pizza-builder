@@ -48,7 +48,7 @@
   text-align: center;
   transition: color 0.15s, border-color 0.15s;
 }
-.tab-btn:hover { color: var(--pico-color); }
+.tab-btn:hover { color: var(--pico-primary); background: none; }
 .tab-btn.active {
   color: var(--pico-primary);
   border-bottom-color: var(--pico-primary);

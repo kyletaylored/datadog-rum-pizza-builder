@@ -86,20 +86,6 @@ This repo is deployed via **GitHub Pages** from the `main` branch root. Any push
 
 ---
 
-## RUM Configuration
-
-| Setting                    | Value                                  |
-| -------------------------- | -------------------------------------- |
-| Application ID             | `4a79b017-ea18-4839-9153-ce2b058b4db6` |
-| Client Token               | `pub067eb57994325a05bf401b11a686e8e3`  |
-| Site                       | `datadoghq.com` (US1)                  |
-| Service                    | `datadog-demo-app`                     |
-| Session Sample Rate        | 100%                                   |
-| Session Replay Sample Rate | 100%                                   |
-| Privacy Level              | `mask-user-input`                      |
-
----
-
 ## Stack
 
 - [Datadog RUM Browser SDK v6](https://docs.datadoghq.com/real_user_monitoring/browser/)

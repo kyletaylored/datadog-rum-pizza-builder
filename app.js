@@ -13,7 +13,7 @@ function toggleTheme() {
 }
 
 // Sync toggle button icon with the theme that was applied in <head>.
-(function() {
+(function () {
   const saved = localStorage.getItem('theme');
   if (saved) {
     const btn = document.getElementById('theme-toggle');
@@ -57,8 +57,8 @@ const isSynthetics = /DatadogSynthetics/i.test(navigator.userAgent);
  * For Synthetics runs: the wizard step at which a simulated error will fire,
  * blocking the test from completing the wizard. Set once at page load.
  *
- * - 40% of runs complete cleanly (null).
- * - 60% of runs fail at a randomly chosen step between 2 and 5, simulating
+ * - 90% of runs complete cleanly (null).
+ * - 10% of runs fail at a randomly chosen step between 2 and 5, simulating
  *   users who abandon mid-wizard due to an error.
  *
  * Step 1 is excluded so the test always gets past the first choice before
@@ -68,7 +68,7 @@ const isSynthetics = /DatadogSynthetics/i.test(navigator.userAgent);
  */
 const syntheticFailStep = (() => {
   if (!isSynthetics) return null;
-  if (Math.random() < 0.4) return null;
+  if (Math.random() < 0.95) return null;
   return Math.floor(Math.random() * 4) + 2; // 2, 3, 4, or 5
 })();
 
@@ -163,11 +163,11 @@ function injectStepError(step) {
  */
 const stepMeta = [
   null,
-  { hash: 'crust',    label: 'Crust'    },
-  { hash: 'sauce',    label: 'Sauce'    },
-  { hash: 'cheese',   label: 'Cheese'   },
+  { hash: 'crust', label: 'Crust' },
+  { hash: 'sauce', label: 'Sauce' },
+  { hash: 'cheese', label: 'Cheese' },
   { hash: 'toppings', label: 'Toppings' },
-  { hash: 'size',     label: 'Size'     },
+  { hash: 'size', label: 'Size' },
 ];
 
 /**
@@ -234,7 +234,7 @@ function select(step, el, value) {
  * session so a new one begins on the user's next interaction.
  */
 function stopAndRestart() {
-  window.DD_RUM && window.DD_RUM.onReady(function() {
+  window.DD_RUM && window.DD_RUM.onReady(function () {
     console.log('[DD RUM] Stopping session');
     window.DD_RUM.stopSession();
     console.log('[DD RUM] Session stopped');
@@ -264,14 +264,14 @@ function renderResults() {
   const pizzaOrder = Object.fromEntries(Object.values(selections).map(s => [s.label.toLowerCase(), s.value]));
   const { orderId, customer } = generateFakeOrderIdentity();
 
-  window.DD_RUM && window.DD_RUM.onReady(function() {
+  window.DD_RUM && window.DD_RUM.onReady(function () {
     console.log('[DD RUM] Action fired: pizza_order_submitted', { pizza_order: pizzaOrder });
     window.DD_RUM.addAction('pizza_order_submitted', { pizza_order: pizzaOrder });
   });
 
-  window.DD_LOGS && window.DD_LOGS.onReady(function() {
+  window.DD_LOGS && window.DD_LOGS.onReady(function () {
     const logPayload = {
-      order_id:    orderId,
+      order_id: orderId,
       customer,
       pizza_order: pizzaOrder,
     };
@@ -289,20 +289,20 @@ function renderResults() {
  * These are entirely fictional and used only to produce varied log payloads.
  */
 const _fakeData = {
-  firstNames: ['Alex','Jordan','Morgan','Taylor','Casey','Riley','Quinn','Avery','Drew','Skyler','Jamie','Parker','Reese','Sage','Blake'],
-  lastNames:  ['Smith','Johnson','Williams','Brown','Jones','Garcia','Miller','Davis','Wilson','Anderson','Thomas','Moore','Martin','Lee','White'],
-  streets:    ['Maple St','Oak Ave','Pine Rd','Elm Dr','Cedar Ln','Birch Blvd','Walnut Way','Spruce Ct','Willow Pl','Ash St'],
+  firstNames: ['Alex', 'Jordan', 'Morgan', 'Taylor', 'Casey', 'Riley', 'Quinn', 'Avery', 'Drew', 'Skyler', 'Jamie', 'Parker', 'Reese', 'Sage', 'Blake'],
+  lastNames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Wilson', 'Anderson', 'Thomas', 'Moore', 'Martin', 'Lee', 'White'],
+  streets: ['Maple St', 'Oak Ave', 'Pine Rd', 'Elm Dr', 'Cedar Ln', 'Birch Blvd', 'Walnut Way', 'Spruce Ct', 'Willow Pl', 'Ash St'],
   cities: [
-    { city: 'Austin',       state: 'TX', zip: '78701' },
-    { city: 'Portland',     state: 'OR', zip: '97201' },
-    { city: 'Denver',       state: 'CO', zip: '80201' },
-    { city: 'Nashville',    state: 'TN', zip: '37201' },
-    { city: 'Chicago',      state: 'IL', zip: '60601' },
-    { city: 'Phoenix',      state: 'AZ', zip: '85001' },
-    { city: 'Atlanta',      state: 'GA', zip: '30301' },
-    { city: 'Seattle',      state: 'WA', zip: '98101' },
-    { city: 'Miami',        state: 'FL', zip: '33101' },
-    { city: 'Minneapolis',  state: 'MN', zip: '55401' },
+    { city: 'Austin', state: 'TX', zip: '78701' },
+    { city: 'Portland', state: 'OR', zip: '97201' },
+    { city: 'Denver', state: 'CO', zip: '80201' },
+    { city: 'Nashville', state: 'TN', zip: '37201' },
+    { city: 'Chicago', state: 'IL', zip: '60601' },
+    { city: 'Phoenix', state: 'AZ', zip: '85001' },
+    { city: 'Atlanta', state: 'GA', zip: '30301' },
+    { city: 'Seattle', state: 'WA', zip: '98101' },
+    { city: 'Miami', state: 'FL', zip: '33101' },
+    { city: 'Minneapolis', state: 'MN', zip: '55401' },
   ],
 };
 
@@ -324,8 +324,8 @@ function _pick(arr) {
  * @returns {{orderId: string, customer: {name: string, email: string, address: string}}}
  */
 function generateFakeOrderIdentity() {
-  const first  = _pick(_fakeData.firstNames);
-  const last   = _pick(_fakeData.lastNames);
+  const first = _pick(_fakeData.firstNames);
+  const last = _pick(_fakeData.lastNames);
   const number = Math.floor(Math.random() * 9000) + 100;
   const street = _pick(_fakeData.streets);
   const locale = _pick(_fakeData.cities);
@@ -334,8 +334,8 @@ function generateFakeOrderIdentity() {
   return {
     orderId,
     customer: {
-      name:    `${first} ${last}`,
-      email:   `${first.toLowerCase()}.${last.toLowerCase()}@example.com`,
+      name: `${first} ${last}`,
+      email: `${first.toLowerCase()}.${last.toLowerCase()}@example.com`,
       address: `${number} ${street}, ${locale.city}, ${locale.state} ${locale.zip}`,
     },
   };
@@ -380,9 +380,9 @@ const rumEvents = [];
  * @returns {[string, string]} Tuple of [columnA header, columnB header]
  */
 function getColHeaders(type) {
-  if (type === 'view')     return ['path', 'hash'];
-  if (type === 'action')   return ['name', 'payload'];
-  if (type === 'error')    return ['message', 'source'];
+  if (type === 'view') return ['path', 'hash'];
+  if (type === 'action') return ['name', 'payload'];
+  if (type === 'error') return ['message', 'source'];
   if (type === 'long_task') return ['duration', ''];
   return ['detail', ''];
 }
@@ -429,10 +429,10 @@ function rerenderTable() {
     return;
   }
   tbody.innerHTML = visible.map(e => {
-    const tc = ['view','action','resource','error','long_task'].includes(e.type) ? e.type : 'other';
+    const tc = ['view', 'action', 'resource', 'error', 'long_task'].includes(e.type) ? e.type : 'other';
     const [a, b] = e.cols;
-    const aEsc = a.replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const bEsc = b.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const aEsc = a.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const bEsc = b.replace(/</g, '&lt;').replace(/>/g, '&gt;');
     return `<tr>
       <td>${e.time}</td>
       <td><span class="type-badge ${tc}">${e.type}</span></td>

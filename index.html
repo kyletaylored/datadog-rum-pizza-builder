@@ -31,20 +31,6 @@
     d=o.createElement(u);d.async=1;d.src=n;d.crossOrigin=''
     n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
   })(window,document,'script','https://www.datadoghq-browser-agent.com/us1/v6/datadog-rum.js','DD_RUM')
-  window.DD_RUM.onReady(function() {
-    window.DD_RUM.init({
-      clientToken: 'pub067eb57994325a05bf401b11a686e8e3',
-      applicationId: '4a79b017-ea18-4839-9153-ce2b058b4db6',
-      site: 'datadoghq.com',
-      service: 'datadog-demo-app',
-      env: 'demo',
-      sessionSampleRate: 100,
-      sessionReplaySampleRate: 100,
-      trackBfcacheViews: true,
-      defaultPrivacyLevel: 'mask-user-input',
-      beforeSend: (event) => { logRumEvent(event); return true; }
-    });
-  })
 </script>
 <script>
   (function(h,o,u,n,d) {
@@ -52,17 +38,8 @@
     d=o.createElement(u);d.async=1;d.src=n;d.crossOrigin=''
     n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
   })(window,document,'script','https://www.datadoghq-browser-agent.com/us1/v6/datadog-logs.js','DD_LOGS')
-  window.DD_LOGS.onReady(function() {
-    window.DD_LOGS.init({
-      clientToken: 'pub067eb57994325a05bf401b11a686e8e3',
-      site: 'datadoghq.com',
-      service: 'datadog-demo-app',
-      env: 'demo',
-      forwardErrorsToLogs: true,
-      sessionSampleRate: 100,
-    });
-  })
 </script>
+<script src="config.js"></script>
 <link rel="stylesheet" href="style.css">
 <script>
   // Apply saved theme before paint to avoid flash.

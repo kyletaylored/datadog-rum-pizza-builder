@@ -46,6 +46,43 @@ if (window.location.hash) {
 }
 
 /**
+ * Initialize the Datadog RUM SDK using shared config from window.DD_CONFIG.
+ * The beforeSend callback feeds every event into the on-page live log table.
+ */
+window.DD_RUM && window.DD_RUM.onReady(function () {
+  var cfg = window.DD_CONFIG || {};
+  window.DD_RUM.init({
+    applicationId: cfg.applicationId,
+    clientToken: cfg.clientToken,
+    site: cfg.site,
+    service: cfg.service,
+    version: cfg.version,
+    env: cfg.env,
+    sessionSampleRate: 100,
+    sessionReplaySampleRate: 100,
+    trackBfcacheViews: true,
+    defaultPrivacyLevel: 'mask-user-input',
+    beforeSend: function (event) { logRumEvent(event); return true; },
+  });
+});
+
+/**
+ * Initialize the Datadog Browser Logs SDK using shared config from window.DD_CONFIG.
+ */
+window.DD_LOGS && window.DD_LOGS.onReady(function () {
+  var cfg = window.DD_CONFIG || {};
+  window.DD_LOGS.init({
+    clientToken: cfg.clientToken,
+    site: cfg.site,
+    service: cfg.service,
+    version: cfg.version,
+    env: cfg.env,
+    forwardErrorsToLogs: true,
+    sessionSampleRate: 100,
+  });
+});
+
+/**
  * Whether the current session is a Datadog Synthetics browser test,
  * detected via the user agent string injected by the test runner.
  *

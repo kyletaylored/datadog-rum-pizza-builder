@@ -23,6 +23,51 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
+      - name: Generate config.js from template
+        env:
+          DD_APP_ID: ${{ secrets.DD_APP_ID }}
+          DD_CLIENT_TOKEN: ${{ secrets.DD_CLIENT_TOKEN }}
+        run: |
+          sed \
+            -e "s/%%DD_APP_ID%%/${DD_APP_ID}/" \
+            -e "s/%%DD_CLIENT_TOKEN%%/${DD_CLIENT_TOKEN}/" \
+            -e "s/%%VERSION%%/${GITHUB_SHA:0:7}/" \
+            config.template.js > config.js
+
+      - name: Validate config.js
+        run: |
+          # Fast check: no unreplaced placeholders
+          if grep -q '%%' config.js; then
+            echo "ERROR: Unreplaced placeholders remain in config.js — check that DD_APP_ID and DD_CLIENT_TOKEN secrets are set"
+            grep '%%' config.js
+            exit 1
+          fi
+
+          # Full validation: required fields are present and non-empty
+          node - << 'EOF'
+          const fs = require('fs');
+
+          // Mock browser globals used by config.js
+          global.window = { location: { hostname: 'kyletaylored.github.io' } };
+
+          eval(fs.readFileSync('config.js', 'utf8'));
+
+          const cfg = window.DD_CONFIG;
+          const required = ['applicationId', 'clientToken', 'site', 'service', 'version'];
+          const missing = required.filter(k => !cfg[k]);
+
+          if (missing.length) {
+            console.error('ERROR: Missing or empty fields in DD_CONFIG:', missing.join(', '));
+            process.exit(1);
+          }
+
+          console.log('config.js validation passed');
+          console.log('  service:', cfg.service);
+          console.log('  version:', cfg.version);
+          console.log('  env:    ', cfg.env);
+          EOF
+
       - name: Setup Pages
         uses: actions/configure-pages@v6
       - name: Upload artifact

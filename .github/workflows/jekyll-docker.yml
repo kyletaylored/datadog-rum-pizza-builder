@@ -85,8 +85,8 @@ jobs:
           npx --yes terser app.js \
             --source-map "url='app.js.map'" \
             --output app.js \
-            --compress false \
-            --mangle false
+            --no-compress \
+            --no-mangle
 
       - name: Upload source maps to Datadog
         env:

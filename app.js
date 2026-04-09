@@ -71,7 +71,7 @@ function colorizeJson(obj) {
  * Runs once; subsequent calls are no-ops.
  */
 function renderConfigTable() {
-  const rumEl  = document.getElementById('config-rum-json');
+  const rumEl = document.getElementById('config-rum-json');
   const logsEl = document.getElementById('config-logs-json');
   if (!rumEl || rumEl.dataset.rendered) return;
 
@@ -79,30 +79,30 @@ function renderConfigTable() {
   const masked = cfg.clientToken ? cfg.clientToken.slice(0, 8) + '••••••••' : '—';
 
   const rumConfig = {
-    applicationId:           cfg.applicationId  || '—',
-    clientToken:             masked,
-    site:                    cfg.site            || '—',
-    service:                 cfg.service         || '—',
-    env:                     cfg.env             || '—',
-    version:                 cfg.version         || '—',
-    sessionSampleRate:       100,
+    applicationId: cfg.applicationId || '—',
+    clientToken: masked,
+    site: cfg.site || '—',
+    service: cfg.service || '—',
+    env: cfg.env || '—',
+    version: cfg.version || '—',
+    sessionSampleRate: 100,
     sessionReplaySampleRate: 100,
-    trackBfcacheViews:       true,
-    defaultPrivacyLevel:     'mask-user-input',
-    sessionPersistence:      'local-storage',
+    trackBfcacheViews: true,
+    defaultPrivacyLevel: 'mask-user-input',
+    sessionPersistence: 'local-storage',
   };
 
   const logsConfig = {
-    clientToken:         masked,
-    site:                cfg.site    || '—',
-    service:             cfg.service || '—',
-    env:                 cfg.env     || '—',
-    version:             cfg.version || '—',
+    clientToken: masked,
+    site: cfg.site || '—',
+    service: cfg.service || '—',
+    env: cfg.env || '—',
+    version: cfg.version || '—',
     forwardErrorsToLogs: true,
-    sessionSampleRate:   100,
+    sessionSampleRate: 100,
   };
 
-  rumEl.innerHTML  = colorizeJson(rumConfig);
+  rumEl.innerHTML = colorizeJson(rumConfig);
   logsEl.innerHTML = colorizeJson(logsConfig);
   rumEl.dataset.rendered = '1';
 }
@@ -161,8 +161,8 @@ const isSynthetics = /DatadogSynthetics/i.test(navigator.userAgent);
  * For Synthetics runs: the wizard step at which a simulated error will fire,
  * blocking the test from completing the wizard. Set once at page load.
  *
- * - 90% of runs complete cleanly (null).
- * - 10% of runs fail at a randomly chosen step between 2 and 5, simulating
+ * - 80% of runs complete cleanly (null).
+ * - 20% of runs fail at a randomly chosen step between 2 and 5, simulating
  *   users who abandon mid-wizard due to an error.
  *
  * Step 1 is excluded so the test always gets past the first choice before
@@ -172,9 +172,22 @@ const isSynthetics = /DatadogSynthetics/i.test(navigator.userAgent);
  */
 const syntheticFailStep = (() => {
   if (!isSynthetics) return null;
-  if (Math.random() < 0.95) return null;
+  if (Math.random() < 0.80) return null;
   return Math.floor(Math.random() * 4) + 2; // 2, 3, 4, or 5
 })();
+
+// Tag the RUM session with the intended fail step so sessions can be filtered
+// in the RUM Explorer by @context.synthetic.intended_fail_step.
+if (isSynthetics) {
+  window.DD_RUM && window.DD_RUM.onReady(function () {
+    window.DD_RUM.setGlobalContext({
+      synthetic: {
+        intended_fail_step: syntheticFailStep,
+        will_fail: syntheticFailStep !== null,
+      },
+    });
+  });
+}
 
 /**
  * The step number that has been killed by a synthetic error injection, if any.
@@ -255,8 +268,13 @@ function injectStepError(step) {
   // Disable the continue button so the test cannot advance.
   if (continueBtn) continueBtn.disabled = true;
 
-  // Throw so RUM captures a real error event for this view.
-  throw new Error(message);
+  const error = new Error(message);
+
+  // console.error is captured by RUM automatically (source: console) and
+  // forwarded to Logs via forwardErrorsToLogs — no custom addError needed.
+  console.error('[Synthetic error injection] Step', step, '—', message);
+
+  throw error;
 }
 
 /**

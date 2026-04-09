@@ -3,21 +3,24 @@
  * Persists the preference to localStorage so it survives page refreshes.
  * Updates the toggle button icon to reflect the current mode.
  */
-function toggleTheme() {
-  const html = document.documentElement;
-  const isDark = html.getAttribute('data-theme') === 'dark';
-  const next = isDark ? 'light' : 'dark';
-  html.setAttribute('data-theme', next);
-  document.getElementById('theme-toggle').textContent = next === 'dark' ? '☀️' : '🌙';
+/**
+ * Toggle between light and dark mode driven by the switch checkbox state.
+ * Persists the preference to localStorage so it survives page refreshes.
+ *
+ * @param {HTMLInputElement} checkbox - The switch input element
+ */
+function toggleTheme(checkbox) {
+  const next = checkbox.checked ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next);
   localStorage.setItem('theme', next);
 }
 
-// Sync toggle button icon with the theme that was applied in <head>.
+// Sync switch checked state with the theme applied in <head>.
 (function () {
   const saved = localStorage.getItem('theme');
   if (saved) {
-    const btn = document.getElementById('theme-toggle');
-    if (btn) btn.textContent = saved === 'dark' ? '☀️' : '🌙';
+    const toggle = document.getElementById('theme-toggle');
+    if (toggle) toggle.checked = saved === 'dark';
   }
 })();
 
@@ -28,9 +31,9 @@ function toggleTheme() {
  * @param {'build'|'results-tab'} tab - The tab identifier to activate
  */
 function switchTab(tab) {
-  const panels = { 'build': 'tab-build', 'results-tab': 'tab-results' };
-  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
-    const isActive = (i === 0 && tab === 'build') || (i === 1 && tab === 'results-tab');
+  const panels = { 'build': 'tab-build', 'results-tab': 'tab-results', 'config': 'tab-config' };
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    const isActive = btn.getAttribute('aria-controls') === panels[tab];
     btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-selected', isActive);
   });
@@ -38,6 +41,69 @@ function switchTab(tab) {
     document.getElementById(id).style.display = 'none';
   });
   document.getElementById(panels[tab]).style.display = 'block';
+
+  if (tab === 'config') renderConfigTable();
+}
+
+/**
+ * Syntax-highlight a JSON object for display in a <pre> block.
+ * Keys are purple, strings green, numbers/booleans/null orange.
+ *
+ * @param {Object} obj
+ * @returns {string} HTML string with <span> color wrappers
+ */
+function colorizeJson(obj) {
+  return JSON.stringify(obj, null, 2).replace(
+    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+    match => {
+      let cls = 'json-num';
+      if (/^"/.test(match)) cls = /:$/.test(match) ? 'json-key' : 'json-str';
+      else if (/true|false/.test(match)) cls = 'json-bool';
+      else if (/null/.test(match)) cls = 'json-null';
+      return `<span class="${cls}">${match}</span>`;
+    }
+  );
+}
+
+/**
+ * Populate the Config tab with colorized JSON for the RUM and Logs SDK configs.
+ * Masks the clientToken — shows only the first 8 characters.
+ * Runs once; subsequent calls are no-ops.
+ */
+function renderConfigTable() {
+  const rumEl  = document.getElementById('config-rum-json');
+  const logsEl = document.getElementById('config-logs-json');
+  if (!rumEl || rumEl.dataset.rendered) return;
+
+  const cfg = window.DD_CONFIG || {};
+  const masked = cfg.clientToken ? cfg.clientToken.slice(0, 8) + '••••••••' : '—';
+
+  const rumConfig = {
+    applicationId:           cfg.applicationId  || '—',
+    clientToken:             masked,
+    site:                    cfg.site            || '—',
+    service:                 cfg.service         || '—',
+    env:                     cfg.env             || '—',
+    version:                 cfg.version         || '—',
+    sessionSampleRate:       100,
+    sessionReplaySampleRate: 100,
+    trackBfcacheViews:       true,
+    defaultPrivacyLevel:     'mask-user-input',
+  };
+
+  const logsConfig = {
+    clientToken:         masked,
+    site:                cfg.site    || '—',
+    service:             cfg.service || '—',
+    env:                 cfg.env     || '—',
+    version:             cfg.version || '—',
+    forwardErrorsToLogs: true,
+    sessionSampleRate:   100,
+  };
+
+  rumEl.innerHTML  = colorizeJson(rumConfig);
+  logsEl.innerHTML = colorizeJson(logsConfig);
+  rumEl.dataset.rendered = '1';
 }
 
 // Clear any stale fragment left over from a previous session on page load.

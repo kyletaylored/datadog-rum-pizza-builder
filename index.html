@@ -64,7 +64,6 @@
           <div class="sidebar-subtitle">Datadog RUM Training</div>
         </div>
       </div>
-      <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark mode">🌙</button>
     </div>
 
     <div class="sidebar-intro">
@@ -150,9 +149,15 @@ Window:     7-day rolling</pre>
     </nav>
 
     <footer class="sidebar-footer">
-      Built by <a href="https://github.com/kyletaylored" target="_blank" rel="noopener">Kyle Taylor</a> &middot;
-      <a href="https://www.datadoghq.com" target="_blank" rel="noopener">Datadog</a> &middot;
-      <a href="https://github.com/kyletaylored/datadog-rum-pizza-builder" target="_blank" rel="noopener">GitHub</a>
+      <div class="sidebar-footer-links">
+        Built by <a href="https://github.com/kyletaylored" target="_blank" rel="noopener">Kyle Taylor</a> &middot;
+        <a href="https://github.com/kyletaylored/datadog-rum-pizza-builder" target="_blank" rel="noopener">GitHub</a>
+      </div>
+      <label class="theme-toggle" aria-label="Toggle light/dark mode">
+        <span class="theme-icon">☀️</span>
+        <input type="checkbox" role="switch" id="theme-toggle" onchange="toggleTheme(this)">
+        <span class="theme-icon">🌙</span>
+      </label>
     </footer>
 
   </aside><!-- /.training-sidebar -->
@@ -163,6 +168,7 @@ Window:     7-day rolling</pre>
     <nav class="tab-nav" role="tablist">
       <button class="tab-btn active" role="tab" aria-selected="true"  aria-controls="tab-build"   onclick="switchTab('build')">🍕 Build</button>
       <button class="tab-btn"        role="tab" aria-selected="false" aria-controls="tab-results" onclick="switchTab('results-tab')">📊 Results</button>
+      <button class="tab-btn"        role="tab" aria-selected="false" aria-controls="tab-config"  onclick="switchTab('config')">⚙️ Config</button>
     </nav>
 
     <!-- Build tab -->
@@ -308,6 +314,18 @@ Window:     7-day rolling</pre>
         allowfullscreen>
       </iframe>
     </div><!-- /#tab-results -->
+
+    <!-- Config tab -->
+    <div id="tab-config" role="tabpanel" class="tab-panel" style="display:none">
+      <div class="container">
+        <h3>Active SDK Configuration</h3>
+        <p>The <code>DD_CONFIG</code> object is shared by both SDKs and generated at deploy time by the GitHub Actions workflow. Values for <code>env</code> and <code>version</code> are resolved at runtime.</p>
+        <h4>RUM</h4>
+        <pre id="config-rum-pre" class="config-code"><code id="config-rum-json"></code></pre>
+        <h4>Logs</h4>
+        <pre id="config-logs-pre" class="config-code"><code id="config-logs-json"></code></pre>
+      </div>
+    </div><!-- /#tab-config -->
 
   </div><!-- /.training-main -->
 

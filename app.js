@@ -384,9 +384,11 @@ function renderResults() {
   ).join('');
 
   const pizzaOrder = Object.fromEntries(Object.values(selections).map(s => [s.label.toLowerCase(), s.value]));
-  const { orderId, customer } = generateFakeOrderIdentity();
+  const { orderId, userId, customer } = generateFakeOrderIdentity();
 
   window.DD_RUM && window.DD_RUM.onReady(function () {
+    window.DD_RUM.setUser({ id: userId, name: customer.name, email: customer.email });
+    console.log('[DD RUM] User set', { id: userId, name: customer.name, email: customer.email });
     console.log('[DD RUM] Action fired: pizza_order_submitted', { pizza_order: pizzaOrder });
     window.DD_RUM.addAction('pizza_order_submitted', { pizza_order: pizzaOrder });
   });
@@ -394,6 +396,7 @@ function renderResults() {
   window.DD_LOGS && window.DD_LOGS.onReady(function () {
     const logPayload = {
       order_id: orderId,
+      usr: { id: userId, name: customer.name, email: customer.email },
       customer,
       pizza_order: pizzaOrder,
     };
@@ -440,10 +443,26 @@ function _pick(arr) {
 }
 
 /**
+ * Generate a stable numeric ID from a string using the djb2 hash algorithm.
+ * Same input always produces the same output, simulating a returning user
+ * whose ID is derived from their name and email rather than a database key.
+ *
+ * @param {string} str
+ * @returns {string} Unsigned 32-bit integer as a decimal string
+ */
+function _hashId(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h) ^ str.charCodeAt(i);
+  return (h >>> 0).toString();
+}
+
+/**
  * Generate a fake customer order identity for log enrichment.
  * All data is randomly composed from fictional pools — no real PII.
+ * The user ID is an idempotent hash of name + email, so the same fictional
+ * person will carry the same ID across multiple sessions.
  *
- * @returns {{orderId: string, customer: {name: string, email: string, address: string}}}
+ * @returns {{orderId: string, userId: string, customer: {name: string, email: string, address: string}}}
  */
 function generateFakeOrderIdentity() {
   const first = _pick(_fakeData.firstNames);
@@ -452,14 +471,14 @@ function generateFakeOrderIdentity() {
   const street = _pick(_fakeData.streets);
   const locale = _pick(_fakeData.cities);
   const orderId = 'ORD-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+  const name = `${first} ${last}`;
+  const email = `${first.toLowerCase()}.${last.toLowerCase()}@example.com`;
+  const userId = _hashId(name + email);
 
   return {
     orderId,
-    customer: {
-      name: `${first} ${last}`,
-      email: `${first.toLowerCase()}.${last.toLowerCase()}@example.com`,
-      address: `${number} ${street}, ${locale.city}, ${locale.state} ${locale.zip}`,
-    },
+    userId,
+    customer: { name, email, address: `${number} ${street}, ${locale.city}, ${locale.state} ${locale.zip}` },
   };
 }
 

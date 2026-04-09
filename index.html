@@ -87,7 +87,7 @@
             <span class="step-chip">#results</span>
           </div>
           <p>You can also correlate view events with <strong>error</strong> events on the same hash to understand whether a drop-off was caused by a page problem or the user simply leaving.</p>
-          <pre>source:browser service:datadog-demo-app @type:view
+          <pre>source:browser service:datadog-rum-pizza-builder @type:view
 | stats count() by @view.url_hash</pre>
         </div>
       </details>
@@ -130,6 +130,7 @@ Group by:    @context.pizza_order.crust
              @geo.country
              @geo.country_iso_code</pre>
           <p>The <code>@geo.country</code> dimension comes from RUM's automatic geo-enrichment — resolved from the user's IP and attached to every event for free.</p>
+          <p>At submission, the app also calls <code>DD_RUM.setUser()</code> with a generated name, email, and a deterministic ID hashed from those values. This lets you filter all sessions for a given fictional user via <code>@usr.id</code>, <code>@usr.name</code>, or <code>@usr.email</code> in the Explorer — simulating a returning customer.</p>
           <p>The <strong>Results</strong> tab shows the metric broken down using <em>toplist</em>, <em>timeseries</em>, <em>sunburst</em>, and <em>geomap</em> widgets, each filterable via dashboard template variables.</p>
         </div>
       </details>
@@ -138,7 +139,7 @@ Group by:    @context.pizza_order.crust
         <summary><span class="sidebar-tag tag-slo">SLO</span><span class="sidebar-section-title">Synthetic tests &amp; error budget</span></summary>
         <div class="sidebar-section-body">
           <p>A Datadog <strong>Browser Synthetic test</strong> runs against this app on a schedule, simulating the full wizard from start to finish. Option order is randomized per run so "always click first" produces varied data.</p>
-          <p>On ~60% of runs, a simulated JS error is injected at a random step, blocking completion and producing intentional funnel drop-off for training purposes.</p>
+          <p>On ~20% of runs, a simulated JS error is injected at a random step, blocking completion and producing intentional funnel drop-off for training purposes. Each session is tagged with <code>@context.synthetic.will_fail</code> and <code>@context.synthetic.intended_fail_step</code> so you can filter intentional failures in the Explorer. The error surfaces as <code>@error.source:console</code> — captured automatically from <code>console.error()</code> with no custom instrumentation.</p>
           <p>An <strong>SLO</strong> tracks completion rate over a rolling window:</p>
           <pre>SLO type:   Monitor-based
 Target:     99% uptime (1% error budget)

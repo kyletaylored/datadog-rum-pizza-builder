@@ -292,6 +292,8 @@ progress { width: 100%; }
 .option-card .emoji { font-size: 2rem; display: block; margin-bottom: 0.4rem; }
 .option-card .label { font-weight: 600; }
 .option-card .desc { font-size: 0.8rem; color: var(--pico-muted-color); }
+.option-card.selected .label { color: #fff; }
+.option-card.selected .desc { color: rgba(255, 255, 255, 0.72); }
 
 /* ============================================================
    Results list

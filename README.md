@@ -4,6 +4,16 @@ A self-contained demo app for exploring [Datadog Real User Monitoring (RUM)](htt
 
 **[Live Demo →](https://kyletaylored.github.io/datadog-rum-pizza-builder/)**
 
+![Pizza Builder wizard interface](assets/pizza-builder.webp)
+
+---
+
+## Results dashboard
+
+The Results tab embeds a live Datadog dashboard showing metric charts for pizza order submissions — broken down by crust, sauce, cheese, toppings, size, and geography.
+
+![Results tab showing embedded Datadog dashboard](assets/pizza-builder-results.webp)
+
 ---
 
 ## What this demonstrates

@@ -78,6 +78,25 @@ jobs:
           console.log('  env:    ', cfg.env);
           EOF
 
+      - name: Generate source maps
+        run: |
+          # Produce identity source maps (no minification) so Datadog can link
+          # stack frames to exact GitHub file + line references.
+          npx --yes terser app.js \
+            --source-map "url='app.js.map'" \
+            --output app.js \
+            --compress false \
+            --mangle false
+
+      - name: Upload source maps to Datadog
+        env:
+          DATADOG_API_KEY: ${{ secrets.DD_API_KEY }}
+        run: |
+          npx --yes @datadog/datadog-ci sourcemaps upload . \
+            --service datadog-rum-pizza-builder \
+            --release-version ${GITHUB_SHA:0:7} \
+            --minified-path-prefix https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/
+
       - name: Setup Pages
         uses: actions/configure-pages@v6
       - name: Upload artifact

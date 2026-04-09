@@ -158,32 +158,69 @@ window.DD_LOGS && window.DD_LOGS.onReady(function () {
 const isSynthetics = /DatadogSynthetics/i.test(navigator.userAgent);
 
 /**
+ * Detect the broad geographic region of the current Synthetics worker using
+ * the IANA timezone from the Intl API — no permissions or network calls needed.
+ * Datadog managed locations set the system timezone to match the test region.
+ *
+ * Used to apply region-specific fail rates so error distribution reflects
+ * realistic differences across APAC, EMEA, and AMER test locations.
+ *
+ * @returns {'APAC'|'EMEA'|'AMER'|'unknown'}
+ */
+function getSyntheticsRegion() {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (/^(Asia|Australia|Pacific)\//i.test(tz)) return 'APAC';
+    if (/^(Europe|Africa)\//i.test(tz)) return 'EMEA';
+    if (/^America\//i.test(tz)) return 'AMER';
+    return 'unknown';
+  } catch (e) {
+    return 'unknown';
+  }
+}
+
+/**
+ * Per-region fail rates for synthetic error injection.
+ * Adjust these once real timezone data has been verified from test runs.
+ *
+ * @type {Object.<string, number>}
+ */
+const SYNTHETIC_FAIL_RATES = {
+  APAC:    0.15,
+  EMEA:    0.20,
+  AMER:    0.25,
+  unknown: 0.20,
+};
+
+const syntheticsRegion = isSynthetics ? getSyntheticsRegion() : null;
+
+/**
  * For Synthetics runs: the wizard step at which a simulated error will fire,
  * blocking the test from completing the wizard. Set once at page load.
  *
- * - 80% of runs complete cleanly (null).
- * - 20% of runs fail at a randomly chosen step between 2 and 5, simulating
- *   users who abandon mid-wizard due to an error.
- *
- * Step 1 is excluded so the test always gets past the first choice before
- * any failure, producing richer partial-funnel data.
+ * Fail rate varies by region (see SYNTHETIC_FAIL_RATES). Step 1 is excluded
+ * so the test always gets past the first choice before any failure, producing
+ * richer partial-funnel data.
  *
  * @type {number|null}
  */
 const syntheticFailStep = (() => {
   if (!isSynthetics) return null;
-  if (Math.random() < 0.80) return null;
+  const failRate = SYNTHETIC_FAIL_RATES[syntheticsRegion] ?? 0.20;
+  if (Math.random() > failRate) return null;
   return Math.floor(Math.random() * 4) + 2; // 2, 3, 4, or 5
 })();
 
-// Tag the RUM session with the intended fail step so sessions can be filtered
-// in the RUM Explorer by @context.synthetic.intended_fail_step.
+// Tag the RUM session with synthetic metadata so sessions can be filtered in
+// the RUM Explorer by @context.synthetic.* attributes.
 if (isSynthetics) {
   window.DD_RUM && window.DD_RUM.onReady(function () {
     window.DD_RUM.setGlobalContext({
       synthetic: {
-        intended_fail_step: syntheticFailStep,
-        will_fail: syntheticFailStep !== null,
+        region:              syntheticsRegion,
+        timezone:            Intl.DateTimeFormat().resolvedOptions().timeZone,
+        intended_fail_step:  syntheticFailStep,
+        will_fail:           syntheticFailStep !== null,
       },
     });
   });

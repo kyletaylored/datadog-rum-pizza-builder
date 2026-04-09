@@ -35,6 +35,15 @@ jobs:
             -e "s/%%VERSION%%/${GITHUB_SHA:0:7}/" \
             config.template.js > config.js
 
+      - name: Inject GitHub URLs
+        run: |
+          PAGES_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}"
+          GITHUB_REPO_URL="https://github.com/${GITHUB_REPOSITORY}"
+          sed -i \
+            -e "s|%%PAGES_URL%%|${PAGES_URL}|g" \
+            -e "s|%%GITHUB_REPO%%|${GITHUB_REPO_URL}|g" \
+            index.html README.md
+
       - name: Validate config.js
         run: |
           # Fast check: no unreplaced placeholders
@@ -48,8 +57,9 @@ jobs:
           node - << 'EOF'
           const fs = require('fs');
 
-          // Mock browser globals used by config.js
-          global.window = { location: { hostname: 'kyletaylored.github.io' } };
+          // Mock browser globals — simulate a GitHub Pages hostname
+          const owner = process.env.GITHUB_REPOSITORY_OWNER;
+          global.window = { location: { hostname: `${owner}.github.io` } };
 
           eval(fs.readFileSync('config.js', 'utf8'));
 

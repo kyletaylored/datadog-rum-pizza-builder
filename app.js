@@ -89,6 +89,7 @@ function renderConfigTable() {
     sessionReplaySampleRate: 100,
     trackBfcacheViews:       true,
     defaultPrivacyLevel:     'mask-user-input',
+    sessionPersistence:      'local-storage',
   };
 
   const logsConfig = {

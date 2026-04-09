@@ -2,7 +2,7 @@
 
 A self-contained demo app for exploring [Datadog Real User Monitoring (RUM)](https://docs.datadoghq.com/real_user_monitoring/) — built as an interactive pizza order wizard.
 
-**[Live Demo →](https://kyletaylored.github.io/datadog-rum-pizza-builder/)**
+**[Live Demo →](%%PAGES_URL%%/)**
 
 ![Pizza Builder wizard interface](assets/pizza-builder.webp)
 

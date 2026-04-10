@@ -87,6 +87,14 @@ jobs:
             --output app.js \
             --no-compress \
             --no-mangle
+          # Patch the `file` field — terser doesn't always derive it from --output,
+          # and datadog-ci uses it to construct the JS URL for the sourcemap upload.
+          node -e "
+            const fs = require('fs');
+            const map = JSON.parse(fs.readFileSync('./app.js.map', 'utf8'));
+            map.file = 'app.js';
+            fs.writeFileSync('./app.js.map', JSON.stringify(map));
+          "
         
       - name: Validate source map
         run: |

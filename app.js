@@ -169,10 +169,20 @@ const isSynthetics = /DatadogSynthetics/i.test(navigator.userAgent);
  */
 function getSyntheticsRegion() {
   try {
+    // Primary signal: IANA timezone. Reliable on real browsers but Selenium/
+    // Synthetics workers may report UTC regardless of physical location.
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (/^(Asia|Australia|Pacific)\//i.test(tz)) return 'APAC';
     if (/^(Europe|Africa)\//i.test(tz)) return 'EMEA';
     if (/^America\//i.test(tz)) return 'AMER';
+
+    // Fallback: browser locale set by the Selenium worker for its region.
+    // Less reliable than timezone but may be configured per managed location.
+    const lang = navigator.language || '';
+    if (/^(en-AU|en-NZ|zh|ja|ko)/i.test(lang)) return 'APAC';
+    if (/^(en-GB|de|fr|es-ES|it|nl|pl|pt-PT)/i.test(lang)) return 'EMEA';
+    if (/^(en-US|en-CA|es-MX|pt-BR)/i.test(lang)) return 'AMER';
+
     return 'unknown';
   } catch (e) {
     return 'unknown';
@@ -219,6 +229,7 @@ if (isSynthetics) {
       synthetic: {
         region:              syntheticsRegion,
         timezone:            Intl.DateTimeFormat().resolvedOptions().timeZone,
+        language:            navigator.language || 'unknown',
         intended_fail_step:  syntheticFailStep,
         will_fail:           syntheticFailStep !== null,
       },

@@ -138,9 +138,6 @@ window.DD_RUM && window.DD_RUM.onReady(function () {
       logRumEvent(event);
       return true;
     },
-    allowedTracingUrls: [
-      (url) => url.includes(window.location.host)
-    ],
   });
 });
 

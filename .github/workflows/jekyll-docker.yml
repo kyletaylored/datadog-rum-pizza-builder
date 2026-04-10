@@ -83,7 +83,7 @@ jobs:
           # Produce identity source maps (no minification) so Datadog can link
           # stack frames to exact GitHub file + line references.
           npx --yes terser app.js \
-            --source-map "filename='app.js.map',url='app.js.map',root=''" \
+            --source-map "url='app.js.map',root=''" \
             --output app.js \
             --no-compress \
             --no-mangle
@@ -96,14 +96,12 @@ jobs:
       - name: Upload source maps to Datadog
         env:
           DATADOG_API_KEY: ${{ secrets.DD_API_KEY }}
-          DATADOG_SITE: datadoghq.com
         run: |
           PAGES_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}"
           npx --yes @datadog/datadog-ci sourcemaps upload . \
             --service datadog-rum-pizza-builder \
             --release-version ${GITHUB_SHA:0:7} \
-            --minified-path-prefix ${PAGES_URL}/ \
-            --repository-url https://github.com/${GITHUB_REPOSITORY}
+            --minified-path-prefix ${PAGES_URL}/
 
       - name: Setup Pages
         uses: actions/configure-pages@v6

@@ -176,12 +176,15 @@ const logger = new Proxy({}, {
 });
 
 /**
- * Whether the current session is a Datadog Synthetics browser test,
- * detected via the user agent string injected by the test runner.
+ * Whether the current session is a Datadog Synthetics browser test.
+ * Detected via the user agent string injected by the test runner, or by the
+ * presence of `?synthetic` in the URL for local debugging (e.g. open
+ * index.html?synthetic to exercise the full Synthetics code path in a browser).
  *
  * @type {boolean}
  */
-const isSynthetics = /DatadogSynthetics/i.test(navigator.userAgent);
+const isSynthetics = /DatadogSynthetics/i.test(navigator.userAgent)
+  || new URLSearchParams(window.location.search).has('synthetic');
 
 /**
  * Map a Fastly POP region string to our broad APAC/EMEA/AMER groupings.

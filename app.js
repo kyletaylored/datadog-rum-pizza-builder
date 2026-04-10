@@ -99,6 +99,7 @@ function renderConfigTable() {
     env: cfg.env || '—',
     version: cfg.version || '—',
     forwardErrorsToLogs: true,
+    forwardConsoleLogs: 'all',
     sessionSampleRate: 100,
   };
 
@@ -145,6 +146,7 @@ window.DD_LOGS && window.DD_LOGS.onReady(function () {
     version: cfg.version,
     env: cfg.env,
     forwardErrorsToLogs: true,
+    forwardConsoleLogs: 'all',
     sessionSampleRate: 100,
   });
 });
@@ -196,9 +198,9 @@ function getSyntheticsRegion() {
  * @type {Object.<string, number>}
  */
 const SYNTHETIC_FAIL_RATES = {
-  APAC:    0.15,
-  EMEA:    0.20,
-  AMER:    0.25,
+  APAC: 0.15,
+  EMEA: 0.20,
+  AMER: 0.25,
   unknown: 0.20,
 };
 
@@ -225,33 +227,26 @@ const syntheticFailStep = (() => {
 // determine which values (if any) vary by managed location. Temporary debug
 // code — remove once region detection is confirmed working.
 if (isSynthetics) {
-  window.DD_LOGS && window.DD_LOGS.onReady(function () {
-    const nav = window.navigator;
-    const intl = (() => {
-      try { return Intl.DateTimeFormat().resolvedOptions(); } catch (e) { return {}; }
-    })();
+  const nav = window.navigator;
+  const intl = (() => {
+    try { return Intl.DateTimeFormat().resolvedOptions(); } catch (e) { return {}; }
+  })();
 
-    window.DD_LOGS.logger.info('synthetics_worker_debug', {
-      // User agent
-      userAgent:          nav.userAgent,
-      // Language / locale signals
-      language:           nav.language,
-      languages:          nav.languages ? Array.from(nav.languages) : [],
-      // Timezone signals
-      timezone:           intl.timeZone,
-      locale:             intl.locale,
-      // Platform / hardware (userAgentData is the modern replacement for navigator.platform)
-      platform:           nav.userAgentData ? nav.userAgentData.platform : null,
+  console.info({
+    worker: {
+      userAgent: nav.userAgent,
+      language: nav.language,
+      languages: nav.languages ? Array.from(nav.languages) : [],
+      timezone: intl.timeZone,
+      locale: intl.locale,
+      platform: nav.userAgentData ? nav.userAgentData.platform : null,
       hardwareConcurrency: nav.hardwareConcurrency,
-      // Screen / window
-      screenWidth:        window.screen.width,
-      screenHeight:       window.screen.height,
-      devicePixelRatio:   window.devicePixelRatio,
-      // Connection (if available)
-      connectionType:     nav.connection ? nav.connection.effectiveType : null,
-      // Datadog Synthetics own globals (if exposed)
-      ddtVars:            typeof window._ddt !== 'undefined' ? window._ddt : null,
-    });
+      screenWidth: window.screen.width,
+      screenHeight: window.screen.height,
+      devicePixelRatio: window.devicePixelRatio,
+      connectionType: nav.connection ? nav.connection.effectiveType : null,
+      ddtVars: typeof window._ddt !== 'undefined' ? window._ddt : null,
+    },
   });
 }
 
@@ -261,11 +256,11 @@ if (isSynthetics) {
   window.DD_RUM && window.DD_RUM.onReady(function () {
     window.DD_RUM.setGlobalContext({
       synthetic: {
-        region:              syntheticsRegion,
-        timezone:            Intl.DateTimeFormat().resolvedOptions().timeZone,
-        language:            navigator.language || 'unknown',
-        intended_fail_step:  syntheticFailStep,
-        will_fail:           syntheticFailStep !== null,
+        region: syntheticsRegion,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        language: navigator.language || 'unknown',
+        intended_fail_step: syntheticFailStep,
+        will_fail: syntheticFailStep !== null,
       },
     });
   });
@@ -475,15 +470,11 @@ function renderResults() {
     window.DD_RUM.addAction('pizza_order_submitted', { pizza_order: pizzaOrder });
   });
 
-  window.DD_LOGS && window.DD_LOGS.onReady(function () {
-    const logPayload = {
-      order_id: orderId,
-      usr: { id: userId, name: customer.name, email: customer.email },
-      customer,
-      pizza_order: pizzaOrder,
-    };
-    console.log('[DD LOGS] Order submitted', logPayload);
-    window.DD_LOGS.logger.info('pizza_order_submitted', logPayload);
+  console.info('pizza_order_submitted', {
+    order_id: orderId,
+    usr: { id: userId, name: customer.name, email: customer.email },
+    customer,
+    pizza_order: pizzaOrder,
   });
 }
 

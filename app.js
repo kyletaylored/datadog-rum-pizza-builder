@@ -465,16 +465,16 @@ function renderResults() {
 
   window.DD_RUM && window.DD_RUM.onReady(function () {
     window.DD_RUM.setUser({ id: userId, name: customer.name, email: customer.email });
-    console.log('[DD RUM] User set', { id: userId, name: customer.name, email: customer.email });
-    console.log('[DD RUM] Action fired: pizza_order_submitted', { pizza_order: pizzaOrder });
     window.DD_RUM.addAction('pizza_order_submitted', { pizza_order: pizzaOrder });
   });
 
-  console.info('pizza_order_submitted', {
-    order_id: orderId,
-    usr: { id: userId, name: customer.name, email: customer.email },
-    customer,
-    pizza_order: pizzaOrder,
+  console.info({
+    pizza_order_submitted: {
+      order_id: orderId,
+      usr: { id: userId, name: customer.name, email: customer.email },
+      customer,
+      pizza_order: pizzaOrder,
+    }
   });
 }
 

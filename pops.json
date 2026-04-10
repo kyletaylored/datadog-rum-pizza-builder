@@ -1,0 +1,2388 @@
+[
+    {
+        "code": "ADL",
+        "name": "Adelaide",
+        "group": "Asia/Pacific",
+        "region": "APAC",
+        "stats_region": "anzac",
+        "billing_region": "Australia",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": -34.9285,
+            "longitude": 138.6007
+        }
+    },
+    {
+        "code": "QAS",
+        "name": "Agra",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 25.578,
+            "longitude": 91.876
+        }
+    },
+    {
+        "code": "QAU",
+        "name": "Ahmedabad",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 23.092,
+            "longitude": 72.673
+        }
+    },
+    {
+        "code": "QAV",
+        "name": "Ambala",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 30.364,
+            "longitude": 76.177
+        }
+    },
+    {
+        "code": "AMS",
+        "name": "Amsterdam",
+        "group": "Europe",
+        "region": "EU-Central",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 52.308613,
+            "longitude": 4.763889
+        },
+        "shield": "amsterdam-nl"
+    },
+    {
+        "code": "RTM",
+        "name": "Amsterdam",
+        "group": "Europe",
+        "region": "EU-Central",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 52.357,
+            "longitude": 4.951
+        }
+    },
+    {
+        "code": "PUT",
+        "name": "Anantapur",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 14.637,
+            "longitude": 77.565
+        }
+    },
+    {
+        "code": "QAW",
+        "name": "Asansol",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 21.393,
+            "longitude": 79.327
+        }
+    },
+    {
+        "code": "DCA",
+        "name": "Ashburn (Metro)",
+        "group": "United States",
+        "region": "US-East",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 38.944533,
+            "longitude": -77.455811
+        }
+    },
+    {
+        "code": "IAD",
+        "name": "Ashburn (Metro)",
+        "group": "United States",
+        "region": "US-East",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 38.944533,
+            "longitude": -77.455811
+        },
+        "shield": "iad-va-us"
+    },
+    {
+        "code": "PDK",
+        "name": "Atlanta (Metro)",
+        "group": "United States",
+        "region": "US-East",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 33.876819,
+            "longitude": -84.302921
+        },
+        "shield": "atlanta-ga-us"
+    },
+    {
+        "code": "AKL",
+        "name": "Auckland",
+        "group": "Asia/Pacific",
+        "region": "APAC",
+        "stats_region": "anzac",
+        "billing_region": "Australia",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": -37.008056,
+            "longitude": 174.791667
+        },
+        "shield": "auckland-akl"
+    },
+    {
+        "code": "QBK",
+        "name": "Bangalore",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 12.983,
+            "longitude": 77.751
+        }
+    },
+    {
+        "code": "QAH",
+        "name": "Bangalore Peenya",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 13.033,
+            "longitude": 77.559
+        }
+    },
+    {
+        "code": "BKK",
+        "name": "Bangkok",
+        "group": "Asia/Pacific",
+        "region": "Asia",
+        "stats_region": "asia",
+        "billing_region": "Asia",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 13.756,
+            "longitude": 100.501
+        }
+    },
+    {
+        "code": "QAJ",
+        "name": "Berhampur",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 24.078,
+            "longitude": 88.265
+        }
+    },
+    {
+        "code": "BER",
+        "name": "Berlin",
+        "group": "Europe",
+        "region": "EU-East",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 52.502,
+            "longitude": 13.369
+        }
+    },
+    {
+        "code": "QAF",
+        "name": "Bhopal",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 23.296,
+            "longitude": 77.354
+        }
+    },
+    {
+        "code": "QBL",
+        "name": "Bhopal",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 23.18,
+            "longitude": 77.46
+        }
+    },
+    {
+        "code": "QBM",
+        "name": "Bhubaneshwar",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 21.393,
+            "longitude": 79.327
+        }
+    },
+    {
+        "code": "QAB",
+        "name": "Bhubaneswar",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 20.296,
+            "longitude": 85.825
+        }
+    },
+    {
+        "code": "BOG",
+        "name": "Bogota",
+        "group": "South America",
+        "region": "SA-North",
+        "stats_region": "southamerica_std",
+        "billing_region": "South America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 4.711,
+            "longitude": -74.072
+        },
+        "shield": "bog-bogota-co"
+    },
+    {
+        "code": "BOS",
+        "name": "Boston",
+        "group": "United States",
+        "region": "US-East",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 42.364347,
+            "longitude": -71.005181
+        },
+        "shield": "bos-ma-us"
+    },
+    {
+        "code": "BSB",
+        "name": "Brasilia",
+        "group": "South America",
+        "region": "SA-East",
+        "stats_region": "southamerica_std",
+        "billing_region": "South America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": -15.7087,
+            "longitude": -47.9144
+        }
+    },
+    {
+        "code": "BNE",
+        "name": "Brisbane",
+        "group": "Asia/Pacific",
+        "region": "APAC",
+        "stats_region": "anzac",
+        "billing_region": "Australia",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": -27.384167,
+            "longitude": 153.1175
+        },
+        "shield": "brisbane-au"
+    },
+    {
+        "code": "BRU",
+        "name": "Brussels",
+        "group": "Europe",
+        "region": "EU-Central",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 50.871,
+            "longitude": 4.476
+        },
+        "shield": "bru-brussels-be"
+    },
+    {
+        "code": "EZE",
+        "name": "Buenos Aires",
+        "group": "South America",
+        "region": "SA-South",
+        "stats_region": "southamerica_std",
+        "billing_region": "South America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": -34.815,
+            "longitude": -58.5348
+        }
+    },
+    {
+        "code": "YYC",
+        "name": "Calgary",
+        "group": "United States",
+        "region": "North-America",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 51.047,
+            "longitude": -114.08
+        }
+    },
+    {
+        "code": "CPT",
+        "name": "Cape Town",
+        "group": "Africa",
+        "region": "South-Africa",
+        "stats_region": "africa_std",
+        "billing_region": "Africa",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": -33.97,
+            "longitude": 18.464
+        },
+        "shield": "cpt-capetown-za"
+    },
+    {
+        "code": "QAL",
+        "name": "Chandigarh",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 30.71,
+            "longitude": 76.703
+        }
+    },
+    {
+        "code": "MAA",
+        "name": "Chennai",
+        "group": "Asia/Pacific",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 12.9941,
+            "longitude": 80.1709
+        },
+        "shield": "maa-chennai-in"
+    },
+    {
+        "code": "QAP",
+        "name": "Chennai",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 13.022,
+            "longitude": 80.203
+        }
+    },
+    {
+        "code": "ORD",
+        "name": "Chicago",
+        "group": "United States",
+        "region": "US-Central",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 41.863,
+            "longitude": -87.641
+        }
+    },
+    {
+        "code": "RFD",
+        "name": "Chicago",
+        "group": "United States",
+        "region": "US-Central",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 41.863,
+            "longitude": -87.641
+        }
+    },
+    {
+        "code": "CHI",
+        "name": "Chicago (Metro)",
+        "group": "United States",
+        "region": "US-Central",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 41.863,
+            "longitude": -87.641
+        },
+        "shield": "chi-il-us"
+    },
+    {
+        "code": "CHC",
+        "name": "Christchurch",
+        "group": "Asia/Pacific",
+        "region": "APAC",
+        "stats_region": "anzac",
+        "billing_region": "Australia",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": -43.532,
+            "longitude": 172.636
+        },
+        "shield": "chc-christchurch-nz"
+    },
+    {
+        "code": "CMH",
+        "name": "Columbus",
+        "group": "United States",
+        "region": "US-East",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 40.116,
+            "longitude": -83.002
+        }
+    },
+    {
+        "code": "LCK",
+        "name": "Columbus",
+        "group": "United States",
+        "region": "US-East",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 40.116,
+            "longitude": -83.002
+        }
+    },
+    {
+        "code": "CPH",
+        "name": "Copenhagen",
+        "group": "Europe",
+        "region": "EU-East",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 55.728081,
+            "longitude": 12.37752
+        },
+        "shield": "cph-copenhagen-dk"
+    },
+    {
+        "code": "CWB",
+        "name": "Curitiba",
+        "group": "South America",
+        "region": "SA-East",
+        "stats_region": "southamerica_std",
+        "billing_region": "South America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": -25.459,
+            "longitude": -49.26
+        }
+    },
+    {
+        "code": "ADS",
+        "name": "Dallas (Metro)",
+        "group": "United States",
+        "region": "US-Central",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 32.896828,
+            "longitude": -97.037997
+        }
+    },
+    {
+        "code": "DFW",
+        "name": "Dallas (Metro)",
+        "group": "United States",
+        "region": "US-Central",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 32.896828,
+            "longitude": -97.037997
+        },
+        "shield": "dallas-tx-us"
+    },
+    {
+        "code": "DEL",
+        "name": "Delhi",
+        "group": "Asia/Pacific",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 28.506912,
+            "longitude": 77.378557
+        },
+        "shield": "del-delhi-in"
+    },
+    {
+        "code": "QAG",
+        "name": "Delhi Lawrence Road",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 28.684,
+            "longitude": 77.155
+        }
+    },
+    {
+        "code": "HDO",
+        "name": "Delhi-Vikaspuri",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 28.631,
+            "longitude": 77.069
+        }
+    },
+    {
+        "code": "DEN",
+        "name": "Denver",
+        "group": "United States",
+        "region": "US-Central",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 39.861656,
+            "longitude": -104.673178
+        },
+        "shield": "den-co-us"
+    },
+    {
+        "code": "DTW",
+        "name": "Detroit",
+        "group": "United States",
+        "region": "US-Central",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 42.448,
+            "longitude": -83.263
+        }
+    },
+    {
+        "code": "QAM",
+        "name": "Dhanbad",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 25.52,
+            "longitude": 85.27
+        }
+    },
+    {
+        "code": "DXB",
+        "name": "Dubai",
+        "group": "Asia/Pacific",
+        "region": "Asia",
+        "stats_region": "asia",
+        "billing_region": "Asia",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 25.032,
+            "longitude": 55.19
+        }
+    },
+    {
+        "code": "DUB",
+        "name": "Dublin",
+        "group": "Europe",
+        "region": "EU-West",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 53.35,
+            "longitude": -6.26
+        },
+        "shield": "dub-dublin-ie"
+    },
+    {
+        "code": "FOR",
+        "name": "Fortaleza",
+        "group": "South America",
+        "region": "SA-East",
+        "stats_region": "southamerica_std",
+        "billing_region": "South America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": -3.735,
+            "longitude": -38.458
+        }
+    },
+    {
+        "code": "FRA",
+        "name": "Frankfurt (Metro)",
+        "group": "Europe",
+        "region": "EU-East",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 50.026421,
+            "longitude": 8.543125
+        },
+        "shield": "frankfurt-de"
+    },
+    {
+        "code": "WIE",
+        "name": "Frankfurt - Interxion",
+        "group": "Europe",
+        "region": "EU-East",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 50.11975,
+            "longitude": 8.738472
+        }
+    },
+    {
+        "code": "FJR",
+        "name": "Fujairah Al Mahta",
+        "group": "Asia/Pacific",
+        "region": "Asia",
+        "stats_region": "asia",
+        "billing_region": "Asia",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 25.112225,
+            "longitude": 56.323964
+        },
+        "shield": "fjr-fujairah-uae"
+    },
+    {
+        "code": "GNV",
+        "name": "Gainesville",
+        "group": "United States",
+        "region": "US-East",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 29.6516,
+            "longitude": -82.3248
+        },
+        "shield": "gnv-fl-us"
+    },
+    {
+        "code": "ACC",
+        "name": "Ghana",
+        "group": "Africa",
+        "region": "AF-West",
+        "stats_region": "africa_std",
+        "billing_region": "Africa",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 5.573,
+            "longitude": -0.203
+        }
+    },
+    {
+        "code": "QAX",
+        "name": "Guwahati",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 26.11,
+            "longitude": 91.71
+        }
+    },
+    {
+        "code": "HEL",
+        "name": "Helsinki",
+        "group": "Europe",
+        "region": "EU-East",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 60.1699,
+            "longitude": 24.9384
+        },
+        "shield": "hel-helsinki-fi"
+    },
+    {
+        "code": "HKG",
+        "name": "Hong Kong",
+        "group": "Asia/Pacific",
+        "region": "Asia",
+        "stats_region": "asia",
+        "billing_region": "Asia",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 22.308919,
+            "longitude": 113.914603
+        },
+        "shield": "hongkong-hk"
+    },
+    {
+        "code": "HNL",
+        "name": "Honolulu",
+        "group": "United States",
+        "region": "US-West",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 21.364,
+            "longitude": -157.869
+        }
+    },
+    {
+        "code": "IAH",
+        "name": "Houston",
+        "group": "United States",
+        "region": "US-Central",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 29.99022,
+            "longitude": -95.336783
+        },
+        "shield": "iah-tx-us"
+    },
+    {
+        "code": "QAC",
+        "name": "Howrah",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 22.58,
+            "longitude": 88.297
+        }
+    },
+    {
+        "code": "HYD",
+        "name": "Hyderabad",
+        "group": "Asia/Pacific",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 17.442,
+            "longitude": 78.378
+        },
+        "shield": "hyd-hyderabad-in"
+    },
+    {
+        "code": "QAE",
+        "name": "Hyderabad",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 17.351,
+            "longitude": 78.548
+        }
+    },
+    {
+        "code": "QBN",
+        "name": "Hyderabad",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 17.437,
+            "longitude": 78.376
+        }
+    },
+    {
+        "code": "JAX",
+        "name": "Jacksonville",
+        "group": "United States",
+        "region": "US-East",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 30.3322,
+            "longitude": -81.6557
+        }
+    },
+    {
+        "code": "QAY",
+        "name": "Jaipur",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 26.997,
+            "longitude": 75.785
+        }
+    },
+    {
+        "code": "JGA",
+        "name": "Jamnagar",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 22.355,
+            "longitude": 69.845
+        }
+    },
+    {
+        "code": "JNB",
+        "name": "Johannesburg",
+        "group": "Africa",
+        "region": "South-Africa",
+        "stats_region": "africa_std",
+        "billing_region": "Africa",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": -26.13778,
+            "longitude": 28.19756
+        },
+        "shield": "jnb-johannesburg-za"
+    },
+    {
+        "code": "KNU",
+        "name": "Kanpur",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 26.401,
+            "longitude": 80.413
+        }
+    },
+    {
+        "code": "MCI",
+        "name": "Kansas City",
+        "group": "United States",
+        "region": "US-Central",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 39.101,
+            "longitude": -94.581
+        }
+    },
+    {
+        "code": "QAA",
+        "name": "Karnal",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 29.685,
+            "longitude": 76.99
+        }
+    },
+    {
+        "code": "QAN",
+        "name": "Kochi",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 9.931,
+            "longitude": 76.267
+        }
+    },
+    {
+        "code": "QBO",
+        "name": "Kochi",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 9.951,
+            "longitude": 76.335
+        }
+    },
+    {
+        "code": "CCU",
+        "name": "Kolkata",
+        "group": "Asia/Pacific",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 22.588,
+            "longitude": 88.393
+        },
+        "shield": "ccu-kolkata-in"
+    },
+    {
+        "code": "QAR",
+        "name": "Kolkata",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 22.573,
+            "longitude": 88.433
+        }
+    },
+    {
+        "code": "KTU",
+        "name": "Kota",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 25.199,
+            "longitude": 75.834
+        }
+    },
+    {
+        "code": "KUL",
+        "name": "Kuala Lumpur",
+        "group": "Asia/Pacific",
+        "region": "Asia",
+        "stats_region": "asia",
+        "billing_region": "Asia",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 3.149,
+            "longitude": 101.706
+        }
+    },
+    {
+        "code": "LIM",
+        "name": "Lima",
+        "group": "South America",
+        "region": "SA-West",
+        "stats_region": "southamerica_std",
+        "billing_region": "South America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": -12.088902,
+            "longitude": -76.973405
+        }
+    },
+    {
+        "code": "LIS",
+        "name": "Lisbon",
+        "group": "Europe",
+        "region": "EU-West",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 38.788,
+            "longitude": -9.123
+        },
+        "shield": "lis-lisbon-pt"
+    },
+    {
+        "code": "BQH",
+        "name": "London",
+        "group": "Europe",
+        "region": "EU-West",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 51.238,
+            "longitude": -0.575
+        }
+    },
+    {
+        "code": "LCY",
+        "name": "London",
+        "group": "Europe",
+        "region": "EU-West",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 51.505278,
+            "longitude": 0.055278
+        },
+        "shield": "london_city-uk"
+    },
+    {
+        "code": "LGW",
+        "name": "London",
+        "group": "Europe",
+        "region": "EU-West",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 51.238,
+            "longitude": -0.575
+        }
+    },
+    {
+        "code": "LHR",
+        "name": "London",
+        "group": "Europe",
+        "region": "EU-West",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 51.4775,
+            "longitude": -0.461389
+        },
+        "shield": "london-uk"
+    },
+    {
+        "code": "LON",
+        "name": "London",
+        "group": "Europe",
+        "region": "EU-West",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 51.499,
+            "longitude": -0.011
+        },
+        "shield": "lon-london-uk"
+    },
+    {
+        "code": "LTN",
+        "name": "London",
+        "group": "Europe",
+        "region": "EU-West",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 51.581,
+            "longitude": -0.243
+        }
+    },
+    {
+        "code": "QQP",
+        "name": "London",
+        "group": "Europe",
+        "region": "EU-West",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 51.513,
+            "longitude": -0.099
+        }
+    },
+    {
+        "code": "BUR",
+        "name": "Los Angeles (Metro)",
+        "group": "United States",
+        "region": "US-West",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 34.198312,
+            "longitude": -118.357404
+        },
+        "shield": "bur-ca-us"
+    },
+    {
+        "code": "HHR",
+        "name": "Los Angeles (Metro)",
+        "group": "United States",
+        "region": "US-West",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 33.942536,
+            "longitude": -118.408075
+        }
+    },
+    {
+        "code": "LAX",
+        "name": "Los Angeles (Metro)",
+        "group": "United States",
+        "region": "US-West",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 33.942536,
+            "longitude": -118.408075
+        }
+    },
+    {
+        "code": "QAZ",
+        "name": "Lucknow",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 26.919,
+            "longitude": 80.964
+        }
+    },
+    {
+        "code": "QBA",
+        "name": "Ludhiana",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 30.936,
+            "longitude": 75.835
+        }
+    },
+    {
+        "code": "MAD",
+        "name": "Madrid",
+        "group": "Europe",
+        "region": "EU-West",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 40.439323,
+            "longitude": -3.621211
+        },
+        "shield": "mad-madrid-es"
+    },
+    {
+        "code": "TOJ",
+        "name": "Madrid",
+        "group": "Europe",
+        "region": "EU-West",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 40.433899,
+            "longitude": -3.62408
+        }
+    },
+    {
+        "code": "IXM",
+        "name": "Madurai",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 9.922,
+            "longitude": 78.094
+        }
+    },
+    {
+        "code": "MAN",
+        "name": "Manchester",
+        "group": "Europe",
+        "region": "EU-West",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 53.4808,
+            "longitude": -2.2426
+        },
+        "shield": "man-manchester-uk"
+    },
+    {
+        "code": "MNL",
+        "name": "Manila",
+        "group": "Asia/Pacific",
+        "region": "Asia",
+        "stats_region": "asia",
+        "billing_region": "Asia",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 14.566,
+            "longitude": 121.022
+        }
+    },
+    {
+        "code": "MRS",
+        "name": "Marseille",
+        "group": "Europe",
+        "region": "EU-West",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 43.311,
+            "longitude": 5.373
+        },
+        "shield": "mrs-marseille-fr"
+    },
+    {
+        "code": "QAD",
+        "name": "Meerut",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 28.984,
+            "longitude": 77.706
+        }
+    },
+    {
+        "code": "MEL",
+        "name": "Melbourne",
+        "group": "Asia/Pacific",
+        "region": "APAC",
+        "stats_region": "anzac",
+        "billing_region": "Australia",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": -37.673333,
+            "longitude": 144.843333
+        },
+        "shield": "melbourne-au"
+    },
+    {
+        "code": "MIA",
+        "name": "Miami",
+        "group": "United States",
+        "region": "US-East",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 25.79325,
+            "longitude": -80.290556
+        },
+        "shield": "miami-fl-us"
+    },
+    {
+        "code": "BGY",
+        "name": "Milan",
+        "group": "Europe",
+        "region": "EU-East",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 45.477,
+            "longitude": 9.102
+        }
+    },
+    {
+        "code": "LIN",
+        "name": "Milan",
+        "group": "Europe",
+        "region": "EU-East",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 45.47,
+            "longitude": 9.036
+        }
+    },
+    {
+        "code": "MXP",
+        "name": "Milan",
+        "group": "Europe",
+        "region": "EU-East",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 45.4642,
+            "longitude": 9.19
+        },
+        "shield": "mxp-milan-it"
+    },
+    {
+        "code": "MSP",
+        "name": "Minneapolis",
+        "group": "United States",
+        "region": "US-Central",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 44.971401,
+            "longitude": -93.254501
+        },
+        "shield": "msp-mn-us"
+    },
+    {
+        "code": "STP",
+        "name": "Minneapolis",
+        "group": "United States",
+        "region": "US-Central",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 44.971401,
+            "longitude": -93.254501
+        }
+    },
+    {
+        "code": "YUL",
+        "name": "Montreal",
+        "group": "United States",
+        "region": "North-America",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 45.497497,
+            "longitude": -73.570959
+        },
+        "shield": "yul-montreal-ca"
+    },
+    {
+        "code": "BOM",
+        "name": "Mumbai",
+        "group": "Asia/Pacific",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 18.975,
+            "longitude": 72.825833
+        },
+        "shield": "bom-mumbai-in"
+    },
+    {
+        "code": "NMI",
+        "name": "Mumbai",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 19.124,
+            "longitude": 73.005
+        }
+    },
+    {
+        "code": "QAI",
+        "name": "Mumbai DAICEC",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 19.062,
+            "longitude": 72.866
+        }
+    },
+    {
+        "code": "QAO",
+        "name": "Mumbai RCP",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 19.076,
+            "longitude": 72.878
+        }
+    },
+    {
+        "code": "MUC",
+        "name": "Munich",
+        "group": "Europe",
+        "region": "EU-East",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 48.143,
+            "longitude": 11.555
+        }
+    },
+    {
+        "code": "QBB",
+        "name": "Nagpur",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 21.393,
+            "longitude": 79.327
+        }
+    },
+    {
+        "code": "LGA",
+        "name": "New York City",
+        "group": "United States",
+        "region": "US-East",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 40.639751,
+            "longitude": -73.778925
+        },
+        "shield": "lga-ny-us"
+    },
+    {
+        "code": "NYC",
+        "name": "New York City (Metro)",
+        "group": "United States",
+        "region": "US-East",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 40.778,
+            "longitude": -74.073
+        }
+    },
+    {
+        "code": "TSS",
+        "name": "New York City (Metro)",
+        "group": "United States",
+        "region": "US-East",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 40.707,
+            "longitude": -74.029
+        }
+    },
+    {
+        "code": "EWR",
+        "name": "Newark",
+        "group": "United States",
+        "region": "US-East",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 40.736844,
+            "longitude": -74.173402
+        },
+        "shield": "ewr-nj-us"
+    },
+    {
+        "code": "QBD",
+        "name": "Noida",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 28.615,
+            "longitude": 77.385
+        }
+    },
+    {
+        "code": "ITM",
+        "name": "Osaka",
+        "group": "Asia/Pacific",
+        "region": "Asia",
+        "stats_region": "asia",
+        "billing_region": "Asia",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 34.785528,
+            "longitude": 135.438222
+        },
+        "shield": "osaka-jp"
+    },
+    {
+        "code": "OSL",
+        "name": "Oslo",
+        "group": "Europe",
+        "region": "EU-East",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 59.922,
+            "longitude": 10.809
+        },
+        "shield": "osl-oslo-no"
+    },
+    {
+        "code": "PAO",
+        "name": "Palo Alto (Metro)",
+        "group": "United States",
+        "region": "US-West",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 37.454965,
+            "longitude": -122.110783
+        }
+    },
+    {
+        "code": "PAR",
+        "name": "Paris (Metro)",
+        "group": "Europe",
+        "region": "EU-West",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 48.856654,
+            "longitude": 2.38532
+        },
+        "shield": "paris-fr"
+    },
+    {
+        "code": "QBE",
+        "name": "Patna",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 25.578,
+            "longitude": 91.876
+        }
+    },
+    {
+        "code": "PER",
+        "name": "Perth",
+        "group": "Asia/Pacific",
+        "region": "APAC",
+        "stats_region": "anzac",
+        "billing_region": "Australia",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": -31.940278,
+            "longitude": 115.966944
+        },
+        "shield": "perth-au"
+    },
+    {
+        "code": "PHX",
+        "name": "Phoenix",
+        "group": "United States",
+        "region": "US-West",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 33.396,
+            "longitude": -111.97
+        }
+    },
+    {
+        "code": "IXZ",
+        "name": "Port Blair",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 11.608,
+            "longitude": 92.705
+        }
+    },
+    {
+        "code": "PDX",
+        "name": "Portland",
+        "group": "United States",
+        "region": "US-West",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 45.552,
+            "longitude": -122.914
+        },
+        "shield": "pdx-or-us"
+    },
+    {
+        "code": "IXD",
+        "name": "Prayagraj",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 25.453,
+            "longitude": 81.835
+        }
+    },
+    {
+        "code": "PNQ",
+        "name": "Pune",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 18.596,
+            "longitude": 73.727
+        }
+    },
+    {
+        "code": "QRO",
+        "name": "Queretaro",
+        "group": "Mexico",
+        "region": "MX-Central",
+        "stats_region": "mexico",
+        "billing_region": "Mexico",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 20.566,
+            "longitude": -100.258
+        }
+    },
+    {
+        "code": "RPR",
+        "name": "Raipur",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 21.228,
+            "longitude": 81.598
+        }
+    },
+    {
+        "code": "IXR",
+        "name": "Ranchi",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 23.812,
+            "longitude": 86.464
+        }
+    },
+    {
+        "code": "GIG",
+        "name": "Rio de Janeiro",
+        "group": "South America",
+        "region": "SA-East",
+        "stats_region": "southamerica_std",
+        "billing_region": "South America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": -22.81341,
+            "longitude": -43.249423
+        },
+        "shield": "gig-riodejaneiro-br"
+    },
+    {
+        "code": "FCO",
+        "name": "Rome",
+        "group": "Europe",
+        "region": "EU-East",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 41.89891,
+            "longitude": 12.51206
+        }
+    },
+    {
+        "code": "SXV",
+        "name": "Salem",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 11.642,
+            "longitude": 78.132
+        }
+    },
+    {
+        "code": "QAK",
+        "name": "Sambalpur",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 21.078,
+            "longitude": 79.152
+        }
+    },
+    {
+        "code": "SJC",
+        "name": "San Jose",
+        "group": "United States",
+        "region": "US-West",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 37.3626,
+            "longitude": -121.929022
+        },
+        "shield": "sjc-ca-us"
+    },
+    {
+        "code": "WVI",
+        "name": "San Jose",
+        "group": "United States",
+        "region": "US-West",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 37.242,
+            "longitude": -121.782
+        }
+    },
+    {
+        "code": "SCL",
+        "name": "Santiago",
+        "group": "South America",
+        "region": "SA-South",
+        "stats_region": "southamerica_std",
+        "billing_region": "South America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": -33.3936,
+            "longitude": -70.7935
+        }
+    },
+    {
+        "code": "GRU",
+        "name": "Sao Paulo (Metro)",
+        "group": "South America",
+        "region": "SA-East",
+        "stats_region": "southamerica_std",
+        "billing_region": "South America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": -23.432075,
+            "longitude": -46.469511
+        },
+        "shield": "gru-saopaulo-br"
+    },
+    {
+        "code": "BFI",
+        "name": "Seattle (Metro)",
+        "group": "United States",
+        "region": "US-West",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 47.449,
+            "longitude": -122.309306
+        },
+        "shield": "bfi-wa-us"
+    },
+    {
+        "code": "ICN",
+        "name": "Seoul",
+        "group": "Asia/Pacific",
+        "region": "Asia",
+        "stats_region": "asia_southkorea",
+        "billing_region": "South Korea",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 36.38,
+            "longitude": 128.124
+        },
+        "shield": "icn-seoul-kr"
+    },
+    {
+        "code": "SHL",
+        "name": "Shillong",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 25.578,
+            "longitude": 91.876
+        }
+    },
+    {
+        "code": "QBF",
+        "name": "Shimla",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 31.098,
+            "longitude": 77.151
+        }
+    },
+    {
+        "code": "IXB",
+        "name": "Siliguri",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 26.727,
+            "longitude": 88.395
+        }
+    },
+    {
+        "code": "QPG",
+        "name": "Singapore",
+        "group": "Asia/Pacific",
+        "region": "Asia",
+        "stats_region": "asia",
+        "billing_region": "Asia",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 1.350189,
+            "longitude": 103.994433
+        },
+        "shield": "qpg-singapore-sg"
+    },
+    {
+        "code": "SIN",
+        "name": "Singapore",
+        "group": "Asia/Pacific",
+        "region": "Asia",
+        "stats_region": "asia",
+        "billing_region": "Asia",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 1.350189,
+            "longitude": 103.994433
+        },
+        "shield": "sin-singapore-sg"
+    },
+    {
+        "code": "SOF",
+        "name": "Sofia",
+        "group": "Europe",
+        "region": "EU-East",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 42.703,
+            "longitude": 23.306
+        },
+        "shield": "sof-sofia-bg"
+    },
+    {
+        "code": "SSE",
+        "name": "Solapur",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 17.66,
+            "longitude": 75.906
+        }
+    },
+    {
+        "code": "QBG",
+        "name": "Srinagar-Nahota",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 34.071,
+            "longitude": 74.846
+        }
+    },
+    {
+        "code": "STL",
+        "name": "St.Louis",
+        "group": "United States",
+        "region": "US-Central",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 38.629,
+            "longitude": -90.197
+        }
+    },
+    {
+        "code": "BMA",
+        "name": "Stockholm",
+        "group": "Europe",
+        "region": "EU-East",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 59.354372,
+            "longitude": 17.94165
+        },
+        "shield": "stockholm-bma"
+    },
+    {
+        "code": "STV",
+        "name": "Surat",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 21.266,
+            "longitude": 72.952
+        }
+    },
+    {
+        "code": "SYD",
+        "name": "Sydney",
+        "group": "Asia/Pacific",
+        "region": "APAC",
+        "stats_region": "anzac",
+        "billing_region": "Australia",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": -33.946111,
+            "longitude": 151.177222
+        },
+        "shield": "sydney-au"
+    },
+    {
+        "code": "WSI",
+        "name": "Sydney (Metro)",
+        "group": "Asia/Pacific",
+        "region": "APAC",
+        "stats_region": "anzac",
+        "billing_region": "Australia",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": -33.919,
+            "longitude": 151.189
+        },
+        "shield": "wsi-australia-au"
+    },
+    {
+        "code": "TYO",
+        "name": "Tokyo",
+        "group": "Asia/Pacific",
+        "region": "Asia",
+        "stats_region": "asia",
+        "billing_region": "Asia",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 35.617,
+            "longitude": 139.748
+        },
+        "shield": "tyo-tokyo-jp"
+    },
+    {
+        "code": "NRT",
+        "name": "Tokyo (Metro)",
+        "group": "Asia/Pacific",
+        "region": "Asia",
+        "stats_region": "asia",
+        "billing_region": "Asia",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 35.617,
+            "longitude": 139.748
+        },
+        "shield": "nrt-tokyo-jp"
+    },
+    {
+        "code": "YYZ",
+        "name": "Toronto",
+        "group": "United States",
+        "region": "North-America",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 43.677223,
+            "longitude": -79.630556
+        },
+        "shield": "yyz-on-ca"
+    },
+    {
+        "code": "PAE",
+        "name": "Tukwila",
+        "group": "United States",
+        "region": "US-West",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 47.498,
+            "longitude": -122.29
+        }
+    },
+    {
+        "code": "YVR",
+        "name": "Vancouver",
+        "group": "United States",
+        "region": "North-America",
+        "stats_region": "usa",
+        "billing_region": "North America",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 49.1967,
+            "longitude": -123.1815
+        }
+    },
+    {
+        "code": "VNS",
+        "name": "Varanasi",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 24.652,
+            "longitude": 84.32
+        }
+    },
+    {
+        "code": "VIE",
+        "name": "Vienna",
+        "group": "Europe",
+        "region": "EU-East",
+        "stats_region": "europe",
+        "billing_region": "Europe",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 48.269,
+            "longitude": 16.41
+        },
+        "shield": "vie-vienna-at"
+    },
+    {
+        "code": "QBI",
+        "name": "Vijaywada",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 16.506,
+            "longitude": 80.648
+        }
+    },
+    {
+        "code": "VTZ",
+        "name": "Visakhapatnam",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 17.749,
+            "longitude": 83.267
+        }
+    },
+    {
+        "code": "QBJ",
+        "name": "Warrangal",
+        "group": "India",
+        "region": "Asia-South",
+        "stats_region": "asia_india",
+        "billing_region": "India",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": 17.969,
+            "longitude": 79.593
+        }
+    },
+    {
+        "code": "WLG",
+        "name": "Wellington",
+        "group": "Asia/Pacific",
+        "region": "APAC",
+        "stats_region": "anzac",
+        "billing_region": "Australia",
+        "coordinates": {
+            "x": 0,
+            "y": 0,
+            "latitude": -41.327221,
+            "longitude": 174.805278
+        }
+    }
+]

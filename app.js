@@ -131,6 +131,9 @@ window.DD_RUM && window.DD_RUM.onReady(function () {
     trackBfcacheViews: true,
     defaultPrivacyLevel: 'mask-user-input',
     beforeSend: function (event) { logRumEvent(event); return true; },
+    allowedTracingUrls: [
+      (url) => url.includes(window.location.host)
+    ],
   });
 });
 
@@ -152,6 +155,16 @@ window.DD_LOGS && window.DD_LOGS.onReady(function () {
 });
 
 /**
+ * Short alias for the Datadog Logs logger. Structured attributes passed as
+ * the second argument are merged into top-level log event fields in Datadog,
+ * unlike plain console.* calls which only forward the message string.
+ * Falls back to console for local dev where the SDK hasn't been initialized.
+ *
+ * @type {DD_LOGS['logger']|Console}
+ */
+const logger = window.DD_LOGS?.logger ?? console;
+
+/**
  * Whether the current session is a Datadog Synthetics browser test,
  * detected via the user agent string injected by the test runner.
  *
@@ -169,17 +182,75 @@ const isSynthetics = /DatadogSynthetics/i.test(navigator.userAgent);
  *
  * @returns {'APAC'|'EMEA'|'AMER'|'unknown'}
  */
+/**
+ * Map a Fastly POP region string to our broad APAC/EMEA/AMER groupings.
+ *
+ * @param {string} fastlyRegion - Region value from pops.json (e.g. "EU-West", "US-East")
+ * @returns {'APAC'|'EMEA'|'AMER'|'unknown'}
+ */
+function fastlyRegionToGroup(fastlyRegion) {
+  if (!fastlyRegion) return 'unknown';
+  if (/^(APAC|Asia)/.test(fastlyRegion)) return 'APAC';
+  if (/^(EU|South-Africa|AF-)/.test(fastlyRegion)) return 'EMEA';
+  if (/^(US|North-America|SA|MX)/.test(fastlyRegion)) return 'AMER';
+  return 'unknown';
+}
+
+/**
+ * Async region detection using the Fastly CDN POP indicated in the
+ * `x-served-by` response header. GitHub Pages is served by Fastly, so a HEAD
+ * request to the current page reveals which POP handled it — a reliable
+ * physical-location signal that Selenium/Synthetics workers cannot spoof.
+ *
+ * Falls back gracefully to null if the header is absent or the fetch fails.
+ *
+ * @returns {Promise<{popCode: string, popName: string, fastlyRegion: string, region: string}|null>}
+ */
+async function detectFastlyRegion() {
+  try {
+    const [headResp, popsResp] = await Promise.all([
+      fetch(window.location.href, { method: 'HEAD' }),
+      fetch('pops.json'),
+    ]);
+
+    const servedBy = headResp.headers.get('x-served-by');
+    if (!servedBy) return null;
+
+    // x-served-by may be comma-separated across cache hops — take the last
+    // entry, which is the POP closest to the user.
+    const lastHop = servedBy.split(',').pop().trim();
+    const popCode = lastHop.split('-').pop().toUpperCase();
+
+    const pops = await popsResp.json();
+    const pop = pops.find(p => p.code === popCode);
+    if (!pop) return { popCode, popName: null, fastlyRegion: null, region: 'unknown' };
+
+    return {
+      popCode: pop.code,
+      popName: pop.name,
+      fastlyRegion: pop.region,
+      region: fastlyRegionToGroup(pop.region),
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Synchronous region estimate used for the fail-step decision at page load.
+ * Less accurate than the async Fastly detection — falls back through timezone
+ * then browser language. The global context is updated asynchronously once
+ * the Fastly lookup resolves.
+ *
+ * @returns {'APAC'|'EMEA'|'AMER'|'unknown'}
+ */
 function getSyntheticsRegion() {
   try {
-    // Primary signal: IANA timezone. Reliable on real browsers but Selenium/
-    // Synthetics workers may report UTC regardless of physical location.
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (/^(Asia|Australia|Pacific)\//i.test(tz)) return 'APAC';
     if (/^(Europe|Africa)\//i.test(tz)) return 'EMEA';
     if (/^America\//i.test(tz)) return 'AMER';
 
-    // Fallback: browser locale set by the Selenium worker for its region.
-    // Less reliable than timezone but may be configured per managed location.
     const lang = navigator.language || '';
     if (/^(en-AU|en-NZ|zh|ja|ko)/i.test(lang)) return 'APAC';
     if (/^(en-GB|de|fr|es-ES|it|nl|pl|pt-PT)/i.test(lang)) return 'EMEA';
@@ -232,7 +303,7 @@ if (isSynthetics) {
     try { return Intl.DateTimeFormat().resolvedOptions(); } catch (e) { return {}; }
   })();
 
-  console.info({
+  logger.info('synthetics_worker_debug', {
     worker: {
       userAgent: nav.userAgent,
       language: nav.language,
@@ -252,16 +323,34 @@ if (isSynthetics) {
 
 // Tag the RUM session with synthetic metadata so sessions can be filtered in
 // the RUM Explorer by @context.synthetic.* attributes.
+// Initial context is set synchronously from the timezone/language fallback,
+// then updated asynchronously once the Fastly POP lookup resolves.
 if (isSynthetics) {
   window.DD_RUM && window.DD_RUM.onReady(function () {
     window.DD_RUM.setGlobalContext({
       synthetic: {
         region: syntheticsRegion,
+        region_source: 'fallback',
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         language: navigator.language || 'unknown',
         intended_fail_step: syntheticFailStep,
         will_fail: syntheticFailStep !== null,
       },
+    });
+  });
+
+  detectFastlyRegion().then(function (pop) {
+    if (!pop) return;
+    logger.info('synthetics_fastly_pop', { pop });
+    window.DD_RUM && window.DD_RUM.onReady(function () {
+      var existing = window.DD_RUM.getGlobalContext().synthetic || {};
+      window.DD_RUM.setGlobalContextProperty('synthetic', Object.assign({}, existing, {
+        region: pop.region,
+        region_source: 'fastly',
+        pop_code: pop.popCode,
+        pop_name: pop.popName,
+        fastly_region: pop.fastlyRegion,
+      }));
     });
   });
 }
@@ -434,15 +523,15 @@ function select(step, el, value) {
  */
 function stopAndRestart() {
   window.DD_RUM && window.DD_RUM.onReady(function () {
-    console.log('[DD RUM] Stopping session');
+    logger.log('[DD RUM] Stopping session');
     window.DD_RUM.stopSession();
-    console.log('[DD RUM] Session stopped');
+    logger.log('[DD RUM] Session stopped');
   });
   Object.keys(selections).forEach(k => delete selections[k]);
   document.querySelectorAll('.option-card.selected').forEach(c => c.classList.remove('selected'));
   for (let i = 1; i <= 5; i++) document.getElementById(`btn-${i}`).disabled = true;
   erroredStep = null;
-  console.log('[Wizard] Selections cleared');
+  logger.log('[Wizard] Selections cleared');
   goTo(0);
 }
 
@@ -468,13 +557,11 @@ function renderResults() {
     window.DD_RUM.addAction('pizza_order_submitted', { pizza_order: pizzaOrder });
   });
 
-  console.info({
-    pizza_order_submitted: {
-      order_id: orderId,
-      usr: { id: userId, name: customer.name, email: customer.email },
-      customer,
-      pizza_order: pizzaOrder,
-    }
+  logger.info('pizza_order_submitted', {
+    order_id: orderId,
+    usr: { id: userId, name: customer.name, email: customer.email },
+    customer,
+    pizza_order: pizzaOrder,
   });
 }
 

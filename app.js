@@ -130,7 +130,14 @@ window.DD_RUM && window.DD_RUM.onReady(function () {
     sessionReplaySampleRate: 100,
     trackBfcacheViews: true,
     defaultPrivacyLevel: 'mask-user-input',
-    beforeSend: function (event) { logRumEvent(event); return true; },
+    beforeSend: function (event) {
+      // Drop resource events for the Datadog SDK itself — noisy and not useful.
+      if (event.type === 'resource' && /ttps:\/\/www\.datadoghq-browser-agent\.com/.test(event.resource?.url)) {
+        return false;
+      }
+      logRumEvent(event);
+      return true;
+    },
     allowedTracingUrls: [
       (url) => url.includes(window.location.host)
     ],
@@ -176,16 +183,6 @@ const logger = new Proxy({}, {
  */
 const isSynthetics = /DatadogSynthetics/i.test(navigator.userAgent);
 
-/**
- * Detect the broad geographic region of the current Synthetics worker using
- * the IANA timezone from the Intl API — no permissions or network calls needed.
- * Datadog managed locations set the system timezone to match the test region.
- *
- * Used to apply region-specific fail rates so error distribution reflects
- * realistic differences across APAC, EMEA, and AMER test locations.
- *
- * @returns {'APAC'|'EMEA'|'AMER'|'unknown'}
- */
 /**
  * Map a Fastly POP region string to our broad APAC/EMEA/AMER groupings.
  *
@@ -241,120 +238,57 @@ async function detectFastlyRegion() {
 }
 
 /**
- * Synchronous region estimate used for the fail-step decision at page load.
- * Less accurate than the async Fastly detection — falls back through timezone
- * then browser language. The global context is updated asynchronously once
- * the Fastly lookup resolves.
- *
- * @returns {'APAC'|'EMEA'|'AMER'|'unknown'}
- */
-function getSyntheticsRegion() {
-  try {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (/^(Asia|Australia|Pacific)\//i.test(tz)) return 'APAC';
-    if (/^(Europe|Africa)\//i.test(tz)) return 'EMEA';
-    if (/^America\//i.test(tz)) return 'AMER';
-
-    const lang = navigator.language || '';
-    if (/^(en-AU|en-NZ|zh|ja|ko)/i.test(lang)) return 'APAC';
-    if (/^(en-GB|de|fr|es-ES|it|nl|pl|pt-PT)/i.test(lang)) return 'EMEA';
-    if (/^(en-US|en-CA|es-MX|pt-BR)/i.test(lang)) return 'AMER';
-
-    return 'unknown';
-  } catch (e) {
-    return 'unknown';
-  }
-}
-
-/**
- * Per-region fail rates for synthetic error injection.
- * Adjust these once real timezone data has been verified from test runs.
+ * Per-region fail rates for synthetic error injection, keyed by the broad
+ * region group derived from the Fastly POP lookup.
  *
  * @type {Object.<string, number>}
  */
 const SYNTHETIC_FAIL_RATES = {
-  APAC: 0.15,
-  EMEA: 0.20,
-  AMER: 0.25,
+  APAC:    0.15,
+  EMEA:    0.20,
+  AMER:    0.25,
   unknown: 0.20,
 };
 
-const syntheticsRegion = isSynthetics ? getSyntheticsRegion() : null;
-
 /**
- * For Synthetics runs: the wizard step at which a simulated error will fire,
- * blocking the test from completing the wizard. Set once at page load.
- *
- * Fail rate varies by region (see SYNTHETIC_FAIL_RATES). Step 1 is excluded
- * so the test always gets past the first choice before any failure, producing
- * richer partial-funnel data.
+ * For Synthetics runs: the wizard step at which a simulated error will fire.
+ * Resolved asynchronously after the Fastly POP lookup — null until then.
+ * Step 1 is excluded so the test always gets past the first choice.
  *
  * @type {number|null}
  */
-const syntheticFailStep = (() => {
-  if (!isSynthetics) return null;
-  const failRate = SYNTHETIC_FAIL_RATES[syntheticsRegion] ?? 0.20;
-  if (Math.random() > failRate) return null;
-  return Math.floor(Math.random() * 4) + 2; // 2, 3, 4, or 5
-})();
+let syntheticFailStep = null;
 
-// Dump all available worker environment signals to a Datadog log so we can
-// determine which values (if any) vary by managed location. Temporary debug
-// code — remove once region detection is confirmed working.
-if (isSynthetics) {
-  const nav = window.navigator;
-  const intl = (() => {
-    try { return Intl.DateTimeFormat().resolvedOptions(); } catch (e) { return {}; }
-  })();
-
-  logger.info('synthetics_worker_debug', {
-    worker: {
-      userAgent: nav.userAgent,
-      language: nav.language,
-      languages: nav.languages ? Array.from(nav.languages) : [],
-      timezone: intl.timeZone,
-      locale: intl.locale,
-      platform: nav.userAgentData ? nav.userAgentData.platform : null,
-      hardwareConcurrency: nav.hardwareConcurrency,
-      screenWidth: window.screen.width,
-      screenHeight: window.screen.height,
-      devicePixelRatio: window.devicePixelRatio,
-      connectionType: nav.connection ? nav.connection.effectiveType : null,
-      ddtVars: typeof window._ddt !== 'undefined' ? window._ddt : null,
-    },
-  });
-}
-
-// Tag the RUM session with synthetic metadata so sessions can be filtered in
-// the RUM Explorer by @context.synthetic.* attributes.
-// Initial context is set synchronously from the timezone/language fallback,
-// then updated asynchronously once the Fastly POP lookup resolves.
+// Tag the RUM session with synthetic metadata and resolve region + fail step
+// from the Fastly CDN POP header — the only reliable location signal available
+// from Synthetics workers.
 if (isSynthetics) {
   window.DD_RUM && window.DD_RUM.onReady(function () {
     window.DD_RUM.setGlobalContext({
-      synthetic: {
-        region: syntheticsRegion,
-        region_source: 'fallback',
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        language: navigator.language || 'unknown',
-        intended_fail_step: syntheticFailStep,
-        will_fail: syntheticFailStep !== null,
-      },
+      synthetic: { region: 'pending', will_fail: false },
     });
   });
 
   detectFastlyRegion().then(function (pop) {
-    if (!pop) return;
-    logger.info('synthetics_fastly_pop', { pop });
+    const region = pop?.region ?? 'unknown';
+    const failRate = SYNTHETIC_FAIL_RATES[region] ?? 0.20;
+    syntheticFailStep = Math.random() > failRate ? null : Math.floor(Math.random() * 4) + 2;
+
+    window.DD_LOGS && window.DD_LOGS.onReady(function () {
+      logger.info('synthetics_fastly_pop', { pop, region, failRate, syntheticFailStep });
+    });
+
     window.DD_RUM && window.DD_RUM.onReady(function () {
-      var existing = window.DD_RUM.getGlobalContext().synthetic || {};
-      window.DD_RUM.setGlobalContextProperty('synthetic', Object.assign({}, existing, {
-        region: pop.region,
-        region_source: 'fastly',
-        pop_code: pop.popCode,
-        pop_name: pop.popName,
-        fastly_region: pop.fastlyRegion,
-      }));
+      window.DD_RUM.setGlobalContext({
+        synthetic: {
+          region,
+          pop_code:           pop?.popCode    ?? null,
+          pop_name:           pop?.popName    ?? null,
+          fastly_region:      pop?.fastlyRegion ?? null,
+          intended_fail_step: syntheticFailStep,
+          will_fail:          syntheticFailStep !== null,
+        },
+      });
     });
   });
 }

@@ -221,6 +221,40 @@ const syntheticFailStep = (() => {
   return Math.floor(Math.random() * 4) + 2; // 2, 3, 4, or 5
 })();
 
+// Dump all available worker environment signals to a Datadog log so we can
+// determine which values (if any) vary by managed location. Temporary debug
+// code — remove once region detection is confirmed working.
+if (isSynthetics) {
+  window.DD_LOGS && window.DD_LOGS.onReady(function () {
+    const nav = window.navigator;
+    const intl = (() => {
+      try { return Intl.DateTimeFormat().resolvedOptions(); } catch (e) { return {}; }
+    })();
+
+    window.DD_LOGS.logger.info('synthetics_worker_debug', {
+      // User agent
+      userAgent:          nav.userAgent,
+      // Language / locale signals
+      language:           nav.language,
+      languages:          nav.languages ? Array.from(nav.languages) : [],
+      // Timezone signals
+      timezone:           intl.timeZone,
+      locale:             intl.locale,
+      // Platform / hardware (userAgentData is the modern replacement for navigator.platform)
+      platform:           nav.userAgentData ? nav.userAgentData.platform : null,
+      hardwareConcurrency: nav.hardwareConcurrency,
+      // Screen / window
+      screenWidth:        window.screen.width,
+      screenHeight:       window.screen.height,
+      devicePixelRatio:   window.devicePixelRatio,
+      // Connection (if available)
+      connectionType:     nav.connection ? nav.connection.effectiveType : null,
+      // Datadog Synthetics own globals (if exposed)
+      ddtVars:            typeof window._ddt !== 'undefined' ? window._ddt : null,
+    });
+  });
+}
+
 // Tag the RUM session with synthetic metadata so sessions can be filtered in
 // the RUM Explorer by @context.synthetic.* attributes.
 if (isSynthetics) {

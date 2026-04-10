@@ -87,6 +87,9 @@ jobs:
             --output app.js \
             --no-compress \
             --no-mangle
+        
+      - name: Validate source map
+        run: |
           # Verify the source map file field is correct before uploading.
           node -e "const m=require('./app.js.map'); console.log('source map file field:', m.file);"
 

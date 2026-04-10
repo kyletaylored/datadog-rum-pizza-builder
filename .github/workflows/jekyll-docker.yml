@@ -96,7 +96,10 @@ jobs:
 
       - name: Validate source map
         run: |
-          node -e "const m=JSON.parse(require('fs').readFileSync('app.js.map','utf8'));console.log('file:',m.file,'| sources:',m.sources?.length,'| version:',m.version);"
+          echo "--- last 3 lines of app.js ---"
+          tail -3 app.js
+          echo "--- source map fields ---"
+          node -e "const m=JSON.parse(require('fs').readFileSync('app.js.map','utf8'));console.log('file:',m.file,'| sourceRoot:',m.sourceRoot,'| sources:',JSON.stringify(m.sources));"
 
       - name: Upload source maps to Datadog
         env:

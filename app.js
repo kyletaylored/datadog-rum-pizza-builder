@@ -238,16 +238,19 @@ async function detectFastlyRegion() {
 }
 
 /**
- * Per-region fail rates for synthetic error injection, keyed by the broad
- * region group derived from the Fastly POP lookup.
+ * Per-region intentional fail rates for synthetic error injection.
+ * Tuned to produce ~90-95% pass rates after accounting for natural
+ * infrastructure noise (network timeouts, slow page loads, etc.).
+ *
+ * Target pass rates: APAC ~95%, EMEA ~92%, AMER ~90%
  *
  * @type {Object.<string, number>}
  */
 const SYNTHETIC_FAIL_RATES = {
-  APAC:    0.15,
-  EMEA:    0.20,
-  AMER:    0.25,
-  unknown: 0.20,
+  APAC:    0.05,
+  EMEA:    0.08,
+  AMER:    0.10,
+  unknown: 0.08,
 };
 
 /**

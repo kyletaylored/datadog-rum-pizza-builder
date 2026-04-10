@@ -155,14 +155,18 @@ window.DD_LOGS && window.DD_LOGS.onReady(function () {
 });
 
 /**
- * Short alias for the Datadog Logs logger. Structured attributes passed as
- * the second argument are merged into top-level log event fields in Datadog,
- * unlike plain console.* calls which only forward the message string.
- * Falls back to console for local dev where the SDK hasn't been initialized.
+ * Lazy proxy for the Datadog Logs logger. Resolves window.DD_LOGS.logger at
+ * call time rather than at assignment time, so it works correctly even when
+ * called before onReady has fired. Falls back to console if the SDK isn't
+ * available (e.g. local dev without config.js).
  *
- * @type {DD_LOGS['logger']|Console}
+ * Structured attributes passed as the second argument are merged into
+ * top-level log event fields in Datadog — unlike plain console.* calls which
+ * only forward the message string.
  */
-const logger = window.DD_LOGS?.logger ?? console;
+const logger = new Proxy({}, {
+  get: (_, method) => (...args) => (window.DD_LOGS?.logger ?? console)[method](...args),
+});
 
 /**
  * Whether the current session is a Datadog Synthetics browser test,

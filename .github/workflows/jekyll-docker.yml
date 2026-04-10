@@ -106,7 +106,11 @@ jobs:
           DATADOG_API_KEY: ${{ secrets.DD_API_KEY }}
         run: |
           PAGES_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}"
-          npx --yes @datadog/datadog-ci sourcemaps upload . \
+          # Copy JS + map into a staging dir so datadog-ci's basePath replacement
+          # doesn't strip the dot from 'app.js' when uploading from '.'.
+          mkdir -p sourcemaps-upload
+          cp app.js app.js.map sourcemaps-upload/
+          npx --yes @datadog/datadog-ci sourcemaps upload sourcemaps-upload \
             --service datadog-rum-pizza-builder \
             --release-version ${GITHUB_SHA:0:7} \
             --minified-path-prefix ${PAGES_URL}/

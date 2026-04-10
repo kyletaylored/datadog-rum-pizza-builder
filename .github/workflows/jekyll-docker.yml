@@ -87,19 +87,16 @@ jobs:
             --output app.js \
             --no-compress \
             --no-mangle
-          # Patch the `file` field — terser doesn't always derive it from --output,
-          # and datadog-ci uses it to construct the JS URL for the sourcemap upload.
-          node -e "
-            const fs = require('fs');
-            const map = JSON.parse(fs.readFileSync('./app.js.map', 'utf8'));
-            map.file = 'app.js';
-            fs.writeFileSync('./app.js.map', JSON.stringify(map));
-          "
-        
+
+      - name: Patch source map file field
+        run: |
+          # terser doesn't reliably set the `file` field — datadog-ci uses it
+          # to construct the JS URL, so we set it explicitly before uploading.
+          node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('app.js.map','utf8'));m.file='app.js';fs.writeFileSync('app.js.map',JSON.stringify(m));"
+
       - name: Validate source map
         run: |
-          # Verify the source map file field is correct before uploading.
-          node -e "const m=JSON.parse(require('fs').readFileSync('./app.js.map','utf8')); console.log('source map file field:', m.file);"
+          node -e "const m=JSON.parse(require('fs').readFileSync('app.js.map','utf8'));console.log('file:',m.file,'| sources:',m.sources?.length,'| version:',m.version);"
 
       - name: Upload source maps to Datadog
         env:

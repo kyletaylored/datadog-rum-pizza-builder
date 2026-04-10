@@ -91,7 +91,7 @@ jobs:
       - name: Validate source map
         run: |
           # Verify the source map file field is correct before uploading.
-          node -e "const m=require('./app.js.map'); console.log('source map file field:', m.file);"
+          node -e "const m=JSON.parse(require('fs').readFileSync('./app.js.map','utf8')); console.log('source map file field:', m.file);"
 
       - name: Upload source maps to Datadog
         env:

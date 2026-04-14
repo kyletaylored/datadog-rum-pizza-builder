@@ -114,6 +114,41 @@ if (window.location.hash) {
 }
 
 /**
+ * Delete a browser cookie by name (sets Max-Age=0 on both root path and current path).
+ *
+ * @param {string} name
+ */
+function deleteCookie(name) {
+  document.cookie = `${name}=; Max-Age=0; path=/`;
+  document.cookie = `${name}=; Max-Age=0; path=${window.location.pathname}`;
+}
+
+/**
+ * Force the RUM SDK's synthetic-session classification based on the
+ * `force_session_type` URL parameter, before DD_RUM.init() runs.
+ *
+ * The Datadog Synthetics runner injects cookies and window globals that cause
+ * the RUM SDK to tag all collected events as "synthetic" — separate from real
+ * user traffic in the RUM Explorer. By passing `?force_session_type=user` in
+ * the test's start URL, these signals are cleared before init so the session
+ * is captured as a normal user session instead.
+ *
+ * This only affects how the RUM SDK classifies the session. Our internal
+ * `isSynthetics` flag (user-agent based) is unaffected and continues to drive
+ * region detection and intentional error injection.
+ *
+ * Reference: https://github.com/DataDog/browser-sdk/blob/main/packages/core/src/domain/synthetics/syntheticsWorkerValues.ts
+ */
+(function () {
+  const forceSessionType = new URLSearchParams(window.location.search).get('force_session_type');
+  if (forceSessionType === 'user') {
+    // Clear the unified context global and cookie.
+    delete window['_DATADOG_SYNTHETICS_RUM_CONTEXT'];
+    deleteCookie('datadog-synthetics-rum-context');
+  }
+})();
+
+/**
  * Initialize the Datadog RUM SDK using shared config from window.DD_CONFIG.
  * The beforeSend callback feeds every event into the on-page live log table.
  */
@@ -209,10 +244,14 @@ function fastlyRegionToGroup(fastlyRegion) {
  */
 async function detectFastlyRegion() {
   try {
-    const [headResp, popsResp] = await Promise.all([
+    const [headResp, popsResp, fakeDataResp] = await Promise.all([
       fetch(window.location.href, { method: 'HEAD' }),
       fetch('pops.json'),
+      fetch('fake-data.json'),
     ]);
+
+    // Load fake data into module variable so generateFakeOrderIdentity can use it.
+    _fakeData = await fakeDataResp.json();
 
     const servedBy = headResp.headers.get('x-served-by');
     if (!servedBy) return null;
@@ -247,9 +286,9 @@ async function detectFastlyRegion() {
  * @type {Object.<string, number>}
  */
 const SYNTHETIC_FAIL_RATES = {
-  APAC:    0.05,
-  EMEA:    0.08,
-  AMER:    0.10,
+  APAC: 0.05,
+  EMEA: 0.08,
+  AMER: 0.10,
   unknown: 0.08,
 };
 
@@ -285,11 +324,11 @@ if (isSynthetics) {
       window.DD_RUM.setGlobalContext({
         synthetic: {
           region,
-          pop_code:           pop?.popCode    ?? null,
-          pop_name:           pop?.popName    ?? null,
-          fastly_region:      pop?.fastlyRegion ?? null,
+          pop_code: pop?.popCode ?? null,
+          pop_name: pop?.popName ?? null,
+          fastly_region: pop?.fastlyRegion ?? null,
           intended_fail_step: syntheticFailStep,
-          will_fail:          syntheticFailStep !== null,
+          will_fail: syntheticFailStep !== null,
         },
       });
     });
@@ -334,6 +373,13 @@ if (isSynthetics) {
       cards.splice(j, 1);
     }
   });
+}
+
+// For non-synthetic sessions, fetch fake-data.json eagerly so it's ready
+// before the user reaches the results screen. Synthetics sessions get it
+// via detectFastlyRegion() above, which runs in parallel with pops.json.
+if (!isSynthetics) {
+  fetch('fake-data.json').then(r => r.json()).then(d => { _fakeData = d; }).catch(() => { });
 }
 
 /**
@@ -491,17 +537,28 @@ function renderResults() {
   ).join('');
 
   const pizzaOrder = Object.fromEntries(Object.values(selections).map(s => [s.label.toLowerCase(), s.value]));
-  const { orderId, userId, customer } = generateFakeOrderIdentity();
+
+  // Resolve region + popName from the Fastly POP context set during Synthetics
+  // runs, for locale-aware identity generation. Falls back gracefully for real
+  // user sessions where POP data isn't available.
+  const synthetic = window.DD_RUM?.getGlobalContext()?.synthetic || {};
+  const { orderId, userId, customer, company } = generateFakeOrderIdentity(
+    synthetic.region || 'AMER',
+    synthetic.pop_name || null
+  );
 
   window.DD_RUM && window.DD_RUM.onReady(function () {
-    window.DD_RUM.setUser({ id: userId, name: customer.name, email: customer.email });
+    window.DD_RUM.setUser({ id: userId, name: customer.name, email: customer.email, loyalty_member: customer.loyalty_member });
+    if (company) window.DD_RUM.setAccount({ id: company.id, name: company.name, plan: company.plan });
     window.DD_RUM.addAction('pizza_order_submitted', { pizza_order: pizzaOrder });
   });
 
   logger.info('pizza_order_submitted', {
     order_id: orderId,
     usr: { id: userId, name: customer.name, email: customer.email },
+    account: company ? { id: company.id, name: company.name, plan: company.plan } : null,
     customer,
+    company,
     pizza_order: pizzaOrder,
   });
 }
@@ -511,26 +568,10 @@ function renderResults() {
 // ---------------------------------------------------------------------------
 
 /**
- * Pools of fake data used to generate randomized order identities.
- * These are entirely fictional and used only to produce varied log payloads.
+ * Pools of fake data loaded asynchronously from fake-data.json.
+ * Populated at page load alongside pops.json — null until resolved.
  */
-const _fakeData = {
-  firstNames: ['Alex', 'Jordan', 'Morgan', 'Taylor', 'Casey', 'Riley', 'Quinn', 'Avery', 'Drew', 'Skyler', 'Jamie', 'Parker', 'Reese', 'Sage', 'Blake'],
-  lastNames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Wilson', 'Anderson', 'Thomas', 'Moore', 'Martin', 'Lee', 'White'],
-  streets: ['Maple St', 'Oak Ave', 'Pine Rd', 'Elm Dr', 'Cedar Ln', 'Birch Blvd', 'Walnut Way', 'Spruce Ct', 'Willow Pl', 'Ash St'],
-  cities: [
-    { city: 'Austin', state: 'TX', zip: '78701' },
-    { city: 'Portland', state: 'OR', zip: '97201' },
-    { city: 'Denver', state: 'CO', zip: '80201' },
-    { city: 'Nashville', state: 'TN', zip: '37201' },
-    { city: 'Chicago', state: 'IL', zip: '60601' },
-    { city: 'Phoenix', state: 'AZ', zip: '85001' },
-    { city: 'Atlanta', state: 'GA', zip: '30301' },
-    { city: 'Seattle', state: 'WA', zip: '98101' },
-    { city: 'Miami', state: 'FL', zip: '33101' },
-    { city: 'Minneapolis', state: 'MN', zip: '55401' },
-  ],
-};
+let _fakeData = null;
 
 /**
  * Pick a random element from an array.
@@ -559,27 +600,81 @@ function _hashId(str) {
 
 /**
  * Generate a fake customer order identity for log enrichment.
- * All data is randomly composed from fictional pools — no real PII.
- * The user ID is an idempotent hash of name + email, so the same fictional
- * person will carry the same ID across multiple sessions.
+ * When a Fastly POP region and popName are known, city selection is narrowed
+ * to the closest matching city (e.g. popName "Sydney" → Sydney locale).
+ * Corporate accounts are assigned ~17% of the time; otherwise the user's
+ * email uses a generic domain. Falls back to AMER pools for real user sessions.
  *
- * @returns {{orderId: string, userId: string, customer: {name: string, email: string, address: string}}}
+ * @param {string} [region='AMER'] - Broad region group: 'APAC', 'EMEA', or 'AMER'
+ * @param {string|null} [popName=null] - Fastly POP city name for locale matching
+ * @returns {{orderId: string, userId: string, customer: Object, company: Object|null}}
  */
-function generateFakeOrderIdentity() {
-  const first = _pick(_fakeData.firstNames);
-  const last = _pick(_fakeData.lastNames);
+function generateFakeOrderIdentity(region, popName) {
+  // Fallback pools in case fake-data.json hasn't loaded yet.
+  const data = _fakeData || {
+    firstNames: ['Alex', 'Jordan', 'Morgan', 'Taylor', 'Casey'],
+    lastNames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones'],
+    streets: ['Maple St', 'Oak Ave', 'Pine Rd', 'Elm Dr', 'Cedar Ln'],
+    cities: { AMER: [{ city: 'Dallas', state: 'TX', country: 'US', zip: '75201', aliases: ['Dallas'] }] },
+    companies: { AMER: [] },
+    loyaltyMembers: [],
+  };
+
+  const r = data.cities[region] ? region : 'AMER';
+
+  // ~10% of the time, pick a loyalty member from the fixed curated list.
+  // These specific users always get loyalty_member: true; random users do not.
+  const loyaltyMembers = data.loyaltyMembers || [];
+  const useLoyaltyMember = loyaltyMembers.length > 0 && Math.random() < 0.10;
+
+  let name, email, loyaltyMember;
+  if (useLoyaltyMember) {
+    loyaltyMember = _pick(loyaltyMembers);
+    name = loyaltyMember.name;
+    email = loyaltyMember.email;
+  } else {
+    const first = _pick(data.firstNames);
+    const last = _pick(data.lastNames);
+    name = `${first} ${last}`;
+    email = `${first.toLowerCase()}.${last.toLowerCase()}@example.com`;
+    loyaltyMember = null;
+  }
+
+  // Try to match the Fastly pop_name to a city alias for a more precise locale.
+  const cityPool = data.cities[r];
+  const locale = (popName && cityPool.find(c => c.aliases.some(a => popName.includes(a))))
+    || _pick(cityPool);
+
+  const isCorporate = !loyaltyMember && Math.random() < 0.17;
+  const company = isCorporate ? _pick(data.companies[r] || []) : null;
+
+  if (loyaltyMember) {
+    // Loyalty members always use their personal email, never a corporate domain.
+  } else if (company) {
+    email = email.replace('@example.com', `@${company.domain}`);
+  }
+
   const number = Math.floor(Math.random() * 9000) + 100;
-  const street = _pick(_fakeData.streets);
-  const locale = _pick(_fakeData.cities);
+  const street = _pick(data.streets);
   const orderId = 'ORD-' + Math.random().toString(36).slice(2, 8).toUpperCase();
-  const name = `${first} ${last}`;
-  const email = `${first.toLowerCase()}.${last.toLowerCase()}@example.com`;
   const userId = _hashId(name + email);
+  const accountId = company ? _hashId(company.name + company.domain) : null;
+
+  const address = locale.state
+    ? `${number} ${street}, ${locale.city}, ${locale.state} ${locale.zip}`
+    : `${number} ${street}, ${locale.city}, ${locale.zip}`;
+
+  const customer = {
+    name, email, address,
+    city: locale.city, country: locale.country,
+    loyalty_member: !!loyaltyMember,
+  };
 
   return {
     orderId,
     userId,
-    customer: { name, email, address: `${number} ${street}, ${locale.city}, ${locale.state} ${locale.zip}` },
+    customer,
+    company: company ? { id: accountId, name: company.name, domain: company.domain, plan: company.plan, region: r } : null,
   };
 }
 

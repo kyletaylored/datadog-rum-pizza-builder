@@ -1,0 +1,73 @@
+{
+  "firstNames": ["Alex", "Jordan", "Morgan", "Taylor", "Casey", "Riley", "Quinn", "Avery", "Drew", "Skyler", "Jamie", "Parker", "Reese", "Sage", "Blake"],
+  "lastNames":  ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Wilson", "Anderson", "Thomas", "Moore", "Martin", "Lee", "White"],
+  "streets":    ["Maple St", "Oak Ave", "Pine Rd", "Elm Dr", "Cedar Ln", "Birch Blvd", "Walnut Way", "Spruce Ct", "Willow Pl", "Ash St"],
+
+  "cities": {
+    "AMER": [
+      { "city": "Dallas",    "state": "TX", "country": "US", "zip": "75201",     "aliases": ["Dallas"] },
+      { "city": "Portland",  "state": "OR", "country": "US", "zip": "97201",     "aliases": ["Oregon", "Portland"] },
+      { "city": "São Paulo", "state": "SP", "country": "BR", "zip": "01310-100", "aliases": ["São Paulo", "Sao Paulo"] },
+      { "city": "Toronto",   "state": "ON", "country": "CA", "zip": "M5H 2N2",  "aliases": ["Canada", "Toronto"] },
+      { "city": "Seattle",   "state": "WA", "country": "US", "zip": "98101",     "aliases": ["Seattle"] },
+      { "city": "Chicago",   "state": "IL", "country": "US", "zip": "60601",     "aliases": ["Chicago"] },
+      { "city": "Atlanta",   "state": "GA", "country": "US", "zip": "30301",     "aliases": ["Atlanta"] },
+      { "city": "Miami",     "state": "FL", "country": "US", "zip": "33101",     "aliases": ["Miami"] }
+    ],
+    "EMEA": [
+      { "city": "Frankfurt", "state": "Hesse",               "country": "DE", "zip": "60311",    "aliases": ["Frankfurt"] },
+      { "city": "Dublin",    "state": "Leinster",            "country": "IE", "zip": "D01 F5P2", "aliases": ["Ireland", "Dublin"] },
+      { "city": "Paris",     "state": "Île-de-France",       "country": "FR", "zip": "75001",    "aliases": ["Paris"] },
+      { "city": "London",    "state": "England",             "country": "GB", "zip": "EC1A 1BB", "aliases": ["London"] },
+      { "city": "Amsterdam", "state": "North Holland",       "country": "NL", "zip": "1012 JS",  "aliases": ["Amsterdam"] },
+      { "city": "Stockholm", "state": "Stockholm",           "country": "SE", "zip": "111 29",   "aliases": ["Stockholm"] },
+      { "city": "Madrid",    "state": "Community of Madrid", "country": "ES", "zip": "28001",    "aliases": ["Madrid"] },
+      { "city": "Milan",     "state": "Lombardy",            "country": "IT", "zip": "20121",    "aliases": ["Milan"] }
+    ],
+    "APAC": [
+      { "city": "Hong Kong", "state": "Central",  "country": "HK", "zip": "999077",  "aliases": ["Hong Kong"] },
+      { "city": "Osaka",     "state": "Osaka",    "country": "JP", "zip": "530-0001","aliases": ["Osaka"] },
+      { "city": "Sydney",    "state": "NSW",      "country": "AU", "zip": "2000",    "aliases": ["Sydney"] },
+      { "city": "Tokyo",     "state": "Tokyo",    "country": "JP", "zip": "100-0001","aliases": ["Tokyo"] },
+      { "city": "Singapore", "state": "Central",  "country": "SG", "zip": "018956",  "aliases": ["Singapore"] },
+      { "city": "Melbourne", "state": "VIC",      "country": "AU", "zip": "3000",    "aliases": ["Melbourne"] },
+      { "city": "Seoul",     "state": "Seoul",    "country": "KR", "zip": "04524",   "aliases": ["Seoul"] },
+      { "city": "Auckland",  "state": "Auckland", "country": "NZ", "zip": "1010",    "aliases": ["Auckland"] }
+    ]
+  },
+
+  "companies": {
+    "AMER": [
+      { "name": "Lone Star Tech",       "domain": "lonestartech.io",    "plan": "enterprise" },
+      { "name": "Great Lakes Software", "domain": "greatlakessw.com",   "plan": "business" },
+      { "name": "Pacific Ventures",     "domain": "pacificventures.co", "plan": "enterprise" },
+      { "name": "Maple Cloud Inc",      "domain": "maplecloud.ca",      "plan": "business" },
+      { "name": "Southside Analytics",  "domain": "southsidean.com",    "plan": "starter" }
+    ],
+    "EMEA": [
+      { "name": "Thames Digital",    "domain": "thamesdigital.co.uk", "plan": "enterprise" },
+      { "name": "Nordic Systems",    "domain": "nordicsystems.se",    "plan": "business" },
+      { "name": "Berlin Labs",       "domain": "berlinlabs.de",       "plan": "enterprise" },
+      { "name": "Canal Street Tech", "domain": "canalstreettech.fr",  "plan": "starter" },
+      { "name": "Sahara Cloud",      "domain": "saharacloud.ae",      "plan": "business" }
+    ],
+    "APAC": [
+      { "name": "Harbour Bridge Tech", "domain": "harbourbridge.com.au", "plan": "enterprise" },
+      { "name": "Sakura Systems",      "domain": "sakurasystems.jp",     "plan": "business" },
+      { "name": "Marina Bay Software", "domain": "marinabaysw.sg",       "plan": "enterprise" },
+      { "name": "Ganges Analytics",    "domain": "gangesanalytics.in",   "plan": "starter" },
+      { "name": "Kiwi Cloud",          "domain": "kiwicloud.nz",         "plan": "business" }
+    ]
+  },
+
+  "loyaltyMembers": [
+    { "name": "Sam Rivera",    "email": "sam.rivera@example.com" },
+    { "name": "Chris Nakamura","email": "chris.nakamura@example.com" },
+    { "name": "Pat Okafor",    "email": "pat.okafor@example.com" },
+    { "name": "Dana Kowalski", "email": "dana.kowalski@example.com" },
+    { "name": "Jordan Ellis",  "email": "jordan.ellis@example.com" },
+    { "name": "Alex Petrov",   "email": "alex.petrov@example.com" },
+    { "name": "Casey Nguyen",  "email": "casey.nguyen@example.com" },
+    { "name": "Morgan Chen",   "email": "morgan.chen@example.com" }
+  ]
+}

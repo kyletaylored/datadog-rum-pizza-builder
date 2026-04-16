@@ -114,41 +114,6 @@ if (window.location.hash) {
 }
 
 /**
- * Delete a browser cookie by name (sets Max-Age=0 on both root path and current path).
- *
- * @param {string} name
- */
-function deleteCookie(name) {
-  document.cookie = `${name}=; Max-Age=0; path=/`;
-  document.cookie = `${name}=; Max-Age=0; path=${window.location.pathname}`;
-}
-
-/**
- * Force the RUM SDK's synthetic-session classification based on the
- * `force_session_type` URL parameter, before DD_RUM.init() runs.
- *
- * The Datadog Synthetics runner injects cookies and window globals that cause
- * the RUM SDK to tag all collected events as "synthetic" — separate from real
- * user traffic in the RUM Explorer. By passing `?force_session_type=user` in
- * the test's start URL, these signals are cleared before init so the session
- * is captured as a normal user session instead.
- *
- * This only affects how the RUM SDK classifies the session. Our internal
- * `isSynthetics` flag (user-agent based) is unaffected and continues to drive
- * region detection and intentional error injection.
- *
- * Reference: https://github.com/DataDog/browser-sdk/blob/main/packages/core/src/domain/synthetics/syntheticsWorkerValues.ts
- */
-(function () {
-  const forceSessionType = new URLSearchParams(window.location.search).get('force_session_type');
-  if (forceSessionType === 'user') {
-    // Clear the unified context global and cookie.
-    delete window['_DATADOG_SYNTHETICS_RUM_CONTEXT'];
-    deleteCookie('datadog-synthetics-rum-context');
-  }
-})();
-
-/**
  * Initialize the Datadog RUM SDK using shared config from window.DD_CONFIG.
  * The beforeSend callback feeds every event into the on-page live log table.
  */

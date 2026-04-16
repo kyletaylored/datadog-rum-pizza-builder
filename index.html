@@ -25,6 +25,42 @@
 
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><text y='32' font-size='32'>🍕</text></svg>">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/picocss/2.0.6/pico.min.css">
+<!-- Must run before the RUM/Logs SDK loaders so synthetic context is cleared
+     before the SDK reads it at load time. -->
+<script>
+  (function () {
+    var params = new URLSearchParams(window.location.search);
+    var forceSessionType = params.get('force_session_type');
+    if (forceSessionType !== 'user') return;
+
+    function deleteCookie(name) {
+      document.cookie = name + '=; Max-Age=0; path=/';
+      document.cookie = name + '=; Max-Age=0; path=' + window.location.pathname;
+    }
+
+    // Snapshot what exists before we clear, for debugging.
+    var before = {
+      rumContext:  window['_DATADOG_SYNTHETICS_RUM_CONTEXT'],
+      publicId:    window['_DATADOG_SYNTHETICS_PUBLIC_ID'],
+      resultId:    window['_DATADOG_SYNTHETICS_RESULT_ID'],
+      injectsRum:  window['_DATADOG_SYNTHETICS_INJECTS_RUM'],
+      rumCookie:   document.cookie.match(/datadog-synthetics-rum-context=([^;]+)/)?.[1],
+      pubCookie:   document.cookie.match(/datadog-synthetics-public-id=([^;]+)/)?.[1],
+    };
+    console.debug('[rum-pizza] force_session_type=user — synthetic context before clearing:', before);
+
+    delete window['_DATADOG_SYNTHETICS_RUM_CONTEXT'];
+    delete window['_DATADOG_SYNTHETICS_PUBLIC_ID'];
+    delete window['_DATADOG_SYNTHETICS_RESULT_ID'];
+    delete window['_DATADOG_SYNTHETICS_INJECTS_RUM'];
+    deleteCookie('datadog-synthetics-rum-context');
+    deleteCookie('datadog-synthetics-public-id');
+    deleteCookie('datadog-synthetics-result-id');
+    deleteCookie('datadog-synthetics-injects-rum');
+
+    console.debug('[rum-pizza] synthetic context cleared — session will be captured as user traffic');
+  })();
+</script>
 <script>
   (function(h,o,u,n,d) {
     h=h[d]=h[d]||{q:[],onReady:function(c){h.q.push(c)}}

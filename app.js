@@ -183,6 +183,18 @@ const logger = new Proxy({}, {
 const isSynthetics = /DatadogSynthetics/i.test(navigator.userAgent)
   || new URLSearchParams(window.location.search).has('synthetic');
 
+// If force_session_type=user cleared synthetic context before SDK load,
+// emit a structured log now that logger is available.
+if (window.__preInitSynthetics) {
+  logger.log('synthetic context cleared for user session', {
+    pre_clear: window.__preInitSynthetics,
+    post_clear: {
+      rumContext: window['_DATADOG_SYNTHETICS_RUM_CONTEXT'],
+      cookies: document.cookie.split(';').filter(c => c.includes('datadog-synthetics')).map(c => c.trim()),
+    },
+  });
+}
+
 /**
  * Map a Fastly POP region string to our broad APAC/EMEA/AMER groupings.
  *

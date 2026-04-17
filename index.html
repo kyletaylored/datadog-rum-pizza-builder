@@ -25,38 +25,23 @@
 
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><text y='32' font-size='32'>🍕</text></svg>">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/picocss/2.0.6/pico.min.css">
-<!-- Must run before the RUM/Logs SDK loaders so synthetic context is cleared
-     before the SDK reads it at load time. Only triggers when ?force_session_type=user
-     is in the URL, giving per-test control over which runs appear as user sessions. -->
+<!-- Runs before the RUM/Logs SDK loaders — must stay here.
+     The SDK snapshots cookies at module evaluation time, so clearing must
+     happen before these <script> tags inject the async SDK scripts. -->
 <script>
   (function () {
-    var forceUser = new URLSearchParams(window.location.search).get('force_session_type') === 'user';
-    if (!forceUser) return;
-
-    // Delete a cookie across all domain/path variants — necessary because the
-    // Synthetics runner sets cookies with an explicit domain attribute, and a
-    // deletion without a matching domain is silently ignored by the browser.
-    function deleteCookie(name) {
-      var base = name + '=; Max-Age=0; path=/';
-      var host = window.location.hostname;
-      // e.g. kyletaylored.github.io → also try .github.io
-      var parentDomain = host.indexOf('.') !== -1 ? '.' + host.split('.').slice(1).join('.') : null;
-      document.cookie = base;
-      document.cookie = base + '; domain=' + host;
-      if (parentDomain) document.cookie = base + '; domain=' + parentDomain;
+    if (new URLSearchParams(window.location.search).get('force_session_type') !== 'user') return;
+    function deleteCookie(n) {
+      var b = n + '=; Max-Age=0; path=/'; var h = window.location.hostname;
+      var p = h.indexOf('.') !== -1 ? '.' + h.split('.').slice(1).join('.') : null;
+      document.cookie = b; document.cookie = b + '; domain=' + h;
+      if (p) document.cookie = b + '; domain=' + p;
     }
-
-    // Snapshot what exists before clearing — visible in DevTools console and
-    // forwarded via forwardConsoleLogs so it appears in Datadog Logs too.
-    var before = {
+    // Stash pre-clear state for app.js to log after the SDK is ready.
+    window.__preInitSynthetics = {
       rumContext: window['_DATADOG_SYNTHETICS_RUM_CONTEXT'],
-      publicId:   window['_DATADOG_SYNTHETICS_PUBLIC_ID'],
-      resultId:   window['_DATADOG_SYNTHETICS_RESULT_ID'],
-      injectsRum: window['_DATADOG_SYNTHETICS_INJECTS_RUM'],
-      cookies:    document.cookie.split(';').filter(function(c) { return c.indexOf('datadog-synthetics') !== -1; }).map(function(c) { return c.trim(); }),
+      cookies: document.cookie.split(';').filter(function(c) { return c.indexOf('datadog-synthetics') !== -1; }).map(function(c) { return c.trim(); }),
     };
-    console.debug('[rum-pizza] clearing synthetic context (trigger: url-param)', before);
-
     delete window['_DATADOG_SYNTHETICS_RUM_CONTEXT'];
     delete window['_DATADOG_SYNTHETICS_PUBLIC_ID'];
     delete window['_DATADOG_SYNTHETICS_RESULT_ID'];
@@ -65,11 +50,6 @@
     deleteCookie('datadog-synthetics-public-id');
     deleteCookie('datadog-synthetics-result-id');
     deleteCookie('datadog-synthetics-injects-rum');
-
-    console.debug('[rum-pizza] synthetic context after clearing:', {
-      rumContext: window['_DATADOG_SYNTHETICS_RUM_CONTEXT'],
-      cookies:    document.cookie.split(';').filter(function(c) { return c.indexOf('datadog-synthetics') !== -1; }).map(function(c) { return c.trim(); }),
-    });
   })();
 </script>
 <script>

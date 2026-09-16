@@ -146,13 +146,22 @@ html, body {
   align-items: center;
   justify-content: center;
   color: var(--dd-color-muted);
-  transform: rotate(0deg);
-  transform-origin: center center;
-  transition: transform 0.15s;
+  /* Three stylesheets want a piece of this pseudo-element: Pico rotates it
+     with `transform`, Web Awesome's native layer draws a chevron with `mask`
+     + `background-color` and rotates it with the `rotate` property. Those two
+     rotations compose instead of overriding, so the marker ends up at 180deg.
+     Reset all of it and animate `rotate` alone.
+     Phase 2 replaces these accordions with <wa-details>, which owns its own
+     marker — this whole block goes away with it. */
+  transform: none;
+  mask: none;
+  background-color: transparent;
+  rotate: 0deg;
+  transition: rotate 0.15s;
   flex-shrink: 0;
 }
 
-.sidebar-section[open] > summary::after { transform: rotate(90deg); }
+.sidebar-section[open] > summary::after { rotate: 90deg; }
 
 .sidebar-section[open] > summary {
   background: var(--dd-surface);

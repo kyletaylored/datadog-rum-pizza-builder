@@ -16,16 +16,20 @@
   position: absolute; top: 0; right: -4px; bottom: 0; width: 8px;
   cursor: col-resize; z-index: 20; background: transparent;
 }
-.sidebar-resizer:hover, .sidebar-resizer.dragging { background: var(--dd-color-primary); opacity: .35; }
+.sidebar-resizer {
+  transition: background var(--dd-speed-fast) var(--dd-ease);
+}
+.sidebar-resizer:hover,
+.sidebar-resizer.dragging { background: var(--dd-color-primary-fill); opacity: .5; }
 @media (max-width: 860px) { .sidebar-resizer { display: none; } }
 
 /* ============================================================
    Sidebar topic-tag palette — add more as new labs need them
    ============================================================ */
-.tag-consent { background: #cffafe; color: #0e7490; }
-.tag-storage { background: #e0e7ff; color: #4338ca; }
-.tag-tabs    { background: #ffedd5; color: #c2410c; }
-.tag-error   { background: #fee2e2; color: #b91c1c; }
+.tag-consent { background: var(--dd-cyan-fill); color: var(--dd-cyan-on); }
+.tag-storage { background: var(--dd-indigo-fill); color: var(--dd-indigo-on); }
+.tag-tabs { background: var(--dd-orange-fill); color: var(--dd-orange-on); }
+.tag-error { background: var(--dd-red-fill); color: var(--dd-red-on); }
 
 /* ============================================================
    Layout helpers
@@ -49,11 +53,11 @@ wa-callout.lab-callout {
    ============================================================ */
 .consent-state-pill {
   display: inline-flex; align-items: center; gap: .35rem; padding: .2rem .6rem;
-  border-radius: 999px; font-size: .8rem; font-weight: 600; margin-left: .5rem;
+  border-radius: var(--dd-radius-pill); font-size: .8rem; font-weight: 600; margin-left: .5rem;
 }
-.consent-state-pill.granted     { background: #dcfce7; color: #15803d; }
-.consent-state-pill.not-granted { background: #fee2e2; color: #b91c1c; }
-.consent-state-pill.pending     { background: #fef3c7; color: #92400e; }
+.consent-state-pill.granted     { background: var(--dd-green-fill);  color: var(--dd-green-on); }
+.consent-state-pill.not-granted { background: var(--dd-red-fill);    color: var(--dd-red-on); }
+.consent-state-pill.pending     { background: var(--dd-yellow-fill); color: var(--dd-yellow-on); }
 
 /* ============================================================
    Storage grid / card — live read-only inspector panels
@@ -82,16 +86,24 @@ wa-card.storage-card > h4[slot='header'] {
 .storage-card li { padding: .35rem 0; border-bottom: 1px dashed var(--dd-color-border); word-break: break-all; }
 .storage-card li:last-child { border-bottom: none; }
 .storage-card .empty { color: var(--dd-color-muted); font-style: italic; font-family: inherit; }
-.storage-card .dd-key { color: #b91c1c; font-weight: 700; }
+.storage-card .dd-key { color: var(--dd-red-on); font-weight: 700; }
 
 /* ============================================================
    Mode picker — pick one of N live configs, with an active state
    ============================================================ */
 .mode-picker { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin: 1rem 0; }
-.mode-picker button { position: relative; }
-.mode-picker button.active { box-shadow: 0 0 0 2px var(--dd-color-primary); }
+.mode-picker button {
+  position: relative;
+  transition: box-shadow var(--dd-speed-fast) var(--dd-ease);
+}
+.mode-picker button.active {
+  box-shadow: 0 0 0 2px var(--dd-color-primary-fill);
+}
 .mode-picker button { height: auto; }
-.mode-picker button.active::after { content: ' ✓'; }
+.mode-picker button.active::after {
+  content: '\2713';
+  margin-inline-start: 0.4em;
+}
 
 .reset-state-btn { font-size: .8rem; }
 
@@ -107,7 +119,7 @@ table.compare-table code { font-size: .8rem; }
    ============================================================ */
 .session-id, .tab-badge {
   font-family: monospace; font-size: .75rem; padding: .1rem .4rem;
-  border-radius: .25rem; background: var(--dd-surface-code);
+  border-radius: var(--dd-radius); background: var(--dd-surface-code);
 }
 .session-id { font-size: .8rem; padding: .15rem .4rem; }
 .tab-row-self { font-weight: 700; }
@@ -119,10 +131,10 @@ table.compare-table code { font-size: .8rem; }
    error/long_task live in style.css.
    ============================================================ */
 .col-src { width: 64px; }
-.filter-btn.rum  { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
-.filter-btn.logs { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
-.type-badge.rum   { background: #dbeafe; color: #1d4ed8; }
-.type-badge.logs  { background: #fee2e2; color: #b91c1c; }
-.type-badge.warn  { background: #fef3c7; color: #92400e; }
-.type-badge.info  { background: #e0e7ff; color: #4338ca; }
-.type-badge.debug { background: #f1f5f9; color: #475569; }
+.filter-btn.rum { background: var(--dd-blue-fill); color: var(--dd-blue-on); border-color: var(--dd-blue-border); }
+.filter-btn.logs { background: var(--dd-red-fill); color: var(--dd-red-on); border-color: var(--dd-red-border); }
+.type-badge.rum { background: var(--dd-blue-fill); color: var(--dd-blue-on); }
+.type-badge.logs { background: var(--dd-red-fill); color: var(--dd-red-on); }
+.type-badge.warn { background: var(--dd-yellow-fill); color: var(--dd-yellow-on); }
+.type-badge.info { background: var(--dd-indigo-fill); color: var(--dd-indigo-on); }
+.type-badge.debug { background: var(--dd-gray-fill); color: var(--dd-gray-on); }

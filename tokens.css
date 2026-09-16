@@ -42,4 +42,85 @@
 
   /* --- Shape ------------------------------------------------------------- */
   --dd-radius: var(--wa-border-radius-m);
+  --dd-radius-pill: var(--wa-border-radius-pill);
+
+  /* --- Elevation & motion ------------------------------------------------ */
+  --dd-shadow-s: var(--wa-shadow-s);
+  --dd-shadow-m: var(--wa-shadow-m);
+  --dd-ease: var(--wa-transition-easing);
+  --dd-speed-fast: var(--wa-transition-fast);
+  --dd-speed: var(--wa-transition-normal);
+
+  /* --- Semantic hue ramps ------------------------------------------------ */
+  /* The badges, filter pills, topic tags and state pills used to hardcode
+     light-mode pastel hex pairs, which meant dark mode showed pale fills with
+     dark text on a dark page. Each hue now resolves to a fill / text / border
+     triple, remapped for dark mode below, so every one of those components
+     inherits correct contrast in both themes from one place. */
+  --dd-red-fill: var(--wa-color-red-95);
+  --dd-red-on: var(--wa-color-red-40);
+  --dd-red-border: var(--wa-color-red-90);
+  --dd-orange-fill: var(--wa-color-orange-95);
+  --dd-orange-on: var(--wa-color-orange-40);
+  --dd-orange-border: var(--wa-color-orange-90);
+  --dd-yellow-fill: var(--wa-color-yellow-95);
+  --dd-yellow-on: var(--wa-color-yellow-40);
+  --dd-yellow-border: var(--wa-color-yellow-90);
+  --dd-green-fill: var(--wa-color-green-95);
+  --dd-green-on: var(--wa-color-green-40);
+  --dd-green-border: var(--wa-color-green-90);
+  --dd-cyan-fill: var(--wa-color-cyan-95);
+  --dd-cyan-on: var(--wa-color-cyan-40);
+  --dd-cyan-border: var(--wa-color-cyan-90);
+  --dd-blue-fill: var(--wa-color-blue-95);
+  --dd-blue-on: var(--wa-color-blue-40);
+  --dd-blue-border: var(--wa-color-blue-90);
+  --dd-indigo-fill: var(--wa-color-indigo-95);
+  --dd-indigo-on: var(--wa-color-indigo-40);
+  --dd-indigo-border: var(--wa-color-indigo-90);
+  --dd-purple-fill: var(--wa-color-purple-95);
+  --dd-purple-on: var(--wa-color-purple-40);
+  --dd-purple-border: var(--wa-color-purple-90);
+  --dd-pink-fill: var(--wa-color-pink-95);
+  --dd-pink-on: var(--wa-color-pink-40);
+  --dd-pink-border: var(--wa-color-pink-90);
+  --dd-gray-fill: var(--wa-color-gray-95);
+  --dd-gray-on: var(--wa-color-gray-40);
+  --dd-gray-border: var(--wa-color-gray-90);
+}
+
+/* Dark mode keyed off our own `data-theme` rather than the framework's class,
+   so the token layer keeps its own switch. Same hues, inverted ends of each
+   ramp: deep fill, light text. */
+:root[data-theme='dark'] {
+  --dd-red-fill: var(--wa-color-red-20);
+  --dd-red-on: var(--wa-color-red-70);
+  --dd-red-border: var(--wa-color-red-30);
+  --dd-orange-fill: var(--wa-color-orange-20);
+  --dd-orange-on: var(--wa-color-orange-70);
+  --dd-orange-border: var(--wa-color-orange-30);
+  --dd-yellow-fill: var(--wa-color-yellow-20);
+  --dd-yellow-on: var(--wa-color-yellow-70);
+  --dd-yellow-border: var(--wa-color-yellow-30);
+  --dd-green-fill: var(--wa-color-green-20);
+  --dd-green-on: var(--wa-color-green-70);
+  --dd-green-border: var(--wa-color-green-30);
+  --dd-cyan-fill: var(--wa-color-cyan-20);
+  --dd-cyan-on: var(--wa-color-cyan-70);
+  --dd-cyan-border: var(--wa-color-cyan-30);
+  --dd-blue-fill: var(--wa-color-blue-20);
+  --dd-blue-on: var(--wa-color-blue-70);
+  --dd-blue-border: var(--wa-color-blue-30);
+  --dd-indigo-fill: var(--wa-color-indigo-20);
+  --dd-indigo-on: var(--wa-color-indigo-70);
+  --dd-indigo-border: var(--wa-color-indigo-30);
+  --dd-purple-fill: var(--wa-color-purple-20);
+  --dd-purple-on: var(--wa-color-purple-70);
+  --dd-purple-border: var(--wa-color-purple-30);
+  --dd-pink-fill: var(--wa-color-pink-20);
+  --dd-pink-on: var(--wa-color-pink-70);
+  --dd-pink-border: var(--wa-color-pink-30);
+  --dd-gray-fill: var(--wa-color-gray-20);
+  --dd-gray-on: var(--wa-color-gray-70);
+  --dd-gray-border: var(--wa-color-gray-30);
 }

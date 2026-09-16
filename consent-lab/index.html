@@ -26,6 +26,7 @@
 </script>
 <script src="../config.js"></script>
 <link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="../lab-shared.css">
 <script>
   // Apply saved theme before paint to avoid flash — shared key with the pizza builder.
   (function() {
@@ -34,14 +35,10 @@
   })();
 </script>
 <style>
-  /* ===== Consent Lab — page-specific components ===== */
-  .tag-consent { background: #cffafe; color: #0e7490; }
-  .tag-storage { background: #e0e7ff; color: #4338ca; }
-  .tag-tabs    { background: #ffedd5; color: #c2410c; }
-  .tag-error   { background: #fee2e2; color: #b91c1c; }
-
-  .lab-container { max-width: 900px; margin: 0 auto; padding: 0 1rem 3rem; }
-
+  /* ===== Consent Lab — page-specific components only.
+     Everything reusable (resizer, tag palette, storage cards, mode picker,
+     compare table, state pill, activity log badges, etc.) now lives in
+     ../lab-shared.css so future labs can pull it in too. ===== */
   .consent-banner {
     display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: space-between;
     padding: 1rem 1.25rem; margin-bottom: 1.5rem; border-radius: .5rem;
@@ -51,53 +48,8 @@
   .consent-banner p { margin: 0; flex: 1 1 260px; }
   .consent-banner .btn-row { display: flex; gap: .5rem; flex-wrap: wrap; }
   .consent-banner button { margin: 0; white-space: nowrap; }
-  .consent-state-pill {
-    display: inline-flex; align-items: center; gap: .35rem; padding: .2rem .6rem;
-    border-radius: 999px; font-size: .8rem; font-weight: 600; margin-left: .5rem;
-  }
-  .consent-state-pill.granted     { background: #dcfce7; color: #15803d; }
-  .consent-state-pill.not-granted { background: #fee2e2; color: #b91c1c; }
-  .consent-state-pill.pending     { background: #fef3c7; color: #92400e; }
-
-  .storage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
-  @media (max-width: 700px) { .storage-grid { grid-template-columns: 1fr; } }
-  .storage-card {
-    border: 1px solid var(--pico-muted-border-color); border-radius: .5rem; padding: 1rem;
-    background: var(--pico-card-sectioning-background-color);
-  }
-  .storage-card h4 { margin: 0 0 .5rem; display: flex; align-items: center; justify-content: space-between; }
-  .storage-card ul { list-style: none; margin: 0; padding: 0; font-family: monospace; font-size: .82rem; }
-  .storage-card li { padding: .35rem 0; border-bottom: 1px dashed var(--pico-muted-border-color); word-break: break-all; }
-  .storage-card li:last-child { border-bottom: none; }
-  .storage-card .empty { color: var(--pico-muted-color); font-style: italic; font-family: inherit; }
-  .storage-card .dd-key { color: #b91c1c; font-weight: 700; }
-
-  .mode-picker { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin: 1rem 0; }
-  .mode-picker button { position: relative; }
-  .mode-picker button.active { box-shadow: 0 0 0 2px var(--pico-primary); }
-  .mode-picker button.active::after { content: ' ✓'; }
-
-  table.compare-table { font-size: .85rem; }
-  table.compare-table code { font-size: .8rem; }
-
-  .session-id { font-family: monospace; padding: .15rem .4rem; border-radius: .25rem; background: var(--pico-code-background-color); }
 
   #tabs-table td, #tabs-table th { font-size: .82rem; }
-  .tab-badge { font-family: monospace; font-size: .75rem; padding: .1rem .4rem; border-radius: .25rem; background: var(--pico-code-background-color); }
-  .tab-row-self { font-weight: 700; }
-
-  .lab-callout {
-    border-left: 4px solid #b91c1c; padding: .75rem 1rem; margin: 1.25rem 0;
-    background: var(--pico-card-sectioning-background-color); border-radius: 0 .5rem .5rem 0;
-  }
-  .lab-callout strong { color: #b91c1c; }
-
-  #error-log { max-height: 220px; overflow-y: auto; font-family: monospace; font-size: .8rem;
-    border: 1px solid var(--pico-muted-border-color); border-radius: .5rem; padding: .75rem; background: var(--pico-card-sectioning-background-color); }
-  #error-log .entry { padding: .25rem 0; border-bottom: 1px dashed var(--pico-muted-border-color); }
-  #error-log .entry:last-child { border-bottom: none; }
-  #error-log .via-rum   { color: #15803d; }
-  #error-log .via-logs  { color: #b91c1c; }
 </style>
 </head>
 <body>
@@ -141,14 +93,17 @@
   ...
   sessionPersistence: 'local-storage', // or 'cookie' | 'memory'
 })</pre>
-          <table class="compare-table">
-            <thead><tr><th>Mode</th><th>Creates a cookie?</th><th>Survives refresh?</th><th>Shared across tabs?</th></tr></thead>
-            <tbody>
-              <tr><td><code>cookie</code></td><td>Yes (<code>_dd_s</code>)</td><td>Yes</td><td>Yes</td></tr>
-              <tr><td><code>local-storage</code></td><td><strong>No</strong></td><td>Yes</td><td>Yes</td></tr>
-              <tr><td><code>memory</code></td><td><strong>No</strong></td><td><strong>No — new session</strong></td><td><strong>No — separate session per tab</strong></td></tr>
-            </tbody>
-          </table>
+          <div class="compare-table-wrap">
+            <table class="compare-table">
+              <thead><tr><th>Mode</th><th>Cookie?</th><th>Refresh-safe?</th><th>Multi-tab safe?</th></tr></thead>
+              <tbody>
+                <tr><td><code>cookie</code></td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+                <tr><td><code>local-storage</code></td><td><strong>No</strong></td><td>Yes</td><td>Yes</td></tr>
+                <tr><td><code>memory</code></td><td><strong>No</strong></td><td><strong>No</strong></td><td><strong>No</strong></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p style="font-size:.82rem">"Refresh-safe" and "multi-tab safe" mean the session ID stays the same instead of minting a new one — <code>cookie</code> uses <code>_dd_s</code>, the others use no cookie at all.</p>
           <p>Try all three in the <strong>Storage Inspector</strong> tab, then use the <strong>Multi-tab test</strong> tab to see why <code>memory</code> risks inflating session counts for a multi-tab workflow, while <code>local-storage</code> doesn't.</p>
           <p>If both RUM and Logs SDKs are on the same page, Datadog requires them to use the <strong>same</strong> <code>sessionPersistence</code> value.</p>
         </div>
@@ -213,6 +168,7 @@ DD_RUM.init({ ..., trackingConsent: 'pending' })</pre>
       </label>
     </footer>
 
+    <div class="sidebar-resizer" id="sidebar-resizer" title="Drag to resize"></div>
   </aside><!-- /.training-sidebar -->
 
   <!-- ===== MAIN CONTENT ===== -->
@@ -248,7 +204,9 @@ DD_RUM.init({ ..., trackingConsent: 'pending' })</pre>
           <button id="mode-btn-cookie"        onclick="reloadWithPersistence('cookie')">cookie</button>
           <button id="mode-btn-local-storage" onclick="reloadWithPersistence('local-storage')">local-storage</button>
           <button id="mode-btn-memory"        onclick="reloadWithPersistence('memory')">memory</button>
+          <button class="secondary outline reset-state-btn" onclick="resetLabState()" title="Clear Datadog cookies &amp; localStorage left over from earlier tests, then reload">🧹 Reset lab state</button>
         </div>
+        <p style="font-size:.78rem; color:var(--pico-muted-color)">Switching modes doesn't delete a cookie created by an earlier test in this browser — cookies just expire on their own. If the inspector below shows a cookie you didn't expect, use <strong>Reset lab state</strong> to clear it before comparing modes.</p>
 
         <div class="storage-grid">
           <div class="storage-card">
@@ -290,10 +248,8 @@ DD_RUM.init({ ..., trackingConsent: 'pending' })</pre>
         <p>The Logs SDK below is initialized independently of the consent banner on the Storage Inspector tab — it always runs, uses <code>sessionPersistence: 'local-storage'</code>, and never sets a cookie. This is the "Sentry-equivalent" backup plan: 100% error capture regardless of RUM consent state.</p>
         <div class="btn-row" style="margin-bottom:1rem">
           <button onclick="labThrowError()">Throw a JS error</button>
-          <button class="secondary" onclick="document.getElementById('error-log').innerHTML=''">Clear log</button>
         </div>
-        <p>RUM consent right now: <span id="consent-pill-2" class="consent-state-pill pending">pending</span> — notice that errors below still get captured by the Logs pipe even when RUM is declined.</p>
-        <div id="error-log"><div class="entry">Waiting for errors…</div></div>
+        <p>RUM consent right now: <span id="consent-pill-2" class="consent-state-pill pending">pending</span> — notice that the error still shows up tagged <span class="type-badge logs">logs</span> in the activity log below even when RUM is declined. If consent is granted, it'll also show up tagged <span class="type-badge rum">rum</span>.</p>
       </div>
     </div><!-- /#tab-errors -->
 
@@ -309,10 +265,40 @@ DD_RUM.init({ ..., trackingConsent: 'pending' })</pre>
       </div>
     </div><!-- /#tab-config -->
 
+    <!-- Persistent activity log — visible under every tab, fed by both SDKs -->
+    <div id="rum-log-wrap">
+      <div id="rum-log-header">
+        <h3>Datadog activity log</h3>
+        <div class="log-controls">
+          <button class="filter-btn rum active"  onclick="toggleActivityFilter('rum')">rum</button>
+          <button class="filter-btn logs active" onclick="toggleActivityFilter('logs')">logs</button>
+          <button class="secondary outline" id="clear-log-btn" onclick="clearActivityLog()">Clear</button>
+        </div>
+      </div>
+      <div id="rum-table-wrap">
+        <table id="rum-table">
+          <colgroup>
+            <col class="col-time"><col class="col-src"><col class="col-type"><col class="col-a"><col class="col-b">
+          </colgroup>
+          <thead id="rum-thead">
+            <tr>
+              <th>time</th>
+              <th>source</th>
+              <th>type</th>
+              <th>path / name</th>
+              <th>hash / payload</th>
+            </tr>
+          </thead>
+          <tbody id="rum-tbody"><tr id="rum-empty-row"><td colspan="5">Waiting for events…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
   </div><!-- /.training-main -->
 
 </div><!-- /.training-layout -->
 
+<script src="../lab-shared.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -1,0 +1,109 @@
+/**
+ * lab-shared.css — reusable UI kit shared by the pizza builder and every
+ * "lab" sub-page (e.g. /consent-lab/). Load this AFTER style.css so its
+ * rules (like `.training-sidebar { position: relative; }`) can safely
+ * layer on top without editing that file.
+ *
+ * Pair with lab-shared.js for the resizable sidebar's drag behavior.
+ */
+
+/* ============================================================
+   Resizable sidebar
+   ============================================================ */
+.training-sidebar { position: relative; }
+
+.sidebar-resizer {
+  position: absolute; top: 0; right: -4px; bottom: 0; width: 8px;
+  cursor: col-resize; z-index: 20; background: transparent;
+}
+.sidebar-resizer:hover, .sidebar-resizer.dragging { background: var(--pico-primary); opacity: .35; }
+@media (max-width: 860px) { .sidebar-resizer { display: none; } }
+
+/* ============================================================
+   Sidebar topic-tag palette — add more as new labs need them
+   ============================================================ */
+.tag-consent { background: #cffafe; color: #0e7490; }
+.tag-storage { background: #e0e7ff; color: #4338ca; }
+.tag-tabs    { background: #ffedd5; color: #c2410c; }
+.tag-error   { background: #fee2e2; color: #b91c1c; }
+
+/* ============================================================
+   Layout helpers
+   ============================================================ */
+.lab-container { max-width: 900px; margin: 0 auto; padding: 0 1rem 3rem; }
+
+.lab-callout {
+  border-left: 4px solid #b91c1c; padding: .75rem 1rem; margin: 1.25rem 0;
+  background: var(--pico-card-sectioning-background-color); border-radius: 0 .5rem .5rem 0;
+}
+.lab-callout strong { color: #b91c1c; }
+
+/* ============================================================
+   State pill — small colored badge for tri-state values
+   (e.g. consent: granted / not-granted / pending)
+   ============================================================ */
+.consent-state-pill {
+  display: inline-flex; align-items: center; gap: .35rem; padding: .2rem .6rem;
+  border-radius: 999px; font-size: .8rem; font-weight: 600; margin-left: .5rem;
+}
+.consent-state-pill.granted     { background: #dcfce7; color: #15803d; }
+.consent-state-pill.not-granted { background: #fee2e2; color: #b91c1c; }
+.consent-state-pill.pending     { background: #fef3c7; color: #92400e; }
+
+/* ============================================================
+   Storage grid / card — live read-only inspector panels
+   ============================================================ */
+.storage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+@media (max-width: 700px) { .storage-grid { grid-template-columns: 1fr; } }
+.storage-card {
+  border: 1px solid var(--pico-muted-border-color); border-radius: .5rem; padding: 1rem;
+  background: var(--pico-card-sectioning-background-color);
+}
+.storage-card h4 { margin: 0 0 .5rem; display: flex; align-items: center; justify-content: space-between; }
+.storage-card ul { list-style: none; margin: 0; padding: 0; font-family: monospace; font-size: .82rem; }
+.storage-card li { padding: .35rem 0; border-bottom: 1px dashed var(--pico-muted-border-color); word-break: break-all; }
+.storage-card li:last-child { border-bottom: none; }
+.storage-card .empty { color: var(--pico-muted-color); font-style: italic; font-family: inherit; }
+.storage-card .dd-key { color: #b91c1c; font-weight: 700; }
+
+/* ============================================================
+   Mode picker — pick one of N live configs, with an active state
+   ============================================================ */
+.mode-picker { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin: 1rem 0; }
+.mode-picker button { position: relative; }
+.mode-picker button.active { box-shadow: 0 0 0 2px var(--pico-primary); }
+.mode-picker button.active::after { content: ' ✓'; }
+
+.reset-state-btn { font-size: .8rem; }
+
+/* ============================================================
+   Comparison table
+   ============================================================ */
+.compare-table-wrap { overflow-x: auto; }
+table.compare-table { font-size: .85rem; }
+table.compare-table code { font-size: .8rem; }
+
+/* ============================================================
+   Small monospace badges — session ids, tab ids, etc.
+   ============================================================ */
+.session-id, .tab-badge {
+  font-family: monospace; font-size: .75rem; padding: .1rem .4rem;
+  border-radius: .25rem; background: var(--pico-code-background-color);
+}
+.session-id { font-size: .8rem; padding: .15rem .4rem; }
+.tab-row-self { font-weight: 700; }
+
+/* ============================================================
+   Activity log extensions — extra "source" column + badge colors
+   for labs that mix multiple SDKs (e.g. RUM + Logs) in one table.
+   Base .type-badge / .filter-btn colors for view/action/resource/
+   error/long_task live in style.css.
+   ============================================================ */
+.col-src { width: 64px; }
+.filter-btn.rum  { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
+.filter-btn.logs { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+.type-badge.rum   { background: #dbeafe; color: #1d4ed8; }
+.type-badge.logs  { background: #fee2e2; color: #b91c1c; }
+.type-badge.warn  { background: #fef3c7; color: #92400e; }
+.type-badge.info  { background: #e0e7ff; color: #4338ca; }
+.type-badge.debug { background: #f1f5f9; color: #475569; }

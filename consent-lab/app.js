@@ -65,6 +65,29 @@ function reloadWithPersistence(mode) {
 }
 
 /**
+ * Clear Datadog-related cookies and localStorage keys left over from an
+ * earlier test in this browser (e.g. a real _dd_s cookie from a previous
+ * "cookie" mode run, or from visiting the main pizza builder, which also
+ * lives on this domain and sets a site-wide first-party cookie). Also resets
+ * this lab's own consent/persistence choice so the next load starts clean.
+ */
+function resetLabState() {
+  document.cookie.split(';').forEach(c => {
+    const name = c.split('=')[0].trim();
+    if (!name) return;
+    const expire = name + '=; Max-Age=0; path=/';
+    document.cookie = expire;
+    document.cookie = expire + '; domain=' + window.location.hostname;
+  });
+  Object.keys(localStorage).forEach(k => {
+    if (/^_dd|datadog/i.test(k)) localStorage.removeItem(k);
+  });
+  sessionStorage.removeItem('consentLab.consent');
+  sessionStorage.removeItem('consentLab.persistence');
+  window.location.reload();
+}
+
+/**
  * Handle a click on the consent banner. "accept-cookie" and "accept-storage"
  * force a specific sessionPersistence mode (sessionPersistence can only be
  * set at init time, so a mode change requires a reload); "decline" just
@@ -127,9 +150,7 @@ window.DD_RUM && window.DD_RUM.onReady(function () {
     sessionPersistence: getPersistence(),
     trackingConsent: getConsent(),
     beforeSend: function (event) {
-      if (event.type === 'error') {
-        logErrorEntry('rum', 'RUM captured: ' + (event.error?.message || 'error event'));
-      }
+      pushActivity('rum', ...rumEventCols(event));
       return true;
     },
   });
@@ -149,9 +170,7 @@ window.DD_LOGS && window.DD_LOGS.onReady(function () {
     forwardConsoleLogs: 'all',
     sessionSampleRate: 100,
     beforeSend: function (log) {
-      if (log.status === 'error') {
-        logErrorEntry('logs', 'Logs pipe captured: ' + (log.message || 'error event'));
-      }
+      pushActivity('logs', ...logEventCols(log));
       return true;
     },
   });
@@ -286,21 +305,95 @@ window.addEventListener('beforeunload', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Error capture demo
+// Unified activity log — every RUM event and every Log entry, tagged by
+// source, visible under every tab (not just the Error capture tab).
 // ---------------------------------------------------------------------------
 
-function logErrorEntry(via, text) {
-  const log = document.getElementById('error-log');
-  if (!log) return;
-  const empty = log.querySelector('.entry');
-  if (empty && empty.textContent === 'Waiting for errors…') log.innerHTML = '';
-  const entry = document.createElement('div');
-  entry.className = 'entry via-' + via;
-  const ts = new Date().toLocaleTimeString();
-  entry.textContent = `[${ts}] (${via === 'rum' ? 'RUM — consent-gated' : 'Logs — always-on'}) ${text}`;
-  log.appendChild(entry);
-  log.scrollTop = log.scrollHeight;
+const activityEvents = [];
+const activityFilters = new Set(['rum', 'logs']);
+const MAX_ACTIVITY_ROWS = 300;
+
+/**
+ * Map a RUM event to [type, name/path, hash/payload] for the log table,
+ * mirroring the column conventions used by the main pizza builder's log.
+ */
+function rumEventCols(event) {
+  const t = event.type;
+  if (t === 'view') {
+    const url = event.view?.url || '';
+    try { const u = new URL(url); return [t, u.pathname, u.hash || '—']; }
+    catch { return [t, url, '—']; }
+  }
+  if (t === 'action') {
+    const name = event.action?.target?.name || event.action?.type || '—';
+    return [t, name, event.context ? JSON.stringify(event.context) : '—'];
+  }
+  if (t === 'error') {
+    return [t, event.error?.message || '—', event.error?.source || '—'];
+  }
+  if (t === 'resource') {
+    return [t, (event.resource?.url || '—').replace(/^https?:\/\/[^/]+/, ''), event.resource?.type || '—'];
+  }
+  if (t === 'long_task') {
+    const ms = event.long_task?.duration != null ? Math.round(event.long_task.duration / 1e6) + 'ms' : '—';
+    return [t, ms, '—'];
+  }
+  return [t || 'other', JSON.stringify(event).slice(0, 60), '—'];
 }
+
+/** Map a Logs SDK entry to [type, name, payload] for the log table. */
+function logEventCols(log) {
+  const type = ['error', 'warn', 'info', 'debug'].includes(log.status) ? log.status : 'debug';
+  const origin = log.origin || log.error?.origin || 'logger';
+  return [type, log.message || '—', origin];
+}
+
+function toggleActivityFilter(source) {
+  if (activityFilters.has(source)) activityFilters.delete(source);
+  else activityFilters.add(source);
+  document.querySelectorAll('.filter-btn.' + source).forEach(btn => btn.classList.toggle('active', activityFilters.has(source)));
+  renderActivityLog();
+}
+
+function clearActivityLog() {
+  activityEvents.length = 0;
+  renderActivityLog();
+}
+
+function pushActivity(source, type, a, b) {
+  const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  activityEvents.push({ source, type: type || 'other', time, a: String(a ?? '—'), b: String(b ?? '—') });
+  if (activityEvents.length > MAX_ACTIVITY_ROWS) activityEvents.shift();
+  renderActivityLog();
+}
+
+function renderActivityLog() {
+  const tbody = document.getElementById('rum-tbody');
+  if (!tbody) return;
+  const visible = activityEvents.filter(e => activityFilters.has(e.source));
+  if (!visible.length) {
+    tbody.innerHTML = '<tr id="rum-empty-row"><td colspan="5">Waiting for events…</td></tr>';
+    return;
+  }
+  const KNOWN_TYPES = ['view', 'action', 'resource', 'error', 'long_task', 'warn', 'info', 'debug'];
+  const wrap = document.getElementById('rum-table-wrap');
+  const wasScrolledToBottom = wrap && wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 20;
+  tbody.innerHTML = visible.slice(-150).map(e => {
+    const typeClass = KNOWN_TYPES.includes(e.type) ? e.type : 'other';
+    return `<tr>
+      <td>${e.time}</td>
+      <td><span class="type-badge ${e.source}">${e.source}</span></td>
+      <td><span class="type-badge ${typeClass}">${e.type}</span></td>
+      <td class="wrap">${escapeHtml(e.a)}</td>
+      <td class="wrap">${escapeHtml(e.b)}</td>
+    </tr>`;
+  }).join('');
+  if (wrap && wasScrolledToBottom) wrap.scrollTop = wrap.scrollHeight;
+}
+
+// ---------------------------------------------------------------------------
+// Error capture demo
+// ---------------------------------------------------------------------------
 
 function labThrowError() {
   const msg = 'Consent Lab demo error @ ' + new Date().toISOString();
@@ -361,10 +454,13 @@ function renderConfigTable(force) {
 
 // ---------------------------------------------------------------------------
 // Boot
+// (Sidebar resizer behavior now lives in ../lab-shared.js, shared with the
+// pizza builder and any future lab.)
 // ---------------------------------------------------------------------------
 
 renderConsentPills();
 renderStorageInspector();
+renderActivityLog();
 setInterval(renderStorageInspector, 1000);
 
 announceTab();

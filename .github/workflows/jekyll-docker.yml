@@ -82,34 +82,53 @@ jobs:
         run: |
           # Produce identity source maps (no minification) so Datadog can link
           # stack frames to exact GitHub file + line references.
-          npx --yes terser app.js \
-            --source-map "url='app.js.map',root=''" \
-            --output app.js \
-            --no-compress \
-            --no-mangle
+          # Both entrypoints are instrumented, so both need maps — consent-lab
+          # errors were previously arriving in Error Tracking un-deminified.
+          for js in app.js consent-lab/app.js; do
+            npx --yes terser "$js" \
+              --source-map "url='app.js.map',root=''" \
+              --output "$js" \
+              --no-compress \
+              --no-mangle
+            # terser doesn't reliably set the `file` field — datadog-ci uses it
+            # to construct the JS URL, so set it explicitly before uploading.
+            node -e "
+              const fs=require('fs');
+              const m=JSON.parse(fs.readFileSync('$js.map','utf8'));
+              m.file='app.js';
+              fs.writeFileSync('$js.map', JSON.stringify(m));
+            "
+          done
 
-      - name: Patch source map file field
+      - name: Validate source maps
         run: |
-          # terser doesn't reliably set the `file` field — datadog-ci uses it
-          # to construct the JS URL, so we set it explicitly before uploading.
-          node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('app.js.map','utf8'));m.file='app.js';fs.writeFileSync('app.js.map',JSON.stringify(m));"
-
-      - name: Validate source map
-        run: |
-          echo "--- last 3 lines of app.js ---"
-          tail -3 app.js
-          echo "--- source map fields ---"
-          node -e "const m=JSON.parse(require('fs').readFileSync('app.js.map','utf8'));console.log('file:',m.file,'| sourceRoot:',m.sourceRoot,'| sources:',JSON.stringify(m.sources));"
+          for js in app.js consent-lab/app.js; do
+            echo "--- $js"
+            tail -1 "$js"
+            node -e "
+              const m=JSON.parse(require('fs').readFileSync('$js.map','utf8'));
+              console.log('  file:', m.file, '| sources:', JSON.stringify(m.sources));
+              if (!m.file || !m.mappings) { console.error('ERROR: incomplete source map for $js'); process.exit(1); }
+            "
+          done
 
       - name: Upload source maps to Datadog
         env:
           DATADOG_API_KEY: ${{ secrets.DD_API_KEY }}
         run: |
           PAGES_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}"
-          # Copy JS + map into a staging dir so datadog-ci's basePath replacement
-          # doesn't strip the dot from 'app.js' when uploading from '.'.
-          mkdir -p sourcemaps-upload
+          # Stage the files under the same relative paths GitHub Pages serves
+          # them at. datadog-ci joins each file's relative path onto
+          # --minified-path-prefix, so one upload covers both entrypoints:
+          #   app.js             -> $PAGES_URL/app.js
+          #   consent-lab/app.js -> $PAGES_URL/consent-lab/app.js
+          # Staging also keeps datadog-ci's basePath handling from stripping the
+          # dot out of 'app.js' when uploading from '.'.
+          mkdir -p sourcemaps-upload/consent-lab
           cp app.js app.js.map sourcemaps-upload/
+          cp consent-lab/app.js consent-lab/app.js.map sourcemaps-upload/consent-lab/
+          # --service and --release-version must match the `service` and
+          # `version` tags on the RUM/Logs events, or stack traces won't resolve.
           npx --yes @datadog/datadog-ci sourcemaps upload sourcemaps-upload \
             --service datadog-rum-pizza-builder \
             --release-version ${GITHUB_SHA:0:7} \

@@ -420,7 +420,10 @@ wa-progress-bar#progress-bar {
   bottom: 0;
   z-index: 5;
   margin-top: 3rem;
-  padding-top: 1rem;
+  /* Bleed the panel out through the main column's 2rem gutters so it reads as
+     a docked footer, then pad the content back in off its own edges. */
+  margin-inline: -2rem;
+  padding: 1rem 1.5rem 0;
   background: var(--dd-surface);
   border-top: 1px solid var(--dd-color-border);
   box-shadow: 0 -0.5rem 1rem -0.5rem var(--wa-color-shadow, rgb(0 0 0 / 0.12));

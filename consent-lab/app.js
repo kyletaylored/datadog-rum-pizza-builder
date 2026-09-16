@@ -216,7 +216,14 @@ window.DD_RUM && window.DD_RUM.onReady(function () {
     sessionPersistence: getPersistence(),
     trackingConsent: getConsent(),
     beforeSend: function (event) {
-      pushActivity('rum', ...rumEventCols(event));
+      // Only API traffic goes in the table — stylesheets, scripts, images and
+      // fonts would bury it (the Web Awesome autoloader alone pulls ~55 chunks
+      // per load). Inlined `data:` URIs are reported as `fetch` but are really
+      // images, so they're excluded too. Everything is still sent to Datadog.
+      const isNoisyResource = event.type === 'resource'
+        && (!['xhr', 'fetch'].includes(event.resource?.type)
+            || /^data:/i.test(event.resource?.url || ''));
+      if (!isNoisyResource) pushActivity('rum', ...rumEventCols(event));
       recordRumErrorProbe(event);
       return true;
     },

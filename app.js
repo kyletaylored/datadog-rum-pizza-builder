@@ -697,9 +697,36 @@ function toggleFilter(type) {
   if (activeFilters.has(type)) activeFilters.delete(type);
   else activeFilters.add(type);
   document.querySelectorAll('.filter-btn').forEach(b => {
-    b.classList.toggle('active', activeFilters.has(b.textContent.trim()));
+    b.classList.toggle('active', activeFilters.has(b.dataset.filter));
   });
   rerenderTable();
+}
+
+/**
+ * Resource types worth surfacing in the on-page log: API traffic only.
+ *
+ * The SDK collects every resource the page fetches — stylesheets, scripts,
+ * images, fonts — which buries the handful of events this demo is actually
+ * about. The Web Awesome autoloader alone pulls ~55 chunks per page load.
+ * These are still sent to Datadog; this only governs the table.
+ *
+ * @type {string[]}
+ */
+const LOGGED_RESOURCE_TYPES = ['xhr', 'fetch'];
+
+/**
+ * Should this resource event appear in the on-page log?
+ *
+ * Type alone isn't enough: inlined `data:` URIs are reported as `fetch` even
+ * when they're really images (Web Awesome's system icons are inlined SVG, and
+ * each one arrives as a ~700-character data URI). Those aren't API traffic.
+ *
+ * @param {Object} event - A RUM event from `beforeSend`
+ * @returns {boolean}
+ */
+function isLoggableResource(event) {
+  if (!LOGGED_RESOURCE_TYPES.includes(event.resource?.type)) return false;
+  return !/^data:/i.test(event.resource?.url || '');
 }
 
 /**
@@ -720,6 +747,7 @@ function getColHeaders(type) {
   if (type === 'action') return ['name', 'payload'];
   if (type === 'error') return ['message', 'source'];
   if (type === 'long_task') return ['duration', ''];
+  if (type === 'resource') return ['url', 'type'];
   return ['detail', ''];
 }
 
@@ -749,6 +777,10 @@ function getColValues(event) {
   if (t === 'long_task') {
     const ms = event.long_task?.duration != null ? Math.round(event.long_task.duration / 1e6) + 'ms' : '—';
     return [ms, ''];
+  }
+  if (t === 'resource') {
+    const url = (event.resource?.url || '—').replace(/^https?:\/\/[^/]+/, '');
+    return [url, event.resource?.type || '—'];
   }
   return [JSON.stringify(event).slice(0, 60), ''];
 }
@@ -785,6 +817,8 @@ function rerenderTable() {
  * @param {Object} event - Raw RUM event object passed by the SDK
  */
 function logRumEvent(event) {
+  if (event.type === 'resource' && !isLoggableResource(event)) return;
+
   const emptyRow = document.getElementById('rum-empty-row');
   if (emptyRow) emptyRow.remove();
 

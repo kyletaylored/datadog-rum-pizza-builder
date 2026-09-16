@@ -325,11 +325,11 @@ Window:     7-day rolling</pre>
         <div id="rum-log-header">
           <h3>Datadog RUM events</h3>
           <div class="log-controls">
-            <button class="filter-btn view active"      onclick="toggleFilter('view')">view</button>
-            <button class="filter-btn action active"    onclick="toggleFilter('action')">action</button>
-            <button class="filter-btn resource"         onclick="toggleFilter('resource')">resource</button>
-            <button class="filter-btn error active"     onclick="toggleFilter('error')">error</button>
-            <button class="filter-btn long_task active" onclick="toggleFilter('long_task')">long_task</button>
+            <button class="filter-btn view active"      data-filter="view"      onclick="toggleFilter('view')">view</button>
+            <button class="filter-btn action active"    data-filter="action"    onclick="toggleFilter('action')">action</button>
+            <button class="filter-btn resource"         data-filter="resource"  onclick="toggleFilter('resource')">xhr/fetch</button>
+            <button class="filter-btn error active"     data-filter="error"     onclick="toggleFilter('error')">error</button>
+            <button class="filter-btn long_task active" data-filter="long_task" onclick="toggleFilter('long_task')">long_task</button>
             <button class="wa-neutral wa-outlined" id="clear-log-btn" onclick="clearLog()">Clear</button>
           </div>
         </div>

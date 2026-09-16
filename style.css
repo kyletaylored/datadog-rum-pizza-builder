@@ -26,7 +26,7 @@ html, body {
     height: auto !important;
     position: static !important;
     border-right: none !important;
-    border-bottom: 1px solid var(--pico-muted-border-color);
+    border-bottom: 1px solid var(--dd-color-border);
   }
   .training-main { overflow: visible !important; }
 }
@@ -39,8 +39,8 @@ html, body {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--pico-muted-border-color);
-  background: var(--pico-card-sectionning-background-color);
+  border-right: 1px solid var(--dd-color-border);
+  background: var(--dd-surface-sunken);
 }
 
 .sidebar-header {
@@ -49,7 +49,7 @@ html, body {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 1.1rem 1.25rem 1rem;
-  border-bottom: 1px solid var(--pico-muted-border-color);
+  border-bottom: 1px solid var(--dd-color-border);
   flex-shrink: 0;
 }
 
@@ -73,19 +73,19 @@ html, body {
 
 .sidebar-subtitle {
   font-size: 0.7rem;
-  color: var(--pico-muted-color);
+  color: var(--dd-color-muted);
   margin-top: 1px;
 }
 
 .sidebar-intro {
   padding: 1rem 1.25rem 0.75rem;
-  border-bottom: 1px solid var(--pico-muted-border-color);
+  border-bottom: 1px solid var(--dd-color-border);
   flex-shrink: 0;
 }
 
 .sidebar-intro p {
   font-size: 0.79rem;
-  color: var(--pico-muted-color);
+  color: var(--dd-color-muted);
   line-height: 1.55;
   margin: 0;
 }
@@ -101,14 +101,14 @@ html, body {
   text-transform: uppercase;
   letter-spacing: 0.09em;
   font-weight: 700;
-  color: var(--pico-muted-color);
+  color: var(--dd-color-muted);
   margin: 0 0 0.4rem;
   padding: 0 1.25rem;
 }
 
 /* Sidebar accordion sections */
 .sidebar-section {
-  border-bottom: 1px solid var(--pico-muted-border-color);
+  border-bottom: 1px solid var(--dd-color-border);
   margin: 0;
 }
 
@@ -128,7 +128,7 @@ html, body {
 }
 
 .sidebar-section > summary:hover {
-  background: var(--pico-muted-border-color);
+  background: var(--dd-color-border);
 }
 
 .sidebar-section > summary::-webkit-details-marker { display: none; }
@@ -145,7 +145,7 @@ html, body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--pico-muted-color);
+  color: var(--dd-color-muted);
   transform: rotate(0deg);
   transform-origin: center center;
   transition: transform 0.15s;
@@ -155,18 +155,18 @@ html, body {
 .sidebar-section[open] > summary::after { transform: rotate(90deg); }
 
 .sidebar-section[open] > summary {
-  background: var(--pico-card-background-color);
-  border-bottom: 1px solid var(--pico-muted-border-color);
+  background: var(--dd-surface);
+  border-bottom: 1px solid var(--dd-color-border);
 }
 
 .sidebar-section-body {
   padding: 0.75rem 1.25rem 1rem;
-  background: var(--pico-card-background-color);
+  background: var(--dd-surface);
 }
 
 .sidebar-section-body p {
   font-size: 0.78rem;
-  color: var(--pico-muted-color);
+  color: var(--dd-color-muted);
   line-height: 1.55;
   margin: 0 0 0.6rem;
 }
@@ -175,15 +175,15 @@ html, body {
 
 .sidebar-section-body code {
   font-size: 0.71rem;
-  background: var(--pico-card-sectionning-background-color);
+  background: var(--dd-surface-sunken);
   padding: 0.1em 0.35em;
   border-radius: 3px;
   font-family: monospace;
 }
 
 .sidebar-section-body pre {
-  background: var(--pico-card-sectionning-background-color);
-  border: 1px solid var(--pico-muted-border-color);
+  background: var(--dd-surface-sunken);
+  border: 1px solid var(--dd-color-border);
   border-radius: 5px;
   padding: 0.55rem 0.7rem;
   font-size: 0.67rem;
@@ -200,9 +200,9 @@ html, body {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.9rem 1.25rem;
-  border-top: 1px solid var(--pico-muted-border-color);
+  border-top: 1px solid var(--dd-color-border);
   font-size: 0.72rem;
-  color: var(--pico-muted-color);
+  color: var(--dd-color-muted);
   flex-shrink: 0;
 }
 .sidebar-footer-links { flex: 1; min-width: 0; }
@@ -241,7 +241,7 @@ html, body {
 .tab-nav {
   display: flex;
   gap: 0;
-  border-bottom: 2px solid var(--pico-muted-border-color);
+  border-bottom: 2px solid var(--dd-color-border);
   margin-bottom: 1.75rem;
   flex-shrink: 0;
 }
@@ -250,32 +250,32 @@ html, body {
   flex: 1;
   background: none;
   border: none;
-  border-top: 1px solid var(--pico-muted-border-color);
-  border-right: 1px solid var(--pico-muted-border-color);
+  border-top: 1px solid var(--dd-color-border);
+  border-right: 1px solid var(--dd-color-border);
   border-bottom: 2px solid transparent;
   margin-bottom: -2px;
   padding: 0.55rem 1.25rem;
   font-size: 0.88rem;
   font-weight: 600;
-  color: var(--pico-muted-color);
+  color: var(--dd-color-muted);
   cursor: pointer;
   border-radius: 0;
   text-align: center;
   transition: color 0.15s, border-color 0.15s;
 }
-.tab-btn:first-child { border-left: 1px solid var(--pico-muted-border-color); }
+.tab-btn:first-child { border-left: 1px solid var(--dd-color-border); }
 
-.tab-btn:hover { color: var(--pico-primary); background: none; }
+.tab-btn:hover { color: var(--dd-color-primary); background: none; }
 .tab-btn.active {
-  color: var(--pico-primary);
-  border-bottom-color: var(--pico-primary);
+  color: var(--dd-color-primary);
+  border-bottom-color: var(--dd-color-primary);
 }
 
 /* Config tab */
 .config-code {
-  background: var(--pico-card-sectionning-background-color);
-  border: 1px solid var(--pico-muted-border-color);
-  border-radius: var(--pico-border-radius);
+  background: var(--dd-surface-sunken);
+  border: 1px solid var(--dd-color-border);
+  border-radius: var(--dd-radius);
   padding: 1rem 1.25rem;
   font-size: 0.8rem;
   overflow-x: auto;
@@ -297,14 +297,14 @@ html, body {
 .dashboard-iframe {
   width: 100%;
   height: calc(100vh - 80px);
-  border: 1px solid var(--pico-muted-border-color);
+  border: 1px solid var(--dd-color-border);
   border-radius: 8px;
 }
 
 /* ============================================================
    Progress bar
    ============================================================ */
-.progress-labels { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--pico-muted-color); margin-bottom: 0.4rem; }
+.progress-labels { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--dd-color-muted); margin-bottom: 0.4rem; }
 progress { width: 100%; }
 
 /* ============================================================
@@ -313,22 +313,22 @@ progress { width: 100%; }
 .options { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin: 1.5rem 0; }
 @media (max-width: 600px) { .options { grid-template-columns: repeat(2, 1fr); } }
 
-.option-card { border: 2px solid var(--pico-muted-border-color); border-radius: var(--pico-border-radius); padding: 0.75rem 0.5rem; cursor: pointer; transition: border-color 0.15s, background 0.15s; text-align: center; user-select: none; }
-.option-card:hover { border-color: var(--pico-primary); }
-.option-card.selected { border-color: var(--pico-primary); background: var(--pico-primary-background); }
+.option-card { border: 2px solid var(--dd-color-border); border-radius: var(--dd-radius); padding: 0.75rem 0.5rem; cursor: pointer; transition: border-color 0.15s, background 0.15s; text-align: center; user-select: none; }
+.option-card:hover { border-color: var(--dd-color-primary); }
+.option-card.selected { border-color: var(--dd-color-primary); background: var(--dd-color-primary-fill); }
 .option-card .emoji { font-size: 2rem; display: block; margin-bottom: 0.4rem; }
 .option-card .label { font-weight: 600; }
-.option-card .desc { font-size: 0.8rem; color: var(--pico-muted-color); }
-.option-card.selected .label { color: #fff; }
-.option-card.selected .desc { color: rgba(255, 255, 255, 0.72); }
+.option-card .desc { font-size: 0.8rem; color: var(--dd-color-muted); }
+.option-card.selected .label { color: var(--dd-color-on-primary); }
+.option-card.selected .desc { color: color-mix(in oklab, var(--dd-color-on-primary) 72%, transparent); }
 
 /* ============================================================
    Results list
    ============================================================ */
 .result-list { list-style: none; padding: 0; }
-.result-list li { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0; border-bottom: 1px solid var(--pico-muted-border-color); }
+.result-list li { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0; border-bottom: 1px solid var(--dd-color-border); }
 .result-list li:last-child { border-bottom: none; }
-.result-list .step-label { color: var(--pico-muted-color); font-size: 0.8rem; min-width: 90px; }
+.result-list .step-label { color: var(--dd-color-muted); font-size: 0.8rem; min-width: 90px; }
 .result-list .step-value { font-weight: 600; }
 
 /* ============================================================
@@ -348,9 +348,9 @@ progress { width: 100%; }
 /* ============================================================
    RUM event log — header & controls
    ============================================================ */
-#rum-log-wrap { margin-top: 3rem; border-top: 1px solid var(--pico-muted-border-color); padding-top: 1.25rem; }
+#rum-log-wrap { margin-top: 3rem; border-top: 1px solid var(--dd-color-border); padding-top: 1.25rem; }
 #rum-log-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem; }
-#rum-log-header h3 { margin: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--pico-muted-color); }
+#rum-log-header h3 { margin: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dd-color-muted); }
 .log-controls { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 
 .filter-btn { font-size: 0.7rem; padding: 2px 8px; border-radius: 3px; cursor: pointer; border: 1px solid transparent; font-weight: 600; opacity: 0.45; transition: opacity 0.15s; }
@@ -365,13 +365,13 @@ progress { width: 100%; }
 /* ============================================================
    RUM event log — table
    ============================================================ */
-#rum-table-wrap { max-height: 300px; overflow-y: auto; border: 1px solid var(--pico-muted-border-color); border-radius: 6px; }
+#rum-table-wrap { max-height: 300px; overflow-y: auto; border: 1px solid var(--dd-color-border); border-radius: 6px; }
 table#rum-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; font-family: monospace; table-layout: fixed; margin: 0; }
-#rum-table thead th { position: sticky; top: 0; background: var(--pico-card-background-color); padding: 5px 8px; text-align: left; font-weight: 700; border-bottom: 1px solid var(--pico-muted-border-color); white-space: nowrap; font-family: monospace; }
-#rum-table tbody tr:nth-child(even) { background: var(--pico-card-sectionning-background-color); }
+#rum-table thead th { position: sticky; top: 0; background: var(--dd-surface); padding: 5px 8px; text-align: left; font-weight: 700; border-bottom: 1px solid var(--dd-color-border); white-space: nowrap; font-family: monospace; }
+#rum-table tbody tr:nth-child(even) { background: var(--dd-surface-sunken); }
 #rum-table td { padding: 4px 8px; vertical-align: top; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #rum-table td.wrap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
-#rum-empty-row td { text-align: center; color: var(--pico-muted-color); padding: 1.5rem; font-family: sans-serif; }
+#rum-empty-row td { text-align: center; color: var(--dd-color-muted); padding: 1.5rem; font-family: sans-serif; }
 
 .type-badge { display: inline-block; font-size: 0.65rem; padding: 1px 5px; border-radius: 3px; font-weight: 700; white-space: nowrap; }
 .type-badge.view      { background: #dbeafe; color: #1d4ed8; }
@@ -424,11 +424,11 @@ table#rum-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; fo
   font-size: 0.7rem;
 }
 .sidebar-steps .step-chip {
-  background: var(--pico-card-sectionning-background-color);
-  border: 1px solid var(--pico-muted-border-color);
+  background: var(--dd-surface-sunken);
+  border: 1px solid var(--dd-color-border);
   border-radius: 4px;
   padding: 2px 7px;
   font-family: monospace;
   font-size: 0.68rem;
 }
-.sidebar-steps .arrow { color: var(--pico-muted-color); font-size: 0.65rem; }
+.sidebar-steps .arrow { color: var(--dd-color-muted); font-size: 0.65rem; }

@@ -107,16 +107,16 @@
     <nav class="sidebar-nav">
       <p class="sidebar-nav-label">Training topics</p>
 
-      <details class="sidebar-section" open>
-        <summary><span class="sidebar-tag tag-consent">Consent</span><span class="sidebar-section-title">The compliance problem</span></summary>
+      <wa-details class="sidebar-section" appearance="plain" open>
+        <span slot="summary"><span class="sidebar-tag tag-consent">Consent</span><span class="sidebar-section-title">The compliance problem</span></span>
         <div class="sidebar-section-body">
           <p>A common pattern: RUM's session cookie (<code>_dd_s</code>) is created the moment the page loads, before any consent banner is answered. Session Replay is correctly gated behind consent — but the cookie itself isn't, and some EU jurisdictions' ePrivacy enforcement treats <em>any</em> non-essential cookie, including a "technical" monitoring cookie, as requiring consent.</p>
           <p>The ask: keep full error visibility (the team is replacing Sentry, which needs 100% error capture) while creating <strong>zero client-side storage</strong> until a user opts in.</p>
         </div>
-      </details>
+      </wa-details>
 
-      <details class="sidebar-section">
-        <summary><span class="sidebar-tag tag-storage">Storage</span><span class="sidebar-section-title">sessionPersistence: cookie vs local-storage vs memory</span></summary>
+      <wa-details class="sidebar-section" appearance="plain">
+        <span slot="summary"><span class="sidebar-tag tag-storage">Storage</span><span class="sidebar-section-title">sessionPersistence: cookie vs local-storage vs memory</span></span>
         <div class="sidebar-section-body">
           <p>RUM's <code>sessionPersistence</code> init option controls where the SDK keeps its session state:</p>
           <pre>DD_RUM.init({
@@ -137,10 +137,10 @@
           <p>Try all three in the <strong>Storage Inspector</strong> tab, then use the <strong>Multi-tab test</strong> tab to see why <code>memory</code> risks inflating session counts for a multi-tab workflow, while <code>local-storage</code> doesn't.</p>
           <p>If both RUM and Logs SDKs are on the same page, Datadog requires them to use the <strong>same</strong> <code>sessionPersistence</code> value.</p>
         </div>
-      </details>
+      </wa-details>
 
-      <details class="sidebar-section">
-        <summary><span class="sidebar-tag tag-consent">Gate</span><span class="sidebar-section-title">Gating with setTrackingConsent</span></summary>
+      <wa-details class="sidebar-section" appearance="plain">
+        <span slot="summary"><span class="sidebar-tag tag-consent">Gate</span><span class="sidebar-section-title">Gating with setTrackingConsent</span></span>
         <div class="sidebar-section-body">
           <p>The tracking-consent API lets you initialize the SDK once — so it's ready to go — without it writing or sending anything until the user answers:</p>
           <pre>DD_RUM.init({ ..., trackingConsent: 'pending' })
@@ -150,18 +150,18 @@ DD_RUM.setTrackingConsent('not-granted')  // stays fully inert, no storage</pre>
           <p>Consent isn't remembered by the SDK across page loads — your app re-applies the user's saved choice (from your own CMP) on every load.</p>
           <p>The banner at the top of the <strong>Storage Inspector</strong> tab drives this live: watch the storage cards stay empty until you click Accept.</p>
         </div>
-      </details>
+      </wa-details>
 
-      <details class="sidebar-section">
-        <summary><span class="sidebar-tag tag-tabs">Tabs</span><span class="sidebar-section-title">Multi-tab &amp; refresh session stability</span></summary>
+      <wa-details class="sidebar-section" appearance="plain">
+        <span slot="summary"><span class="sidebar-tag tag-tabs">Tabs</span><span class="sidebar-section-title">Multi-tab &amp; refresh session stability</span></span>
         <div class="sidebar-section-body">
           <p>A travel-booking-style flow commonly opens several tabs and refreshes mid-session. That's exactly where <code>memory</code> persistence falls apart: it lives in that one JS heap, so a new tab — or a refresh — has no way to see the old session ID and simply starts a new one.</p>
           <p>The <strong>Multi-tab test</strong> tab uses a <code>BroadcastChannel</code> to compare the live RUM session ID across every open tab of this page, so you can see the effect directly instead of taking it on faith.</p>
         </div>
-      </details>
+      </wa-details>
 
-      <details class="sidebar-section">
-        <summary><span class="sidebar-tag tag-error">Errors</span><span class="sidebar-section-title">The always-on error-tracking backup plan</span></summary>
+      <wa-details class="sidebar-section" appearance="plain">
+        <span slot="summary"><span class="sidebar-tag tag-error">Errors</span><span class="sidebar-section-title">The always-on error-tracking backup plan</span></span>
         <div class="sidebar-section-body">
           <p>If the business also wants <strong>100% error capture even pre-consent</strong> — matching how event-based tools like Sentry behave — RUM itself isn't the right tool for that slice, since it's intentionally gated by consent end-to-end.</p>
           <p>The pattern: run the <strong>Logs Browser SDK</strong> as an independent, always-on error pipe with <code>sessionPersistence: 'local-storage'</code> (never a cookie), separate from RUM's consent gate:</p>
@@ -175,15 +175,18 @@ DD_RUM.setTrackingConsent('not-granted')  // stays fully inert, no storage</pre>
 DD_RUM.init({ ..., trackingConsent: 'pending' })</pre>
           <p>Try it in the <strong>Error capture</strong> tab — throwing an error is captured by the Logs pipe regardless of the RUM consent state shown at the top of the page.</p>
         </div>
-      </details>
+      </wa-details>
 
-      <details class="sidebar-section">
-        <summary><span class="sidebar-tag tag-consent">Legal</span><span class="sidebar-section-title">⚠️ Not a compliance guarantee</span></summary>
+      <wa-details class="sidebar-section" appearance="plain">
+        <span slot="summary"><span class="sidebar-tag tag-consent">Legal</span><span class="sidebar-section-title">⚠️ Not a compliance guarantee</span></span>
         <div class="sidebar-section-body">
-          <p><strong>This is an engineering lab, not legal advice.</strong> Switching from a cookie to <code>local-storage</code> removes an HTTP cookie — but the EU ePrivacy Directive (Art. 5(3)) governs "storing information, or gaining access to information already stored, in the terminal equipment of a subscriber or user," which several national regulators (including some Nordic DPAs) read as covering <em>any</em> client-side storage mechanism, not literally just cookies named "cookie."</p>
+          <wa-callout variant="danger" class="lab-callout">
+            <strong>This is an engineering lab, not legal advice.</strong>
+          </wa-callout>
+          <p>Switching from a cookie to <code>local-storage</code> removes an HTTP cookie — but the EU ePrivacy Directive (Art. 5(3)) governs "storing information, or gaining access to information already stored, in the terminal equipment of a subscriber or user," which several national regulators (including some Nordic DPAs) read as covering <em>any</em> client-side storage mechanism, not literally just cookies named "cookie."</p>
           <p>In other words: a strict regulator may still require consent before writing to <code>localStorage</code>. Confirm the specific jurisdiction's interpretation with the customer's legal/DPO before presenting <code>sessionPersistence: 'local-storage'</code> as a full fix rather than a mitigation.</p>
         </div>
-      </details>
+      </wa-details>
     </nav>
 
     <footer class="sidebar-footer">
@@ -193,7 +196,7 @@ DD_RUM.init({ ..., trackingConsent: 'pending' })</pre>
       </div>
       <label class="theme-toggle" aria-label="Toggle light/dark mode">
         <span class="theme-icon">☀️</span>
-        <input type="checkbox" role="switch" id="theme-toggle" onchange="toggleTheme(this)">
+        <wa-switch id="theme-toggle" onchange="toggleTheme(this)"></wa-switch>
         <span class="theme-icon">🌙</span>
       </label>
     </footer>
@@ -220,9 +223,9 @@ DD_RUM.init({ ..., trackingConsent: 'pending' })</pre>
             <span id="consent-pill" class="consent-state-pill pending">pending</span>
           </p>
           <div class="btn-row">
-            <button onclick="labSetConsent('accept-cookie')">Accept — use a cookie</button>
-            <button class="secondary" onclick="labSetConsent('accept-storage')">Accept — cookie-free only</button>
-            <button class="secondary outline" onclick="labSetConsent('decline')">Decline everything</button>
+            <button class="wa-brand" onclick="labSetConsent('accept-cookie')">Accept — use a cookie</button>
+            <button class="wa-neutral" onclick="labSetConsent('accept-storage')">Accept — cookie-free only</button>
+            <button class="wa-neutral wa-outlined" onclick="labSetConsent('decline')">Decline everything</button>
           </div>
         </div>
 
@@ -234,19 +237,19 @@ DD_RUM.init({ ..., trackingConsent: 'pending' })</pre>
           <button id="mode-btn-cookie"        onclick="reloadWithPersistence('cookie')">cookie</button>
           <button id="mode-btn-local-storage" onclick="reloadWithPersistence('local-storage')">local-storage</button>
           <button id="mode-btn-memory"        onclick="reloadWithPersistence('memory')">memory</button>
-          <button class="secondary outline reset-state-btn" onclick="resetLabState()" title="Clear Datadog cookies &amp; localStorage left over from earlier tests, then reload">🧹 Reset lab state</button>
+          <button class="wa-neutral wa-outlined reset-state-btn" onclick="resetLabState()" title="Clear Datadog cookies &amp; localStorage left over from earlier tests, then reload">🧹 Reset lab state</button>
         </div>
         <p style="font-size:.78rem; color:var(--dd-color-muted)">Switching modes doesn't delete a cookie created by an earlier test in this browser — cookies just expire on their own. If the inspector below shows a cookie you didn't expect, use <strong>Reset lab state</strong> to clear it before comparing modes.</p>
 
         <div class="storage-grid">
-          <div class="storage-card">
-            <h4>Cookies <span id="cookie-count"></span></h4>
+          <wa-card class="storage-card" appearance="outlined">
+            <h4 slot="header">Cookies <span id="cookie-count"></span></h4>
             <ul id="cookie-list"></ul>
-          </div>
-          <div class="storage-card">
-            <h4>localStorage <span id="ls-count"></span></h4>
+          </wa-card>
+          <wa-card class="storage-card" appearance="outlined">
+            <h4 slot="header">localStorage <span id="ls-count"></span></h4>
             <ul id="ls-list"></ul>
-          </div>
+          </wa-card>
         </div>
 
         <p>Current RUM session ID (via <code>DD_RUM.getInternalContext()</code>): <span id="session-id-display" class="session-id">—</span></p>
@@ -260,8 +263,8 @@ DD_RUM.init({ ..., trackingConsent: 'pending' })</pre>
         <h3>Multi-tab &amp; refresh session stability</h3>
         <p>Open this page in a second tab (same persistence mode) and watch whether it reports the <em>same</em> session ID as this tab, or a new one. Then try reloading one tab and see if its own session ID changes.</p>
         <div class="btn-row" style="margin-bottom:1rem">
-          <button onclick="window.open(window.location.href, '_blank')">Open a second tab</button>
-          <button class="secondary" onclick="window.location.reload()">Reload this tab</button>
+          <button class="wa-brand" onclick="window.open(window.location.href, '_blank')">Open a second tab</button>
+          <button class="wa-neutral" onclick="window.location.reload()">Reload this tab</button>
         </div>
         <table id="tabs-table">
           <thead><tr><th>Tab</th><th>Persistence</th><th>Consent</th><th>Session ID</th><th>Last seen</th></tr></thead>
@@ -277,7 +280,7 @@ DD_RUM.init({ ..., trackingConsent: 'pending' })</pre>
         <h3>Always-on, cookie-free error capture</h3>
         <p>The Logs SDK below is initialized independently of the consent banner on the Storage Inspector tab — it always runs, uses <code>sessionPersistence: 'local-storage'</code>, and never sets a cookie. This is the "Sentry-equivalent" backup plan: 100% error capture regardless of RUM consent state.</p>
         <div class="btn-row" style="margin-bottom:1rem">
-          <button onclick="labThrowError()">Throw a JS error</button>
+          <button class="wa-danger" onclick="labThrowError()">Throw a JS error</button>
         </div>
         <p>RUM consent right now: <span id="consent-pill-2" class="consent-state-pill pending">pending</span> — notice that the error still shows up tagged <span class="type-badge logs">logs</span> in the activity log below even when RUM is declined. If consent is granted, it'll also show up tagged <span class="type-badge rum">rum</span>.</p>
       </div>
@@ -302,13 +305,13 @@ DD_RUM.init({ ..., trackingConsent: 'pending' })</pre>
         <div class="log-controls">
           <button class="filter-btn rum active"  onclick="toggleActivityFilter('rum')">rum</button>
           <button class="filter-btn logs active" onclick="toggleActivityFilter('logs')">logs</button>
-          <button class="secondary outline" id="clear-log-btn" onclick="clearActivityLog()">Clear</button>
+          <button class="wa-neutral wa-outlined" id="clear-log-btn" onclick="clearActivityLog()">Clear</button>
         </div>
       </div>
       <div class="btn-row" style="margin:0 0 .75rem; flex-wrap:wrap">
-        <button class="secondary" onclick="labFireAction()">🔥 Fire RUM action</button>
-        <button class="secondary" onclick="labLogInfo()">📝 Emit Logs info</button>
-        <button class="secondary" onclick="labFetchResource()">📦 Fetch a resource</button>
+        <button class="wa-neutral" onclick="labFireAction()">🔥 Fire RUM action</button>
+        <button class="wa-neutral" onclick="labLogInfo()">📝 Emit Logs info</button>
+        <button class="wa-neutral" onclick="labFetchResource()">📦 Fetch a resource</button>
       </div>
       <p style="font-size:.78rem; color:var(--dd-color-muted); margin:0 0 .75rem">
         Switching tabs above generates a real RUM <span class="type-badge view">view</span> event (fragment-based, same as the pizza builder). The buttons here generate an <span class="type-badge action">action</span>, a <span class="type-badge info">log</span>, and a <span class="type-badge resource">resource</span> event on demand.

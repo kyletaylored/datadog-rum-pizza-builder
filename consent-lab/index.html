@@ -167,6 +167,43 @@ DD_RUM.init({ ..., trackingConsent: 'pending' })</pre>
       </wa-details>
 
       <wa-details class="sidebar-section" appearance="plain">
+        <span slot="summary"><span class="sidebar-tag tag-error">Errors</span><span class="sidebar-section-title">Replacing Sentry: what Error Tracking needs</span></span>
+        <div class="sidebar-section-body">
+          <p>The customer is moving off Sentry and needs <strong>100% error capture</strong>, cookie-free, before any consent is given. The Logs SDK covers that — but only for errors that arrive with a stack trace.</p>
+          <p>Datadog <strong>Error Tracking</strong> turns a log into an <em>issue</em> when the log carries <code>error.stack</code>, grouping and titling it by <code>error.kind</code> and <code>error.message</code>. A <code>status:error</code> log with no stack stays a log line and never becomes an issue:</p>
+          <pre>// becomes an issue — real Error, so a real stack
+try { risky() } catch (err) {
+  DD_LOGS.logger.error('Checkout failed', { step }, err)
+}
+
+// stays a log line — no Error object, no stack
+DD_LOGS.logger.error('Checkout failed')
+console.error('Checkout failed')</pre>
+          <p>Uncaught exceptions, unhandled promise rejections and failed network requests are picked up automatically by <code>forwardErrorsToLogs: true</code>, with stacks, and need no instrumentation at all.</p>
+          <p>The <strong>Error capture</strong> tab fires each source and reports what the SDK actually built for it, so the coverage claim is measured rather than assumed.</p>
+        </div>
+      </wa-details>
+
+      <wa-details class="sidebar-section" appearance="plain">
+        <span slot="summary"><span class="sidebar-tag tag-sessions">Sessions</span><span class="sidebar-section-title">Avoiding inflated session counts</span></span>
+        <div class="sidebar-section-body">
+          <p><code>sessionPersistence: 'memory'</code> is cookie-free, but it keeps the session in a JS variable — so every tab and every refresh starts a brand-new session. On a travel-booking site, where multiple tabs and reloads are normal, that inflates session counts against a number the customer actually reports on.</p>
+          <p>So rather than putting all traffic on <code>memory</code>, split the two pipes by what they need:</p>
+          <div class="compare-table-wrap">
+            <table class="compare-table">
+              <thead><tr><th>Pipe</th><th>Runs</th><th>Storage</th></tr></thead>
+              <tbody>
+                <tr><td>Logs + Error Tracking</td><td>Always</td><td>Cookie-free</td></tr>
+                <tr><td>RUM + Replay</td><td>Post-consent</td><td><code>cookie</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Errors never needed a stable session ID to be useful, so the always-on pipe can be stateless. RUM only exists after consent, where a cookie is allowed and session counts stay honest. No inflation, no coverage gap.</p>
+          <p>If the customer would rather keep one pipe, <code>local-storage</code> gives stable sessions with no cookie — but read the <strong>Legal</strong> note below first, because a strict regulator may treat any client-side storage as requiring consent anyway.</p>
+        </div>
+      </wa-details>
+
+      <wa-details class="sidebar-section" appearance="plain">
         <span slot="summary"><span class="sidebar-tag tag-consent">Legal</span><span class="sidebar-section-title">⚠️ Not a compliance guarantee</span></span>
         <div class="sidebar-section-body">
           <wa-callout variant="danger" class="lab-callout">
@@ -267,11 +304,73 @@ DD_RUM.init({ ..., trackingConsent: 'pending' })</pre>
     <div id="tab-errors" role="tabpanel" class="tab-panel" style="display:none">
       <div class="lab-container">
         <h3>Always-on, cookie-free error capture</h3>
-        <p>The Logs SDK below is initialized independently of the consent banner on the Storage Inspector tab — it always runs, uses <code>sessionPersistence: 'local-storage'</code>, and never sets a cookie. This is the "Sentry-equivalent" backup plan: 100% error capture regardless of RUM consent state.</p>
+        <p>The Logs SDK on this page is initialized independently of the consent banner on the Storage Inspector tab — it always runs, uses <code>sessionPersistence: 'local-storage'</code>, and never sets a cookie. This is the "Sentry-equivalent" backup plan: 100% error capture regardless of RUM consent state.</p>
         <div class="btn-row" style="margin-bottom:1rem">
           <button class="wa-danger" onclick="labThrowError()">Throw a JS error</button>
         </div>
         <p>RUM consent right now: <span id="consent-pill-2" class="consent-state-pill pending">pending</span> — notice that the error still shows up tagged <span class="type-badge logs">logs</span> in the activity log below even when RUM is declined. If consent is granted, it'll also show up tagged <span class="type-badge rum">rum</span>.</p>
+
+        <hr>
+
+        <h3>Does this actually replace Sentry? Error-source coverage</h3>
+        <p>"100% error capture" is the requirement, so the question worth answering precisely is which error sources this cookie-free pipe turns into <strong>Error Tracking issues</strong>, not just log lines. Datadog's Error Tracking processes a log into an issue when the log carries a stack trace (<code>error.stack</code>); <code>error.kind</code> and <code>error.message</code> are what it groups and titles issues by. A log with <code>status:error</code> and no stack stays a log line forever.</p>
+        <p>That distinction is the whole risk in this migration: it's the difference between having 100% error coverage and believing you do. Fire each source and read the measured result — nothing here is asserted, it's whatever the SDK actually builds in this browser.</p>
+
+        <div class="btn-row" style="margin:1rem 0">
+          <button class="wa-brand" onclick="etTriggerAll()">Run all sources</button>
+          <button class="wa-neutral wa-outlined" onclick="etReset()">Reset results</button>
+        </div>
+
+        <div class="compare-table-wrap">
+          <table class="compare-table et-matrix">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Error source</th>
+                <th><code>origin</code></th>
+                <th><code>error.kind</code></th>
+                <th>Stack?</th>
+                <th>Result</th>
+              </tr>
+            </thead>
+            <tbody id="et-tbody"></tbody>
+          </table>
+        </div>
+        <p id="et-verdict" class="et-verdict"></p>
+
+        <wa-callout variant="warning" class="lab-callout">
+          <strong>The two that don't make it are the ones to warn the team about.</strong>
+          <code>console.error("some string")</code> and <code>logger.error("some message")</code>
+          both produce a <code>status:error</code> log with no stack trace, so neither ever
+          becomes an issue. Codebases migrating off Sentry tend to be full of exactly these,
+          because <code>Sentry.captureMessage()</code> accepted them. Passing the real
+          <code>Error</code> object — <code>logger.error(msg, ctx, err)</code> — is what makes
+          the difference.
+        </wa-callout>
+
+        <h4>Recommended shape for a strict-consent deployment</h4>
+        <p>This is the architecture the coverage table supports, and it avoids needing <code>sessionPersistence: 'memory'</code> for all traffic:</p>
+        <div class="compare-table-wrap">
+          <table class="compare-table">
+            <thead><tr><th>Pipe</th><th>When it runs</th><th>Storage</th><th>Job</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>Logs</strong> + Error Tracking</td>
+                <td>Always, from first paint</td>
+                <td><code>local-storage</code> or <code>memory</code> — never a cookie</td>
+                <td>100% error capture, the Sentry replacement</td>
+              </tr>
+              <tr>
+                <td><strong>RUM</strong> + Session Replay</td>
+                <td>Only after technical-cookie consent</td>
+                <td><code>cookie</code></td>
+                <td>Performance, funnels, replays, accurate session counts</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The reason to split them rather than run RUM on <code>memory</code> everywhere: <code>memory</code> holds the session in a JS variable, so every tab and every refresh mints a brand-new session ID. For a travel-booking site — where opening several tabs and reloading is normal behavior — that inflates session counts against a real number the customer cares about. Prove it to yourself on the <strong>Multi-tab test</strong> tab: switch to <code>memory</code>, open a second tab, and watch the session IDs diverge.</p>
+        <p>Splitting the pipes sidesteps the trade-off entirely. Errors never needed a stable session ID to be useful, so the always-on pipe can be cookie-free and stateless; RUM only ever exists post-consent, where a cookie is permitted and session counts stay honest.</p>
       </div>
     </div><!-- /#tab-errors -->
 

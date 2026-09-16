@@ -67,6 +67,7 @@ function switchLabTab(tab) {
   Object.values(panels).forEach(id => { document.getElementById(id).style.display = 'none'; });
   document.getElementById(panels[tab]).style.display = 'block';
   if (tab === 'config') renderConfigTable();
+  if (tab === 'errors') renderErrorMatrix();
 
   // Changing the hash is what makes RUM treat this as a new View — same
   // fragment-based tracking the main pizza builder uses. Without this, RUM
@@ -211,6 +212,7 @@ window.DD_LOGS && window.DD_LOGS.onReady(function () {
     sessionSampleRate: 100,
     beforeSend: function (log) {
       pushActivity('logs', ...logEventCols(log));
+      recordErrorProbe(log);
       return true;
     },
   });
@@ -466,6 +468,191 @@ function labLogInfo() {
       consent: getConsent(),
     });
   }
+}
+
+// ---------------------------------------------------------------------------
+// Error Tracking coverage matrix — "can Logs replace Sentry, cookie-free?"
+//
+// The customer requirement behind this: they need 100% error capture (they're
+// replacing Sentry, which is cookie-free and they're fine with that), but
+// their legal team won't allow any cookie before consent. The Logs SDK on
+// this page is always-on and cookie-free, so the question becomes: which
+// error sources does it actually pick up, and which of those turn into
+// Datadog *Error Tracking* issues rather than just log lines?
+//
+// Error Tracking processes a log into an issue when the log carries an error
+// stack trace (`error.stack`); `error.kind` and `error.message` are what it
+// groups and titles issues by. A log with `status:error` but no stack stays a
+// log line and never becomes an issue — which is the trap this matrix exists
+// to make visible, because it's the difference between "we see 100% of
+// errors" and "we think we do".
+//
+// Every row here is verified live in the browser rather than asserted: the
+// Logs beforeSend callback reports what the SDK actually built.
+// ---------------------------------------------------------------------------
+
+/**
+ * The error sources worth testing, in the order a reviewer should read them.
+ * `eligible` is what we *expect* — the table shows measured results next to
+ * it, so a wrong expectation shows up as a mismatch instead of hiding.
+ *
+ * @type {Array<{id: string, label: string, how: string, eligible: boolean}>}
+ */
+const ET_SOURCES = [
+  { id: 'uncaught',       label: 'Uncaught exception',        how: 'throw new Error(…)',                         eligible: true },
+  { id: 'rejection',      label: 'Unhandled promise rejection', how: 'Promise.reject(new Error(…))',             eligible: true },
+  { id: 'network',        label: 'Failed network request',     how: 'fetch() to an unreachable host',            eligible: true },
+  { id: 'console-error',  label: 'console.error(Error)',       how: 'console.error(new Error(…))',               eligible: true },
+  { id: 'logger-error',   label: 'logger.error(msg, ctx, err)', how: 'Error passed as the 3rd argument',         eligible: true },
+  { id: 'console-string', label: 'console.error("text")',      how: 'a string, with no Error object',            eligible: false },
+  { id: 'logger-message', label: 'logger.error("msg")',        how: 'message only, with no Error object',        eligible: false },
+];
+
+/** Measured results, keyed by source id. @type {Object<string, object>} */
+const etResults = {};
+
+/**
+ * Tag every probe's message with its source id so the Logs beforeSend
+ * callback can attribute the resulting log back to the button that fired it.
+ * The network probe is the exception — the SDK writes that message itself
+ * ("Fetch error GET …"), so it's matched on the URL instead.
+ */
+function etTag(id) {
+  return '[et:' + id + '] Consent Lab error-source probe';
+}
+
+const ET_NETWORK_MARKER = 'et-probe-network';
+
+/**
+ * Inspect a log the Logs SDK is about to send and, if it came from one of our
+ * probes, record what the SDK actually built for it.
+ *
+ * @param {object} log - The log event from DD_LOGS beforeSend
+ */
+function recordErrorProbe(log) {
+  const message = log.message || '';
+  let id = (message.match(/\[et:([a-z-]+)\]/) || [])[1];
+  if (!id && message.includes(ET_NETWORK_MARKER)) id = 'network';
+  if (!id || !ET_SOURCES.some(src => src.id === id)) return;
+
+  etResults[id] = {
+    origin: log.origin || log.error?.origin || 'logger',
+    kind: log.error?.kind || null,
+    hasStack: Boolean(log.error?.stack),
+    cookiesAtCapture: etDatadogCookieCount(),
+  };
+  renderErrorMatrix();
+}
+
+/** Count Datadog-owned cookies right now — the number that has to stay 0. */
+function etDatadogCookieCount() {
+  if (!document.cookie) return 0;
+  return document.cookie.split(';').filter(c => /^\s*(_dd|datadog)/i.test(c)).length;
+}
+
+/**
+ * Fire one error source. Each is deliberately produced the way real app code
+ * would produce it, with no custom Datadog instrumentation on the error path.
+ *
+ * @param {string} id - A source id from ET_SOURCES
+ */
+function etTrigger(id) {
+  const msg = etTag(id);
+  const logger = window.DD_LOGS && window.DD_LOGS.logger;
+
+  switch (id) {
+    case 'uncaught':
+      // Escape the current call stack so this is a genuine uncaught exception
+      // rather than something we catch and report ourselves.
+      setTimeout(function () { throw new Error(msg); }, 10);
+      break;
+    case 'rejection':
+      Promise.reject(new Error(msg));
+      break;
+    case 'network':
+      // An unresolvable host is a real network failure. Note a 404 from a
+      // reachable host is NOT: that's a successful HTTP exchange, so the Logs
+      // SDK doesn't treat it as an error at all.
+      fetch('https://' + ET_NETWORK_MARKER + '-' + Date.now() + '.invalid/probe')
+        .catch(() => { /* the failure is the point */ });
+      break;
+    case 'console-error':
+      console.error(new Error(msg));
+      break;
+    case 'console-string':
+      console.error(msg);
+      break;
+    case 'logger-error':
+      if (logger) {
+        try { throw new Error(msg); }
+        catch (err) { logger.error(msg, { probe: id }, err); }
+      }
+      break;
+    case 'logger-message':
+      if (logger) logger.error(msg, { probe: id });
+      break;
+  }
+}
+
+/** Fire every source, spaced out so the table fills in visibly. */
+function etTriggerAll() {
+  ET_SOURCES.forEach((src, i) => setTimeout(() => etTrigger(src.id), i * 220));
+}
+
+/** Clear measured results and start over. */
+function etReset() {
+  Object.keys(etResults).forEach(k => delete etResults[k]);
+  renderErrorMatrix();
+}
+
+function renderErrorMatrix() {
+  const tbody = document.getElementById('et-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = ET_SOURCES.map(src => {
+    const r = etResults[src.id];
+    const captured = Boolean(r);
+    const issue = captured && r.hasStack;
+    const matchesExpectation = !captured || issue === src.eligible;
+
+    const verdict = !captured
+      ? '<span class="type-badge other">not fired</span>'
+      : issue
+        ? '<span class="type-badge action">issue</span>'
+        : '<span class="type-badge error">log only</span>';
+
+    return `<tr>
+      <td>
+        <button class="wa-neutral wa-outlined et-fire-btn" onclick="etTrigger('${src.id}')">Fire</button>
+      </td>
+      <td><strong>${escapeHtml(src.label)}</strong><br><span class="et-how">${escapeHtml(src.how)}</span></td>
+      <td>${captured ? `<span class="type-badge ${escapeHtml(r.origin)}">${escapeHtml(r.origin)}</span>` : '—'}</td>
+      <td>${captured ? (r.kind ? `<code>${escapeHtml(r.kind)}</code>` : '<span class="et-absent">none</span>') : '—'}</td>
+      <td>${captured ? (r.hasStack ? 'yes' : '<span class="et-absent">no</span>') : '—'}</td>
+      <td>${verdict}${matchesExpectation ? '' : ' <span title="Measured result differs from the documented expectation">⚠️</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  const fired = Object.keys(etResults).length;
+  const issues = Object.values(etResults).filter(r => r.hasStack).length;
+  const expectedIssues = ET_SOURCES.filter(src => src.eligible).length;
+  const cookies = etDatadogCookieCount();
+
+  const verdictEl = document.getElementById('et-verdict');
+  if (!verdictEl) return;
+
+  if (!fired) {
+    verdictEl.innerHTML = 'Fire the sources above (or <strong>Run all</strong>) to measure what this cookie-free Logs pipe actually captures.';
+    return;
+  }
+
+  verdictEl.innerHTML =
+    `<strong>${issues} of ${fired}</strong> fired source${fired === 1 ? '' : 's'} produced an Error Tracking issue ` +
+    `(${expectedIssues} of ${ET_SOURCES.length} sources can). ` +
+    `Datadog cookies on this page right now: <strong>${cookies}</strong>` +
+    (cookies === 0
+      ? ' — the error pipe created none.'
+      : ' — note RUM created these after you granted consent on the Storage Inspector tab; the Logs pipe still created none.');
 }
 
 /**

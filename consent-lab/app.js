@@ -39,6 +39,11 @@ function switchLabTab(tab) {
   Object.values(panels).forEach(id => { document.getElementById(id).style.display = 'none'; });
   document.getElementById(panels[tab]).style.display = 'block';
   if (tab === 'config') renderConfigTable();
+
+  // Changing the hash is what makes RUM treat this as a new View — same
+  // fragment-based tracking the main pizza builder uses. Without this, RUM
+  // only ever sees a single view for the whole page (the initial load).
+  if (window.location.hash !== '#' + tab) window.location.hash = tab;
 }
 
 // ---------------------------------------------------------------------------
@@ -46,6 +51,13 @@ function switchLabTab(tab) {
 // same-tab reload but starts fresh ('pending' / 'cookie') in a brand new tab,
 // which is the honest default for a first-time visitor.
 // ---------------------------------------------------------------------------
+
+// Clear any stale fragment left over from a previous session/tab-switch, so
+// the very first View this page reports isn't mislabeled — same convention
+// the main pizza builder uses.
+if (window.location.hash) {
+  history.replaceState(null, '', window.location.pathname);
+}
 
 const VALID_MODES = ['cookie', 'local-storage', 'memory'];
 
@@ -401,6 +413,39 @@ function labThrowError() {
   // uncaught exception — exactly what forwardErrorsToLogs / RUM's automatic
   // error tracking are designed to pick up, no custom instrumentation needed.
   setTimeout(function () { throw new Error(msg); }, 10);
+}
+
+/**
+ * Fire a custom RUM action on demand. Only shows up in the activity log
+ * (tagged "rum") once trackingConsent is granted — while pending/declined,
+ * this click still happens, but RUM has nothing to send, which is the
+ * consent gate working as intended.
+ */
+function labFireAction() {
+  if (window.DD_RUM && window.DD_RUM.addAction) {
+    window.DD_RUM.addAction('consent_lab_test_action', {
+      persistence: getPersistence(),
+      consent: getConsent(),
+    });
+  }
+}
+
+/** Emit a Logs SDK info entry. Always works — the Logs pipe is always-on. */
+function labLogInfo() {
+  if (window.DD_LOGS && window.DD_LOGS.logger) {
+    window.DD_LOGS.logger.info('Consent Lab manual log entry', {
+      persistence: getPersistence(),
+      consent: getConsent(),
+    });
+  }
+}
+
+/**
+ * Fetch this same page with a cache-busting query string to generate a
+ * genuine "resource" RUM event without any custom instrumentation.
+ */
+function labFetchResource() {
+  fetch(window.location.pathname + '?labResource=' + Date.now()).catch(() => { /* noop — the request itself is the point */ });
 }
 
 // ---------------------------------------------------------------------------

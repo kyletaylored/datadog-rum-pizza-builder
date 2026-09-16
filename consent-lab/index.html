@@ -275,6 +275,15 @@ DD_RUM.init({ ..., trackingConsent: 'pending' })</pre>
           <button class="secondary outline" id="clear-log-btn" onclick="clearActivityLog()">Clear</button>
         </div>
       </div>
+      <div class="btn-row" style="margin:0 0 .75rem; flex-wrap:wrap">
+        <button class="secondary" onclick="labFireAction()">🔥 Fire RUM action</button>
+        <button class="secondary" onclick="labLogInfo()">📝 Emit Logs info</button>
+        <button class="secondary" onclick="labFetchResource()">📦 Fetch a resource</button>
+      </div>
+      <p style="font-size:.78rem; color:var(--pico-muted-color); margin:0 0 .75rem">
+        Switching tabs above generates a real RUM <span class="type-badge view">view</span> event (fragment-based, same as the pizza builder). The buttons here generate an <span class="type-badge action">action</span>, a <span class="type-badge info">log</span>, and a <span class="type-badge resource">resource</span> event on demand.
+        The <span class="type-badge logs">logs</span> row always works; the <span class="type-badge rum">rum</span> row only appears once you've accepted consent on the Storage Inspector tab — that's the gate working as intended.
+      </p>
       <div id="rum-table-wrap">
         <table id="rum-table">
           <colgroup>

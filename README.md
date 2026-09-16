@@ -139,5 +139,6 @@ This repo is deployed via **GitHub Pages** from the `main` branch root. Any push
 ## Stack
 
 - [Datadog RUM Browser SDK v6](https://docs.datadoghq.com/real_user_monitoring/browser/)
-- [Pico CSS](https://picocss.com/) — minimal classless CSS framework
+- [Web Awesome 3](https://webawesome.com/) — framework-agnostic web components, loaded from CDN
+- A small design-token layer of our own (`tokens.css`) that every custom component reads from, so the framework underneath stays swappable
 - Vanilla JS, no build tooling

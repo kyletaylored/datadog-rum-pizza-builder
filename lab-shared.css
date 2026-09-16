@@ -32,11 +32,16 @@
    ============================================================ */
 .lab-container { max-width: 900px; margin: 0 auto; padding: 0 1rem 3rem; }
 
-.lab-callout {
-  border-left: 4px solid #b91c1c; padding: .75rem 1rem; margin: 1.25rem 0;
-  background: var(--dd-surface-sunken); border-radius: 0 .5rem .5rem 0;
+/* Callout — <wa-callout variant="danger" class="lab-callout">. The component
+   supplies the icon slot, variant colors and layout; we only keep the
+   left-border accent treatment this site uses. */
+wa-callout.lab-callout {
+  --spacing: 0.85rem 1rem;
+  margin: 1.25rem 0;
+  border-inline-start-width: 4px;
+  border-radius: 0 var(--dd-radius) var(--dd-radius) 0;
+  font-size: 0.82rem;
 }
-.lab-callout strong { color: #b91c1c; }
 
 /* ============================================================
    State pill — small colored badge for tri-state values
@@ -55,11 +60,24 @@
    ============================================================ */
 .storage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
 @media (max-width: 700px) { .storage-grid { grid-template-columns: 1fr; } }
-.storage-card {
-  border: 1px solid var(--dd-color-border); border-radius: .5rem; padding: 1rem;
+/* Storage inspector cards — <wa-card class="storage-card" appearance="outlined">.
+   Background comes from our token rather than the component's appearance
+   variants, so the card tracks the rest of the site's surfaces. An outer
+   document rule beats the shadow root's own :host background. */
+wa-card.storage-card {
+  --spacing: 1rem;
   background: var(--dd-surface-sunken);
+  border-color: var(--dd-color-border);
 }
-.storage-card h4 { margin: 0 0 .5rem; display: flex; align-items: center; justify-content: space-between; }
+/* Slotted into the card's header; styled here because slotted content is
+   light DOM and never inherits from the shadow part it lands in. */
+wa-card.storage-card > h4[slot='header'] {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
 .storage-card ul { list-style: none; margin: 0; padding: 0; font-family: monospace; font-size: .82rem; }
 .storage-card li { padding: .35rem 0; border-bottom: 1px dashed var(--dd-color-border); word-break: break-all; }
 .storage-card li:last-child { border-bottom: none; }
@@ -72,6 +90,7 @@
 .mode-picker { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin: 1rem 0; }
 .mode-picker button { position: relative; }
 .mode-picker button.active { box-shadow: 0 0 0 2px var(--dd-color-primary); }
+.mode-picker button { height: auto; }
 .mode-picker button.active::after { content: ' ✓'; }
 
 .reset-state-btn { font-size: .8rem; }

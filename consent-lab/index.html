@@ -397,7 +397,7 @@ console.error('Checkout failed')</pre>
           object as the third argument, <code>logger.error(msg, ctx, err)</code>.
         </wa-callout>
 
-        <h4>If they'd rather not touch the error-reporting code at all</h4>
+        <wa-details class="lab-aside" summary="If they'd rather not touch the error-reporting code at all">
         <p>There's a path that keeps their existing Sentry SDK calls exactly as written: Datadog accepts Sentry's own wire format, so repointing the <code>dsn</code> at Datadog forwards everything the Sentry SDK already captures.</p>
         <pre>Sentry.init({
   dsn: 'https://&lt;TOKEN&gt;@sentry-intake.&lt;DD_SITE&gt;/1',
@@ -405,7 +405,9 @@ console.error('Checkout failed')</pre>
 })</pre>
         <p>Those events <a href="https://docs.datadoghq.com/error_tracking/guides/sentry_sdk/" target="_blank" rel="noopener">arrive as logs</a> and need Error Tracking for Logs enabled, same as the pipe on this page — so the same <code>instanceof Error</code> and stack-trace rules apply. Useful as a migration bridge, or where rewriting every <code>captureException</code> call isn't realistic. Worth checking the Sentry SDK's own storage behavior against the cookie constraint before proposing it.</p>
 
-        <h4>Recommended shape for a strict-consent deployment</h4>
+        </wa-details>
+
+        <wa-details class="lab-aside" summary="Recommended shape for a strict-consent deployment" open>
         <wa-callout variant="danger" class="lab-callout">
           <strong>The obvious architecture doesn't work, and it fails silently.</strong>
           "Cookie-free Logs for errors, cookie-based RUM after consent" is the natural
@@ -448,6 +450,7 @@ console.error('Checkout failed')</pre>
         <p>Once consent is granted both pipes report the same error, which is expected — it's why the matrix shows the two doors separately rather than as a single verdict.</p>
 
         <p>The one open question is legal, not technical, and it's the same caveat as the <strong>Legal</strong> topic in the sidebar: <code>local-storage</code> removes the HTTP cookie, but ePrivacy Art. 5(3) governs "storing information … in the terminal equipment", which several regulators read as covering any client-side storage. If this customer's DPO takes that strict reading, the only remaining cookie-free option is <code>memory</code> for both SDKs — and at that point the session-inflation problem is unavoidable and should be priced into the conversation rather than engineered around.</p>
+        </wa-details>
       </div>
     </div><!-- /#tab-errors -->
 
@@ -479,10 +482,12 @@ console.error('Checkout failed')</pre>
         <button class="wa-neutral" onclick="labLogInfo()">📝 Emit Logs info</button>
         <button class="wa-neutral" onclick="labFetchResource()">📦 Fetch a resource</button>
       </div>
-      <p style="font-size:.78rem; color:var(--dd-color-muted); margin:0 0 .75rem">
-        Switching tabs above generates a real RUM <span class="type-badge view">view</span> event (fragment-based, same as the pizza builder). The buttons here generate an <span class="type-badge action">action</span>, an <span class="type-badge error">error</span>, a <span class="type-badge info">log</span>, and a <span class="type-badge resource">resource</span> event on demand.
-        <strong>Generate error</strong> reports one real <code>Error</code> into both pipes at once — <code>logger.error(msg, ctx, err)</code> and <code>DD_RUM.addError(err)</code> — which is the shape that satisfies Error Tracking on both sides. Pre-consent you'll see only the <span class="type-badge logs">logs</span> row; that one still reaches Error Tracking for Logs.
-        The <span class="type-badge logs">logs</span> row always works; the <span class="type-badge rum">rum</span> row only appears once you've accepted consent on the Storage Inspector tab — that's the gate working as intended.
+      <p class="log-hint">
+        Switching tabs generates a RUM <span class="type-badge view">view</span>. The buttons emit an
+        <span class="type-badge action">action</span>, an <span class="type-badge error">error</span>, a
+        <span class="type-badge info">log</span> and a <span class="type-badge resource">resource</span> on demand.
+        <span class="type-badge logs">logs</span> rows always work; <span class="type-badge rum">rum</span> rows
+        need consent — see the <strong>Error capture</strong> tab.
       </p>
       <div id="rum-table-wrap">
         <table id="rum-table">

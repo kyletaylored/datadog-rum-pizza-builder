@@ -10,6 +10,10 @@
  * framework's variables exist to alias) and BEFORE style.css / lab-shared.css
  * (so the tokens exist by the time components read them).
  *
+ * These alias Web Awesome's OKLCH token system, which already swaps light and
+ * dark values off the `wa-light`/`wa-dark` class, so nothing here needs a
+ * per-theme override.
+ *
  * Deliberately unlayered: the framework ships its theme inside cascade layers
  * (`@layer wa-theme` etc.), and unlayered CSS outranks every layer, so these
  * definitions always win without needing !important.
@@ -21,21 +25,21 @@
      --dd-surface-sunken recessed background (sidebar, code blocks, zebra rows)
      --dd-surface-code   inline code / monospace chip background
      --dd-color-border   hairline dividers and component borders            */
-  --dd-surface: var(--pico-card-background-color);
-  --dd-surface-sunken: var(--pico-card-sectioning-background-color);
-  --dd-surface-code: var(--pico-code-background-color);
-  --dd-color-border: var(--pico-muted-border-color);
+  --dd-surface: var(--wa-color-surface-raised);
+  --dd-surface-sunken: var(--wa-color-surface-lowered);
+  --dd-surface-code: var(--wa-color-neutral-fill-quiet);
+  --dd-color-border: var(--wa-color-surface-border);
 
   /* --- Text -------------------------------------------------------------- */
-  --dd-color-muted: var(--pico-muted-color);
+  --dd-color-muted: var(--wa-color-text-quiet);
 
   /* --- Brand ------------------------------------------------------------- */
   /* --dd-color-primary    accent for links, active tabs, selected borders
      --dd-color-primary-fill  solid brand fill behind --dd-color-on-primary  */
-  --dd-color-primary: var(--pico-primary);
-  --dd-color-primary-fill: var(--pico-primary-background);
-  --dd-color-on-primary: #fff;
+  --dd-color-primary: var(--wa-color-brand-on-quiet);
+  --dd-color-primary-fill: var(--wa-color-brand-fill-loud);
+  --dd-color-on-primary: var(--wa-color-brand-on-loud);
 
   /* --- Shape ------------------------------------------------------------- */
-  --dd-radius: var(--pico-border-radius);
+  --dd-radius: var(--wa-border-radius-m);
 }

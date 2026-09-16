@@ -103,6 +103,23 @@ An **SLO** is built on the synthetic monitor to track wizard completion rate ove
 
 ---
 
+## Consent & Storage Lab
+
+**[Try it →](%%PAGES_URL%%/consent-lab/)**
+
+A second, standalone demo at `/consent-lab/` for a real recurring sales-engineering question: an EU customer's legal team won't allow *any* cookie — including RUM's first-party session cookie — without prior consent, but they still want 100% error capture (replacing Sentry) and don't want session counts inflated by a multi-tab, refresh-heavy flow.
+
+It demonstrates, live in the browser:
+
+- **`sessionPersistence: 'cookie' | 'local-storage' | 'memory'`** — a live storage inspector shows exactly what RUM writes to `document.cookie` and `localStorage` under each mode.
+- **`setTrackingConsent('pending' | 'granted' | 'not-granted')`** — a consent banner gates RUM end-to-end; nothing is written or sent until the user accepts.
+- **Multi-tab / refresh session stability** — a `BroadcastChannel` compares the live RUM session ID across every open tab, showing why `memory` persistence risks inflating session counts for multi-tab flows (a new session per tab, and per refresh) while `local-storage` doesn't.
+- **An always-on, cookie-free error pipe** — the Logs Browser SDK runs independently of the RUM consent gate with `sessionPersistence: 'local-storage'`, so 100% of errors are captured even before consent — the Sentry-equivalent backup plan.
+
+The lab also calls out an important caveat: switching to `local-storage` removes an HTTP cookie, but the EU ePrivacy Directive's "storage on terminal equipment" language is read by some regulators as covering *any* client-side storage, not just cookies. It's framed in the UI as a mitigation to confirm with legal/DPO, not a guaranteed compliance fix.
+
+---
+
 ## Running locally
 
 Just open `index.html` in a browser — no build step, no server required. Everything is loaded from CDN.

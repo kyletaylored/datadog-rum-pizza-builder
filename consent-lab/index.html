@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cookie Consent &amp; Session Storage Lab · Datadog RUM Pizza Builder</title>
+<meta name="description" content="An interactive lab for testing Datadog RUM's sessionPersistence and tracking-consent APIs against strict EU cookie-consent requirements — cookie vs. local-storage vs. memory, multi-tab session stability, and cookie-free error tracking.">
+<meta name="author" content="Kyle Taylor">
+<meta name="robots" content="index, follow">
+
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><text y='32' font-size='32'>🍪</text></svg>">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/picocss/2.0.6/pico.min.css">
+<script>
+  (function(h,o,u,n,d) {
+    h=h[d]=h[d]||{q:[],onReady:function(c){h.q.push(c)}}
+    d=o.createElement(u);d.async=1;d.src=n;d.crossOrigin=''
+    n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
+  })(window,document,'script','https://www.datadoghq-browser-agent.com/us1/v6/datadog-rum.js','DD_RUM')
+</script>
+<script>
+  (function(h,o,u,n,d) {
+    h=h[d]=h[d]||{q:[],onReady:function(c){h.q.push(c)}}
+    d=o.createElement(u);d.async=1;d.src=n;d.crossOrigin=''
+    n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
+  })(window,document,'script','https://www.datadoghq-browser-agent.com/us1/v6/datadog-logs.js','DD_LOGS')
+</script>
+<script src="../config.js"></script>
+<link rel="stylesheet" href="../style.css">
+<script>
+  // Apply saved theme before paint to avoid flash — shared key with the pizza builder.
+  (function() {
+    var t = localStorage.getItem('theme');
+    if (t) document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
+<style>
+  /* ===== Consent Lab — page-specific components ===== */
+  .tag-consent { background: #cffafe; color: #0e7490; }
+  .tag-storage { background: #e0e7ff; color: #4338ca; }
+  .tag-tabs    { background: #ffedd5; color: #c2410c; }
+  .tag-error   { background: #fee2e2; color: #b91c1c; }
+
+  .lab-container { max-width: 900px; margin: 0 auto; padding: 0 1rem 3rem; }
+
+  .consent-banner {
+    display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: space-between;
+    padding: 1rem 1.25rem; margin-bottom: 1.5rem; border-radius: .5rem;
+    background: var(--pico-card-sectioning-background-color);
+    border: 1px solid var(--pico-muted-border-color);
+  }
+  .consent-banner p { margin: 0; flex: 1 1 260px; }
+  .consent-banner .btn-row { display: flex; gap: .5rem; flex-wrap: wrap; }
+  .consent-banner button { margin: 0; white-space: nowrap; }
+  .consent-state-pill {
+    display: inline-flex; align-items: center; gap: .35rem; padding: .2rem .6rem;
+    border-radius: 999px; font-size: .8rem; font-weight: 600; margin-left: .5rem;
+  }
+  .consent-state-pill.granted     { background: #dcfce7; color: #15803d; }
+  .consent-state-pill.not-granted { background: #fee2e2; color: #b91c1c; }
+  .consent-state-pill.pending     { background: #fef3c7; color: #92400e; }
+
+  .storage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+  @media (max-width: 700px) { .storage-grid { grid-template-columns: 1fr; } }
+  .storage-card {
+    border: 1px solid var(--pico-muted-border-color); border-radius: .5rem; padding: 1rem;
+    background: var(--pico-card-sectioning-background-color);
+  }
+  .storage-card h4 { margin: 0 0 .5rem; display: flex; align-items: center; justify-content: space-between; }
+  .storage-card ul { list-style: none; margin: 0; padding: 0; font-family: monospace; font-size: .82rem; }
+  .storage-card li { padding: .35rem 0; border-bottom: 1px dashed var(--pico-muted-border-color); word-break: break-all; }
+  .storage-card li:last-child { border-bottom: none; }
+  .storage-card .empty { color: var(--pico-muted-color); font-style: italic; font-family: inherit; }
+  .storage-card .dd-key { color: #b91c1c; font-weight: 700; }
+
+  .mode-picker { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin: 1rem 0; }
+  .mode-picker button { position: relative; }
+  .mode-picker button.active { box-shadow: 0 0 0 2px var(--pico-primary); }
+  .mode-picker button.active::after { content: ' ✓'; }
+
+  table.compare-table { font-size: .85rem; }
+  table.compare-table code { font-size: .8rem; }
+
+  .session-id { font-family: monospace; padding: .15rem .4rem; border-radius: .25rem; background: var(--pico-code-background-color); }
+
+  #tabs-table td, #tabs-table th { font-size: .82rem; }
+  .tab-badge { font-family: monospace; font-size: .75rem; padding: .1rem .4rem; border-radius: .25rem; background: var(--pico-code-background-color); }
+  .tab-row-self { font-weight: 700; }
+
+  .lab-callout {
+    border-left: 4px solid #b91c1c; padding: .75rem 1rem; margin: 1.25rem 0;
+    background: var(--pico-card-sectioning-background-color); border-radius: 0 .5rem .5rem 0;
+  }
+  .lab-callout strong { color: #b91c1c; }
+
+  #error-log { max-height: 220px; overflow-y: auto; font-family: monospace; font-size: .8rem;
+    border: 1px solid var(--pico-muted-border-color); border-radius: .5rem; padding: .75rem; background: var(--pico-card-sectioning-background-color); }
+  #error-log .entry { padding: .25rem 0; border-bottom: 1px dashed var(--pico-muted-border-color); }
+  #error-log .entry:last-child { border-bottom: none; }
+  #error-log .via-rum   { color: #15803d; }
+  #error-log .via-logs  { color: #b91c1c; }
+</style>
+</head>
+<body>
+
+<div class="training-layout">
+
+  <!-- ===== LEFT SIDEBAR ===== -->
+  <aside class="training-sidebar">
+
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <span class="sidebar-logo">🍪</span>
+        <div>
+          <div class="sidebar-title">Consent &amp; Storage Lab</div>
+          <div class="sidebar-subtitle">Datadog RUM Training</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-intro">
+      <p>An EU customer's legal team has ruled that <strong>no cookie may be created without prior consent</strong> — even the first-party RUM session cookie. This lab tests Datadog RUM's cookie-free options against that requirement, live in your browser.</p>
+      <p><a href="../">← Back to Pizza Builder</a></p>
+    </div>
+
+    <nav class="sidebar-nav">
+      <p class="sidebar-nav-label">Training topics</p>
+
+      <details class="sidebar-section" open>
+        <summary><span class="sidebar-tag tag-consent">Consent</span><span class="sidebar-section-title">The compliance problem</span></summary>
+        <div class="sidebar-section-body">
+          <p>A common pattern: RUM's session cookie (<code>_dd_s</code>) is created the moment the page loads, before any consent banner is answered. Session Replay is correctly gated behind consent — but the cookie itself isn't, and some EU jurisdictions' ePrivacy enforcement treats <em>any</em> non-essential cookie, including a "technical" monitoring cookie, as requiring consent.</p>
+          <p>The ask: keep full error visibility (the team is replacing Sentry, which needs 100% error capture) while creating <strong>zero client-side storage</strong> until a user opts in.</p>
+        </div>
+      </details>
+
+      <details class="sidebar-section">
+        <summary><span class="sidebar-tag tag-storage">Storage</span><span class="sidebar-section-title">sessionPersistence: cookie vs local-storage vs memory</span></summary>
+        <div class="sidebar-section-body">
+          <p>RUM's <code>sessionPersistence</code> init option controls where the SDK keeps its session state:</p>
+          <pre>DD_RUM.init({
+  ...
+  sessionPersistence: 'local-storage', // or 'cookie' | 'memory'
+})</pre>
+          <table class="compare-table">
+            <thead><tr><th>Mode</th><th>Creates a cookie?</th><th>Survives refresh?</th><th>Shared across tabs?</th></tr></thead>
+            <tbody>
+              <tr><td><code>cookie</code></td><td>Yes (<code>_dd_s</code>)</td><td>Yes</td><td>Yes</td></tr>
+              <tr><td><code>local-storage</code></td><td><strong>No</strong></td><td>Yes</td><td>Yes</td></tr>
+              <tr><td><code>memory</code></td><td><strong>No</strong></td><td><strong>No — new session</strong></td><td><strong>No — separate session per tab</strong></td></tr>
+            </tbody>
+          </table>
+          <p>Try all three in the <strong>Storage Inspector</strong> tab, then use the <strong>Multi-tab test</strong> tab to see why <code>memory</code> risks inflating session counts for a multi-tab workflow, while <code>local-storage</code> doesn't.</p>
+          <p>If both RUM and Logs SDKs are on the same page, Datadog requires them to use the <strong>same</strong> <code>sessionPersistence</code> value.</p>
+        </div>
+      </details>
+
+      <details class="sidebar-section">
+        <summary><span class="sidebar-tag tag-consent">Gate</span><span class="sidebar-section-title">Gating with setTrackingConsent</span></summary>
+        <div class="sidebar-section-body">
+          <p>The tracking-consent API lets you initialize the SDK once — so it's ready to go — without it writing or sending anything until the user answers:</p>
+          <pre>DD_RUM.init({ ..., trackingConsent: 'pending' })
+// later, from your CMP / banner:
+DD_RUM.setTrackingConsent('granted')      // starts writing storage + sending data
+DD_RUM.setTrackingConsent('not-granted')  // stays fully inert, no storage</pre>
+          <p>Consent isn't remembered by the SDK across page loads — your app re-applies the user's saved choice (from your own CMP) on every load.</p>
+          <p>The banner at the top of the <strong>Storage Inspector</strong> tab drives this live: watch the storage cards stay empty until you click Accept.</p>
+        </div>
+      </details>
+
+      <details class="sidebar-section">
+        <summary><span class="sidebar-tag tag-tabs">Tabs</span><span class="sidebar-section-title">Multi-tab &amp; refresh session stability</span></summary>
+        <div class="sidebar-section-body">
+          <p>A travel-booking-style flow commonly opens several tabs and refreshes mid-session. That's exactly where <code>memory</code> persistence falls apart: it lives in that one JS heap, so a new tab — or a refresh — has no way to see the old session ID and simply starts a new one.</p>
+          <p>The <strong>Multi-tab test</strong> tab uses a <code>BroadcastChannel</code> to compare the live RUM session ID across every open tab of this page, so you can see the effect directly instead of taking it on faith.</p>
+        </div>
+      </details>
+
+      <details class="sidebar-section">
+        <summary><span class="sidebar-tag tag-error">Errors</span><span class="sidebar-section-title">The always-on error-tracking backup plan</span></summary>
+        <div class="sidebar-section-body">
+          <p>If the business also wants <strong>100% error capture even pre-consent</strong> — matching how event-based tools like Sentry behave — RUM itself isn't the right tool for that slice, since it's intentionally gated by consent end-to-end.</p>
+          <p>The pattern: run the <strong>Logs Browser SDK</strong> as an independent, always-on error pipe with <code>sessionPersistence: 'local-storage'</code> (never a cookie), separate from RUM's consent gate:</p>
+          <pre>DD_LOGS.init({
+  ...
+  sessionPersistence: 'local-storage',
+  trackingConsent: 'granted', // always on
+  forwardErrorsToLogs: true,
+})
+// RUM stays gated:
+DD_RUM.init({ ..., trackingConsent: 'pending' })</pre>
+          <p>Try it in the <strong>Error capture</strong> tab — throwing an error is captured by the Logs pipe regardless of the RUM consent state shown at the top of the page.</p>
+        </div>
+      </details>
+
+      <details class="sidebar-section">
+        <summary><span class="sidebar-tag tag-consent">Legal</span><span class="sidebar-section-title">⚠️ Not a compliance guarantee</span></summary>
+        <div class="sidebar-section-body">
+          <p><strong>This is an engineering lab, not legal advice.</strong> Switching from a cookie to <code>local-storage</code> removes an HTTP cookie — but the EU ePrivacy Directive (Art. 5(3)) governs "storing information, or gaining access to information already stored, in the terminal equipment of a subscriber or user," which several national regulators (including some Nordic DPAs) read as covering <em>any</em> client-side storage mechanism, not literally just cookies named "cookie."</p>
+          <p>In other words: a strict regulator may still require consent before writing to <code>localStorage</code>. Confirm the specific jurisdiction's interpretation with the customer's legal/DPO before presenting <code>sessionPersistence: 'local-storage'</code> as a full fix rather than a mitigation.</p>
+        </div>
+      </details>
+    </nav>
+
+    <footer class="sidebar-footer">
+      <div class="sidebar-footer-links">
+        Built by <a href="https://github.com/kyletaylored" target="_blank" rel="noopener">Kyle Taylor</a> &middot;
+        <a href="https://github.com/kyletaylored/datadog-rum-pizza-builder" target="_blank" rel="noopener">GitHub</a>
+      </div>
+      <label class="theme-toggle" aria-label="Toggle light/dark mode">
+        <span class="theme-icon">☀️</span>
+        <input type="checkbox" role="switch" id="theme-toggle" onchange="toggleTheme(this)">
+        <span class="theme-icon">🌙</span>
+      </label>
+    </footer>
+
+  </aside><!-- /.training-sidebar -->
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <div class="training-main">
+
+    <nav class="tab-nav" role="tablist">
+      <button class="tab-btn active" role="tab" aria-selected="true"  aria-controls="tab-storage" onclick="switchLabTab('storage')">🗄️ Storage Inspector</button>
+      <button class="tab-btn"        role="tab" aria-selected="false" aria-controls="tab-tabs"    onclick="switchLabTab('tabs')">🪟 Multi-tab test</button>
+      <button class="tab-btn"        role="tab" aria-selected="false" aria-controls="tab-errors"  onclick="switchLabTab('errors')">🚨 Error capture</button>
+      <button class="tab-btn"        role="tab" aria-selected="false" aria-controls="tab-config"  onclick="switchLabTab('config')">⚙️ Config</button>
+    </nav>
+
+    <!-- Storage Inspector tab -->
+    <div id="tab-storage" role="tabpanel" class="tab-panel">
+      <div class="lab-container">
+
+        <div class="consent-banner">
+          <p>🍪 This page can create a technical session store to monitor performance and errors. How should it behave?
+            <span id="consent-pill" class="consent-state-pill pending">pending</span>
+          </p>
+          <div class="btn-row">
+            <button onclick="labSetConsent('accept-cookie')">Accept — use a cookie</button>
+            <button class="secondary" onclick="labSetConsent('accept-storage')">Accept — cookie-free only</button>
+            <button class="secondary outline" onclick="labSetConsent('decline')">Decline everything</button>
+          </div>
+        </div>
+
+        <h3>Live storage inspector</h3>
+        <p>Reflects exactly what this tab has written to the browser right now. Refreshes every second, and immediately after any action below.</p>
+
+        <div class="mode-picker">
+          <span>Try RUM with:</span>
+          <button id="mode-btn-cookie"        onclick="reloadWithPersistence('cookie')">cookie</button>
+          <button id="mode-btn-local-storage" onclick="reloadWithPersistence('local-storage')">local-storage</button>
+          <button id="mode-btn-memory"        onclick="reloadWithPersistence('memory')">memory</button>
+        </div>
+
+        <div class="storage-grid">
+          <div class="storage-card">
+            <h4>Cookies <span id="cookie-count"></span></h4>
+            <ul id="cookie-list"></ul>
+          </div>
+          <div class="storage-card">
+            <h4>localStorage <span id="ls-count"></span></h4>
+            <ul id="ls-list"></ul>
+          </div>
+        </div>
+
+        <p>Current RUM session ID (via <code>DD_RUM.getInternalContext()</code>): <span id="session-id-display" class="session-id">—</span></p>
+        <p>Active <code>sessionPersistence</code> mode: <strong id="active-mode-display">cookie</strong></p>
+      </div>
+    </div><!-- /#tab-storage -->
+
+    <!-- Multi-tab test tab -->
+    <div id="tab-tabs" role="tabpanel" class="tab-panel" style="display:none">
+      <div class="lab-container">
+        <h3>Multi-tab &amp; refresh session stability</h3>
+        <p>Open this page in a second tab (same persistence mode) and watch whether it reports the <em>same</em> session ID as this tab, or a new one. Then try reloading one tab and see if its own session ID changes.</p>
+        <div class="btn-row" style="margin-bottom:1rem">
+          <button onclick="window.open(window.location.href, '_blank')">Open a second tab</button>
+          <button class="secondary" onclick="window.location.reload()">Reload this tab</button>
+        </div>
+        <table id="tabs-table">
+          <thead><tr><th>Tab</th><th>Persistence</th><th>Consent</th><th>Session ID</th><th>Last seen</th></tr></thead>
+          <tbody id="tabs-tbody"><tr><td colspan="5">Waiting for tab reports…</td></tr></tbody>
+        </table>
+        <p id="tabs-verdict"></p>
+      </div>
+    </div><!-- /#tab-tabs -->
+
+    <!-- Error capture tab -->
+    <div id="tab-errors" role="tabpanel" class="tab-panel" style="display:none">
+      <div class="lab-container">
+        <h3>Always-on, cookie-free error capture</h3>
+        <p>The Logs SDK below is initialized independently of the consent banner on the Storage Inspector tab — it always runs, uses <code>sessionPersistence: 'local-storage'</code>, and never sets a cookie. This is the "Sentry-equivalent" backup plan: 100% error capture regardless of RUM consent state.</p>
+        <div class="btn-row" style="margin-bottom:1rem">
+          <button onclick="labThrowError()">Throw a JS error</button>
+          <button class="secondary" onclick="document.getElementById('error-log').innerHTML=''">Clear log</button>
+        </div>
+        <p>RUM consent right now: <span id="consent-pill-2" class="consent-state-pill pending">pending</span> — notice that errors below still get captured by the Logs pipe even when RUM is declined.</p>
+        <div id="error-log"><div class="entry">Waiting for errors…</div></div>
+      </div>
+    </div><!-- /#tab-errors -->
+
+    <!-- Config tab -->
+    <div id="tab-config" role="tabpanel" class="tab-panel" style="display:none">
+      <div class="lab-container">
+        <h3>Active SDK configuration</h3>
+        <p>Reflects the actual <code>DD_RUM.init()</code> and <code>DD_LOGS.init()</code> calls made by this page for your current choices.</p>
+        <h4>RUM (consent-gated)</h4>
+        <pre class="config-code"><code id="config-rum-json"></code></pre>
+        <h4>Logs (always-on error pipe)</h4>
+        <pre class="config-code"><code id="config-logs-json"></code></pre>
+      </div>
+    </div><!-- /#tab-config -->
+
+  </div><!-- /.training-main -->
+
+</div><!-- /.training-layout -->
+
+<script src="app.js"></script>
+</body>
+</html>

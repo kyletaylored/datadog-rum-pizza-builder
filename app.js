@@ -89,7 +89,7 @@ function renderConfigTable() {
     sessionReplaySampleRate: 100,
     trackBfcacheViews: true,
     defaultPrivacyLevel: 'mask-user-input',
-    sessionPersistence: 'local-storage',
+    sessionPersistence: 'cookie',
   };
 
   const logsConfig = {
@@ -98,6 +98,7 @@ function renderConfigTable() {
     service: cfg.service || '—',
     env: cfg.env || '—',
     version: cfg.version || '—',
+    sessionPersistence: 'cookie',
     forwardErrorsToLogs: true,
     forwardConsoleLogs: 'all',
     sessionSampleRate: 100,
@@ -130,6 +131,7 @@ window.DD_RUM && window.DD_RUM.onReady(function () {
     sessionReplaySampleRate: 100,
     trackBfcacheViews: true,
     defaultPrivacyLevel: 'mask-user-input',
+    sessionPersistence: 'cookie',
     beforeSend: function (event) {
       // Drop resource events for the Datadog SDK itself — noisy and not useful.
       if (event.type === 'resource' && /ttps:\/\/www\.datadoghq-browser-agent\.com/.test(event.resource?.url)) {
@@ -152,6 +154,7 @@ window.DD_LOGS && window.DD_LOGS.onReady(function () {
     service: cfg.service,
     version: cfg.version,
     env: cfg.env,
+    sessionPersistence: 'cookie',
     forwardErrorsToLogs: true,
     forwardConsoleLogs: 'all',
     sessionSampleRate: 100,

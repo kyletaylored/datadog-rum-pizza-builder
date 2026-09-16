@@ -1,6 +1,6 @@
 # PRD: Replace Pico CSS with a Modern UI Framework
 
-**Status:** Draft
+**Status:** Executed — all six phases shipped (see §13)
 **Owner:** Kyle Taylor
 **Repo:** `datadog-rum-pizza-builder`
 **Last updated:** 2026-09-16
@@ -178,9 +178,45 @@ With the new component layer in place, spend dedicated time on the things a fram
 - Page weight (CSS + framework JS) stays under ~150KB gzipped total (rough budget, not a hard gate) — sanity check against Pico's current footprint.
 - Subjective: a "does this look more polished" gut-check from whoever raised the original complaint, post-Phase 5.
 
-## 12. Open questions
+## 12. Open questions — resolved
 
-1. Do we adopt Web Awesome's own `<wa-tab-group>` behavior for tabs, or keep our hand-rolled `switchTab()`/`switchLabTab()` JS (which also drives the hash-based RUM view tracking) and only take Web Awesome's *styling*? Leaning toward keeping our own JS, since it's already wired to RUM view tracking in a way we understand.
-2. Should the resizable sidebar (`lab-shared.js`) stay fully custom, or is there a Web Awesome primitive (e.g., a splitter/resize component) worth adopting instead?
-3. How much of Phase 5 (design pass) is in scope for this project vs. a separate follow-up?
-4. Do we want to pin Web Awesome to a specific npm-published version via jsDelivr (recommended) or track their rolling CDN tag?
+1. **Tabs: keep our own JS.** `switchTab()`/`switchLabTab()` also drive the hash change that makes RUM record a new view, and the tab strip is already correctly ARIA-wired. `<wa-tab-group>` would have meant re-deriving that view-tracking behavior inside a component whose internals we don't control, for no visual gain — the tab strip is bespoke-styled either way. Kept as-is, re-themed through the token layer.
+2. **Resizable sidebar: stays fully custom.** Web Awesome does ship `<wa-split-panel>`, but our resizer drives `grid-template-columns` on `.training-layout` and persists the width to one shared `localStorage` key across pages. `<wa-split-panel>` owns its own layout, so adopting it would mean restructuring the page grid on both pages to gain a drag handle we already have. Not worth it.
+3. **Phase 5 was done in scope**, not deferred. It turned out to be the phase that actually addressed the original complaint: the badge/tag/pill palette was hardcoded light-mode hex, so dark mode showed pale fills with dark text. That was the worst-looking thing on either page, and no framework swap would have fixed it.
+4. **Pinned to `3.13.0`** via jsDelivr, never a rolling tag, per §10.
+
+### One deviation from §8.2
+
+Buttons stayed native `<button>` with Web Awesome's variant classes (`wa-brand`,
+`wa-neutral`, `wa-outlined`) rather than becoming `<wa-button>`. Web Awesome
+ships a full native-element layer, so the rendered result is identical off the
+same tokens — but the light DOM keeps RUM's automatic action-name inference
+working exactly as before, which is the top-listed risk in §10, and avoids a
+flash of undefined custom elements on the primary interaction surface. The two
+funnel-critical buttons additionally carry an explicit `data-dd-action-name`.
+
+## 13. Execution log
+
+| Phase | Commit | Notes |
+|---|---|---|
+| 0 — Token layer | `8c2caf1` | Also fixed `--pico-card-sectionning-background-color` (three n's), which never resolved and left several surfaces transparent |
+| 1 — Load alongside | `7f005bb` | Found the accordion chevron double-rotating: Pico used `transform`, Web Awesome uses the `rotate` property, and the two compose |
+| 2 — Pizza builder | `e5ec1b6` | Found that jsDelivr's `dist` is the npm build with bare module specifiers; `dist-cdn` is the browser one |
+| 3 — Consent lab | `970a2d8` | `.lab-callout` turned out to be dead CSS; now renders the disclaimer it was written for |
+| 4 — Remove Pico | `e3bb43e` | One-file re-aliasing of `tokens.css`; no component rule touched |
+| 5 — Design pass | `258f994` | Semantic hue ramps, elevation, motion |
+
+### Success metrics (§11) as measured
+
+- All §4 rows have a shipped equivalent — verified by an inventory sweep.
+- `grep -ri pico` returns nothing outside this PRD.
+- RUM/Logs capture verified against the pre-migration commit side by side in a
+  second worktree: fragment views, click actions (`Start Building` name
+  unchanged), `pizza_order_submitted` with its full context payload, and the
+  consent lab's Logs events all behave identically.
+- Styling payload measured on a real page load: ~61 KB for Web Awesome plus
+  ~5.5 KB gzipped of our own CSS — inside the ~150 KB budget. Caveat worth
+  knowing: the autoloader fetches this across ~55 small requests, which also
+  means ~55 extra `resource` events per page load in RUM.
+- `npx terser app.js --source-map ...` still succeeds unchanged, so the deploy
+  workflow's assumptions hold.

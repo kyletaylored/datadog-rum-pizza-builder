@@ -24,6 +24,16 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # Runs first because everything below needs the real site URL. Its
+      # base_url output comes from the Pages API, so it reflects a custom
+      # domain; GITHUB_REPOSITORY_OWNER can only ever reconstruct the default
+      # github.io host, which is wrong the moment a CNAME is in play. Note a
+      # custom domain on the *user* site (owner.github.io) also rebases every
+      # project site under it, even when the project repo has no CNAME.
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v6
+
       - name: Generate config.js from template
         env:
           DD_APP_ID: ${{ secrets.DD_APP_ID }}
@@ -36,11 +46,14 @@ jobs:
             config.template.js > config.js
 
       - name: Inject GitHub URLs
+        env:
+          PAGES_URL: ${{ steps.pages.outputs.base_url }}
         run: |
-          PAGES_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}"
+          # base_url has no trailing slash, which is what the templates expect
+          # (they write "%%PAGES_URL%%/" and "%%PAGES_URL%%/assets/...").
           GITHUB_REPO_URL="https://github.com/${GITHUB_REPOSITORY}"
           sed -i \
-            -e "s|%%PAGES_URL%%|${PAGES_URL}|g" \
+            -e "s|%%PAGES_URL%%|${PAGES_URL%/}|g" \
             -e "s|%%GITHUB_REPO%%|${GITHUB_REPO_URL}|g" \
             index.html README.md
 
@@ -80,29 +93,44 @@ jobs:
 
       - name: Generate source maps
         run: |
-          # Produce identity source maps (no minification) so Datadog can link
-          # stack frames to exact GitHub file + line references.
-          # Both entrypoints are instrumented, so both need maps — consent-lab
-          # errors were previously arriving in Error Tracking un-deminified.
-          for js in app.js consent-lab/app.js; do
+          # Discover instrumented entrypoints rather than listing them, so a
+          # new lab directory needs no workflow change.
+          find . -name 'app.js' \
+            -not -path './.git/*' \
+            -not -path './node_modules/*' \
+            -not -path './sourcemaps-upload/*' \
+            | sed 's|^\./||' | sort > .entrypoints
+
+          count=$(wc -l < .entrypoints | tr -d ' ')
+          if [ "$count" -eq 0 ]; then
+            echo "ERROR: no app.js entrypoints found"
+            exit 1
+          fi
+          echo "Found $count entrypoint(s):"
+          sed 's/^/  /' .entrypoints
+
+          while read -r js; do
+            base="$(basename "$js")"
+            # Identity source maps (no minification) so Datadog can link stack
+            # frames to exact GitHub file + line references.
             npx --yes terser "$js" \
-              --source-map "url='app.js.map',root=''" \
+              --source-map "url='${base}.map',root=''" \
               --output "$js" \
               --no-compress \
               --no-mangle
             # terser doesn't reliably set the `file` field — datadog-ci uses it
-            # to construct the JS URL, so set it explicitly before uploading.
+            # to construct the JS URL, so set it explicitly.
             node -e "
               const fs=require('fs');
               const m=JSON.parse(fs.readFileSync('$js.map','utf8'));
-              m.file='app.js';
+              m.file='$base';
               fs.writeFileSync('$js.map', JSON.stringify(m));
             "
-          done
+          done < .entrypoints
 
       - name: Validate source maps
         run: |
-          for js in app.js consent-lab/app.js; do
+          while read -r js; do
             echo "--- $js"
             tail -1 "$js"
             node -e "
@@ -110,32 +138,35 @@ jobs:
               console.log('  file:', m.file, '| sources:', JSON.stringify(m.sources));
               if (!m.file || !m.mappings) { console.error('ERROR: incomplete source map for $js'); process.exit(1); }
             "
-          done
+          done < .entrypoints
 
       - name: Upload source maps to Datadog
         env:
           DATADOG_API_KEY: ${{ secrets.DD_API_KEY }}
+          PAGES_URL: ${{ steps.pages.outputs.base_url }}
         run: |
-          PAGES_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}"
-          # Stage the files under the same relative paths GitHub Pages serves
-          # them at. datadog-ci joins each file's relative path onto
-          # --minified-path-prefix, so one upload covers both entrypoints:
+          # Stage each file under the same relative path Pages serves it at.
+          # datadog-ci joins that path onto --minified-path-prefix, so one
+          # upload covers every entrypoint:
           #   app.js             -> $PAGES_URL/app.js
           #   consent-lab/app.js -> $PAGES_URL/consent-lab/app.js
-          # Staging also keeps datadog-ci's basePath handling from stripping the
-          # dot out of 'app.js' when uploading from '.'.
-          mkdir -p sourcemaps-upload/consent-lab
-          cp app.js app.js.map sourcemaps-upload/
-          cp consent-lab/app.js consent-lab/app.js.map sourcemaps-upload/consent-lab/
+          # Staging also keeps datadog-ci's basePath handling from stripping
+          # the dot out of 'app.js' when uploading from '.'.
+          while read -r js; do
+            mkdir -p "sourcemaps-upload/$(dirname "$js")"
+            cp "$js" "$js.map" "sourcemaps-upload/$(dirname "$js")/"
+          done < .entrypoints
+          find sourcemaps-upload -type f | sort
           # --service and --release-version must match the `service` and
-          # `version` tags on the RUM/Logs events, or stack traces won't resolve.
+          # `version` tags on the RUM/Logs events, or frames won't resolve.
           npx --yes @datadog/datadog-ci sourcemaps upload sourcemaps-upload \
             --service datadog-rum-pizza-builder \
             --release-version ${GITHUB_SHA:0:7} \
-            --minified-path-prefix ${PAGES_URL}/
+            --minified-path-prefix "${PAGES_URL%/}/"
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v6
+      - name: Clean up build artifacts
+        run: rm -rf sourcemaps-upload .entrypoints
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:

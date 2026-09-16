@@ -69,13 +69,13 @@ html, body { background: var(--dd-surface-page); }
 }
 
 .sidebar-title {
-  font-size: 0.92rem;
+  font-size: 1rem;
   font-weight: 700;
   line-height: 1.2;
 }
 
 .sidebar-subtitle {
-  font-size: 0.7rem;
+  font-size: var(--dd-text-m);
   color: var(--dd-color-muted);
   margin-top: 1px;
 }
@@ -87,7 +87,7 @@ html, body { background: var(--dd-surface-page); }
 }
 
 .sidebar-intro p {
-  font-size: 0.79rem;
+  font-size: var(--dd-text-m);
   color: var(--dd-color-muted);
   line-height: 1.55;
   margin: 0;
@@ -100,7 +100,7 @@ html, body { background: var(--dd-surface-page); }
 }
 
 .sidebar-nav-label {
-  font-size: 0.62rem;
+  font-size: var(--dd-text-xs);
   text-transform: uppercase;
   letter-spacing: 0.09em;
   font-weight: 700;
@@ -143,8 +143,9 @@ wa-details.sidebar-section > [slot='summary'] {
   gap: 0.7rem;
   flex: 1;
   min-width: 0;
-  font-size: 0.7rem;
+  font-size: var(--dd-text-m);
   font-weight: 600;
+  line-height: 1.4;
   /* Slotted light-DOM content inherits from its light-DOM parent, not from
      the shadow `summary` it lands in, so ::part(header) typography would
      never reach it. Set it here instead. */
@@ -161,7 +162,7 @@ wa-details.sidebar-section::part(icon) {
 }
 
 .sidebar-section-body p {
-  font-size: 0.78rem;
+  font-size: var(--dd-text-m);
   color: var(--dd-color-muted);
   line-height: 1.55;
   margin: 0 0 0.6rem;
@@ -170,7 +171,7 @@ wa-details.sidebar-section::part(icon) {
 .sidebar-section-body p:last-child { margin-bottom: 0; }
 
 .sidebar-section-body code {
-  font-size: 0.71rem;
+  font-size: var(--dd-text-s);
   background: var(--dd-surface-sunken);
   padding: 0.1em 0.35em;
   border-radius: 3px;
@@ -182,7 +183,7 @@ wa-details.sidebar-section::part(icon) {
   border: 1px solid var(--dd-color-border);
   border-radius: 5px;
   padding: 0.55rem 0.7rem;
-  font-size: 0.67rem;
+  font-size: var(--dd-text-s);
   overflow-x: auto;
   margin: 0.5rem 0 0.6rem;
   white-space: pre;
@@ -197,7 +198,7 @@ wa-details.sidebar-section::part(icon) {
   gap: 0.75rem;
   padding: 0.9rem 1.25rem;
   border-top: 1px solid var(--dd-color-border);
-  font-size: 0.72rem;
+  font-size: var(--dd-text-m);
   color: var(--dd-color-muted);
   flex-shrink: 0;
 }
@@ -219,6 +220,18 @@ wa-details.sidebar-section::part(icon) {
   flex: 1;
 }
 
+/* Cap the measure on prose only. Tables, the log and the dashboard frame are
+   meant to use the full column width, so they opt out. */
+.tab-panel > p,
+.tab-panel > h2,
+.tab-panel > h3,
+.tab-panel > h4,
+.screen > p,
+.lab-container > p,
+.lab-container > h3 + p {
+  max-width: var(--dd-measure);
+}
+
 /* ============================================================
    Theme toggle
    ============================================================ */
@@ -236,55 +249,50 @@ wa-details.sidebar-section::part(icon) {
    Tabs
    ============================================================ */
 .tab-nav {
-  display: flex;
-  gap: 0;
-  border-bottom: 2px solid var(--dd-color-border);
+  /* Segmented control. The previous treatment drew a top/left/right border on
+     each button, so the strip read as three separate boxes with an underline
+     floating beneath them. */
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 0.2rem;
+  padding: 0.25rem;
   margin-bottom: 1.75rem;
+  background: var(--dd-surface-sunken);
+  border: 1px solid var(--dd-color-border);
+  border-radius: var(--dd-radius);
   flex-shrink: 0;
 }
 
 .tab-btn {
-  position: relative;
-  flex: 1;
   height: auto;
-  background: none;
+  padding: 0.45rem 1.1rem;
   border: none;
-  border-top: 1px solid var(--dd-color-border);
-  border-right: 1px solid var(--dd-color-border);
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  padding: 0.55rem 1.25rem;
-  font-size: 0.88rem;
+  background: none;
+  border-radius: calc(var(--dd-radius) - 0.15rem);
+  font-size: var(--dd-text-l);
   font-weight: 600;
   color: var(--dd-color-muted);
   cursor: pointer;
-  border-radius: 0;
-  text-align: center;
-  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  transition: color var(--dd-speed-fast) var(--dd-ease),
+              background var(--dd-speed-fast) var(--dd-ease),
+              box-shadow var(--dd-speed-fast) var(--dd-ease);
 }
-.tab-btn:first-child { border-left: 1px solid var(--dd-color-border); }
 
-.tab-btn:hover { color: var(--dd-color-primary); background: var(--dd-surface-sunken); }
+.tab-btn:hover {
+  color: var(--wa-color-text-normal);
+  background: color-mix(in oklab, var(--dd-color-border) 45%, transparent);
+}
+
 .tab-btn.active {
   color: var(--dd-color-primary);
-  border-bottom-color: var(--dd-color-primary);
   background: var(--dd-surface);
+  box-shadow: var(--dd-shadow-s);
 }
-/* The 2px underline is the only thing marking the active tab, so give it
-   something to move: it grows from the center on activation. */
-.tab-btn::after {
-  content: '';
-  position: absolute;
-  inset-inline: 0;
-  bottom: -2px;
-  height: 2px;
-  background: var(--dd-color-primary);
-  scale: 0 1;
-  transition: scale var(--dd-speed) var(--dd-ease);
-}
-.tab-btn.active::after { scale: 1 1; }
-@media (prefers-reduced-motion: reduce) {
-  .tab-btn::after { transition: none; }
+
+@media (max-width: 700px) {
+  .tab-nav { align-self: stretch; }
+  .tab-btn { flex: 1; padding-inline: 0.5rem; }
 }
 
 /* Config tab */
@@ -319,7 +327,19 @@ wa-details.sidebar-section::part(icon) {
 /* ============================================================
    Progress bar
    ============================================================ */
-.progress-labels { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--dd-color-muted); margin-bottom: 0.4rem; }
+.progress-wrap { margin-bottom: 1.75rem; }
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: var(--dd-text-s);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--dd-color-muted);
+  margin-bottom: 0.45rem;
+}
+#step-name { color: var(--dd-color-primary); }
+.screen > h2 { margin-top: 0; line-height: 1.2; letter-spacing: -0.01em; }
 wa-progress-bar#progress-bar {
   --track-height: 0.5rem;
   --indicator-color: var(--dd-color-primary);
@@ -360,9 +380,9 @@ wa-progress-bar#progress-bar {
 @media (prefers-reduced-motion: reduce) {
   .option-card, .option-card:hover, .option-card:active { translate: none; }
 }
-.option-card .emoji { font-size: 2rem; display: block; margin-bottom: 0.4rem; }
-.option-card .label { font-weight: 600; }
-.option-card .desc { font-size: 0.8rem; color: var(--dd-color-muted); }
+.option-card .emoji { font-size: 2.4rem; display: block; margin-bottom: 0.5rem; line-height: 1; }
+.option-card .label { font-weight: 600; font-size: var(--dd-text-l); }
+.option-card .desc { font-size: var(--dd-text-s); color: var(--dd-color-muted); margin-top: 0.15rem; }
 .option-card.selected .label { color: var(--dd-color-on-primary); }
 .option-card.selected .desc { color: color-mix(in oklab, var(--dd-color-on-primary) 72%, transparent); }
 
@@ -418,12 +438,12 @@ wa-progress-bar#progress-bar {
 }
 
 #rum-log-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem; }
-#rum-log-header h3 { margin: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dd-color-muted); }
+#rum-log-header h3 { margin: 0; font-size: var(--dd-text-s); font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--dd-color-muted); }
 .log-controls { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 
 .filter-btn {
   height: auto;
-  font-size: 0.7rem;
+  font-size: var(--dd-text-xs);
   padding: 2px 10px;
   border-radius: var(--dd-radius-pill);
   cursor: pointer;
@@ -453,7 +473,7 @@ wa-progress-bar#progress-bar {
   box-shadow: var(--dd-shadow-s);
   background: var(--dd-surface);
 }
-table#rum-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; font-family: monospace; table-layout: fixed; margin: 0; }
+table#rum-table { width: 100%; border-collapse: collapse; font-size: var(--dd-text-s); font-family: monospace; table-layout: fixed; margin: 0; }
 #rum-table thead th { position: sticky; top: 0; background: var(--dd-surface); padding: 5px 8px; text-align: left; font-weight: 700; border-bottom: 1px solid var(--dd-color-border); white-space: nowrap; font-family: monospace; }
 #rum-table tbody tr:nth-child(even) { background: var(--dd-surface-sunken); }
 #rum-table td { padding: 5px 8px; vertical-align: top; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -471,7 +491,7 @@ table#rum-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; fo
 #rum-table td.wrap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
 #rum-empty-row td { text-align: center; color: var(--dd-color-muted); padding: 1.5rem; font-family: sans-serif; }
 
-.type-badge { display: inline-block; font-size: 0.65rem; padding: 2px 7px; border-radius: var(--dd-radius-pill); font-weight: 700; white-space: nowrap; letter-spacing: 0.02em; }
+.type-badge { display: inline-block; font-size: var(--dd-text-xs); padding: 2px 7px; border-radius: var(--dd-radius-pill); font-weight: 700; white-space: nowrap; letter-spacing: 0.02em; }
 .type-badge.view { background: var(--dd-blue-fill); color: var(--dd-blue-on); }
 .type-badge.action { background: var(--dd-green-fill); color: var(--dd-green-on); }
 .type-badge.resource { background: var(--dd-yellow-fill); color: var(--dd-yellow-on); }
@@ -498,9 +518,9 @@ table#rum-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; fo
      the label had no breathing room on either side. */
   min-width: 72px;
   padding-inline: 0.5rem;
-  font-size: 0.62rem;
+  font-size: var(--dd-text-xs);
   font-weight: 700;
-  padding-block: 2px;
+  padding-block: 3px;
   border-radius: var(--dd-radius-pill);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -532,6 +552,6 @@ table#rum-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; fo
   border-radius: 4px;
   padding: 2px 7px;
   font-family: monospace;
-  font-size: 0.68rem;
+  font-size: var(--dd-text-s);
 }
 .sidebar-steps .arrow { color: var(--dd-color-muted); font-size: 0.65rem; }

@@ -185,6 +185,18 @@ table.et-matrix th:first-child { width: 4.5rem; }
    than swallowed, so a docs change or SDK change shows up here first. */
 .et-drift { cursor: help; }
 
+/* Reference material inside a tab panel — collapsible so a long explainer
+   can't push the live activity log out of the viewport. */
+wa-details.lab-aside {
+  --spacing: 0.9rem;
+  margin: 1.25rem 0;
+}
+
+wa-details.lab-aside::part(header) {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
 .et-verdict {
   margin: 0.85rem 0 0;
   padding: 0.7rem 0.9rem;

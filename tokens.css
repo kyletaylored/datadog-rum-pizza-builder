@@ -25,6 +25,15 @@
      --dd-surface-sunken recessed background (sidebar, code blocks, zebra rows)
      --dd-surface-code   inline code / monospace chip background
      --dd-color-border   hairline dividers and component borders            */
+  /* Two elevation levels, so the app chrome and the content it frames never
+     read as the same plane. The framework's "lowered" goes darker than the
+     page, which in a dark theme has nowhere left to go — the page is already
+     near-black, so a lowered sidebar came out identical to the page behind
+     it. Inverting the model fixes both themes at once: the page sits at the
+     recessed level and content panels are raised off it.
+       light  page #f1f2f3  →  panel #ffffff
+       dark   page #101219  →  panel #1b1d26                              */
+  --dd-surface-page: var(--wa-color-surface-lowered);
   --dd-surface: var(--wa-color-surface-raised);
   --dd-surface-sunken: var(--wa-color-surface-lowered);
   --dd-surface-code: var(--wa-color-neutral-fill-quiet);

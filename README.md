@@ -2,7 +2,7 @@
 
 A self-contained demo app for exploring [Datadog Real User Monitoring (RUM)](https://docs.datadoghq.com/real_user_monitoring/) — built as an interactive pizza order wizard.
 
-**[Live Demo →](https://kyletaylored.github.io/datadog-rum-pizza-builder/)**
+**[Live Demo →](%%PAGES_URL%%/)**
 
 ![Pizza Builder wizard interface](assets/pizza-builder.webp)
 
@@ -105,7 +105,7 @@ An **SLO** is built on the synthetic monitor to track wizard completion rate ove
 
 ## Consent & Storage Lab
 
-**[Try it →](https://kyletaylored.github.io/datadog-rum-pizza-builder/consent-lab/)**
+**[Try it →](%%PAGES_URL%%/consent-lab/)**
 
 A second, standalone demo at `/consent-lab/` for a real recurring sales-engineering question: an EU customer's legal team won't allow *any* cookie — including RUM's first-party session cookie — without prior consent, but they still want 100% error capture (replacing Sentry) and don't want session counts inflated by a multi-tab, refresh-heavy flow.
 

@@ -39,7 +39,18 @@ function toggleTheme(sw) {
 // may have come from the OS rather than localStorage.
 (function () {
   const toggle = document.getElementById('theme-toggle');
-  if (toggle) toggle.checked = document.documentElement.dataset.theme === 'dark';
+  if (!toggle) return;
+  const sync = () => { toggle.checked = document.documentElement.dataset.theme === 'dark'; };
+  sync();
+  // The CDN autoloader registers <wa-switch> asynchronously, after this script
+  // has already run. Setting `checked` before the upgrade doesn't survive it,
+  // and `whenDefined` can resolve before this instance is upgraded, so wait for
+  // the component's own first render to settle before syncing again.
+  if (toggle.localName.startsWith('wa-')) {
+    customElements.whenDefined(toggle.localName)
+      .then(() => toggle.updateComplete)
+      .then(sync);
+  }
 })();
 
 // ---------------------------------------------------------------------------

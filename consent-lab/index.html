@@ -9,13 +9,27 @@
 <meta name="robots" content="index, follow">
 
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><text y='32' font-size='32'>🍪</text></svg>">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/picocss/2.0.6/pico.min.css">
+<style>
+  /* Pico stays loaded through the migration as a safety net, but demoted into
+     the lowest cascade layer. Linked normally it would be *unlayered*, and
+     unlayered CSS outranks every layer — including Web Awesome's own
+     native-element styling — so plain <button>s kept rendering as Pico
+     buttons. Declaring the `pico` layer here, before Web Awesome's stylesheet
+     declares its layer order, sorts it below everything. Deleted in Phase 4.
+     Our own tokens.css / style.css / lab-shared.css stay unlayered on purpose,
+     so our custom components still win over both frameworks. */
+  @import url("https://cdnjs.cloudflare.com/ajax/libs/picocss/2.0.6/pico.min.css") layer(pico);
+</style>
 <!-- Web Awesome 3.13.0 — version pinned deliberately (never @latest): the
      project is a young rebrand of Shoelace, so bumps get re-verified by hand.
      Loaded from CDN only, never bundled, so the deploy workflow's terser /
-     source-map step still only has app.js to think about. -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@3.13.0/dist/styles/webawesome.css">
-<script type="module" src="https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@3.13.0/dist/webawesome.loader.js"></script>
+     source-map step still only has app.js to think about.
+     Note the `dist-cdn` path, not `dist`: the `dist` build is the npm one and
+     ships bare module specifiers ("lit", "@shoelace-style/...") that a browser
+     cannot resolve without an import map, so every component silently fails to
+     register. `dist-cdn` is the same code with relative imports. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@3.13.0/dist-cdn/styles/webawesome.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@3.13.0/dist-cdn/webawesome.loader.js"></script>
 <script>
   (function(h,o,u,n,d) {
     h=h[d]=h[d]||{q:[],onReady:function(c){h.q.push(c)}}

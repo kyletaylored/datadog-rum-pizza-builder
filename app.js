@@ -26,7 +26,18 @@ function toggleTheme(sw) {
 // may have come from the OS rather than localStorage.
 (function () {
   const toggle = document.getElementById('theme-toggle');
-  if (toggle) toggle.checked = document.documentElement.dataset.theme === 'dark';
+  if (!toggle) return;
+  const sync = () => { toggle.checked = document.documentElement.dataset.theme === 'dark'; };
+  sync();
+  // The CDN autoloader registers <wa-switch> asynchronously, after this script
+  // has already run. Setting `checked` before the upgrade doesn't survive it,
+  // and `whenDefined` can resolve before this instance is upgraded, so wait for
+  // the component's own first render to settle before syncing again.
+  if (toggle.localName.startsWith('wa-')) {
+    customElements.whenDefined(toggle.localName)
+      .then(() => toggle.updateComplete)
+      .then(sync);
+  }
 })();
 
 /**
@@ -430,6 +441,9 @@ const stepMeta = [
   { hash: 'size', label: 'Size' },
 ];
 
+/** Number of wizard steps, derived from stepMeta's 1-based indexing. */
+const TOTAL_STEPS = stepMeta.length - 1;
+
 /**
  * User's current selections, keyed by step number.
  *
@@ -458,8 +472,8 @@ function goTo(step) {
   } else {
     document.getElementById(`screen-${step}`).classList.add('active');
     wrap.style.display = 'block';
-    document.getElementById('progress-bar').value = step;
-    document.getElementById('step-label').textContent = `Step ${step} of 5`;
+    document.getElementById('progress-bar').value = (step / TOTAL_STEPS) * 100;
+    document.getElementById('step-label').textContent = `Step ${step} of ${TOTAL_STEPS}`;
     document.getElementById('step-name').textContent = stepMeta[step].label;
     location.hash = stepMeta[step].hash;
 

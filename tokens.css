@@ -1,0 +1,41 @@
+/**
+ * tokens.css — this site's own design-token layer.
+ *
+ * Every custom component in style.css / lab-shared.css reads `--dd-*` tokens
+ * from here instead of reaching into the UI framework's variables directly.
+ * That keeps the framework swappable: changing frameworks means re-aliasing
+ * this one file, not hunting through every component rule.
+ *
+ * Load order matters — this must come AFTER the framework stylesheet (so the
+ * framework's variables exist to alias) and BEFORE style.css / lab-shared.css
+ * (so the tokens exist by the time components read them).
+ *
+ * Deliberately unlayered: the framework ships its theme inside cascade layers
+ * (`@layer wa-theme` etc.), and unlayered CSS outranks every layer, so these
+ * definitions always win without needing !important.
+ */
+
+:root {
+  /* --- Surfaces & lines -------------------------------------------------- */
+  /* --dd-surface        raised panel background (open accordion, table head)
+     --dd-surface-sunken recessed background (sidebar, code blocks, zebra rows)
+     --dd-surface-code   inline code / monospace chip background
+     --dd-color-border   hairline dividers and component borders            */
+  --dd-surface: var(--pico-card-background-color);
+  --dd-surface-sunken: var(--pico-card-sectioning-background-color);
+  --dd-surface-code: var(--pico-code-background-color);
+  --dd-color-border: var(--pico-muted-border-color);
+
+  /* --- Text -------------------------------------------------------------- */
+  --dd-color-muted: var(--pico-muted-color);
+
+  /* --- Brand ------------------------------------------------------------- */
+  /* --dd-color-primary    accent for links, active tabs, selected borders
+     --dd-color-primary-fill  solid brand fill behind --dd-color-on-primary  */
+  --dd-color-primary: var(--pico-primary);
+  --dd-color-primary-fill: var(--pico-primary-background);
+  --dd-color-on-primary: #fff;
+
+  /* --- Shape ------------------------------------------------------------- */
+  --dd-radius: var(--pico-border-radius);
+}

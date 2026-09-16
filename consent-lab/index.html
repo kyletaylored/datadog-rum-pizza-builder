@@ -25,6 +25,7 @@
   })(window,document,'script','https://www.datadoghq-browser-agent.com/us1/v6/datadog-logs.js','DD_LOGS')
 </script>
 <script src="../config.js"></script>
+<link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../style.css">
 <link rel="stylesheet" href="../lab-shared.css">
 <script>
@@ -42,8 +43,8 @@
   .consent-banner {
     display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: space-between;
     padding: 1rem 1.25rem; margin-bottom: 1.5rem; border-radius: .5rem;
-    background: var(--pico-card-sectioning-background-color);
-    border: 1px solid var(--pico-muted-border-color);
+    background: var(--dd-surface-sunken);
+    border: 1px solid var(--dd-color-border);
   }
   .consent-banner p { margin: 0; flex: 1 1 260px; }
   .consent-banner .btn-row { display: flex; gap: .5rem; flex-wrap: wrap; }
@@ -206,7 +207,7 @@ DD_RUM.init({ ..., trackingConsent: 'pending' })</pre>
           <button id="mode-btn-memory"        onclick="reloadWithPersistence('memory')">memory</button>
           <button class="secondary outline reset-state-btn" onclick="resetLabState()" title="Clear Datadog cookies &amp; localStorage left over from earlier tests, then reload">🧹 Reset lab state</button>
         </div>
-        <p style="font-size:.78rem; color:var(--pico-muted-color)">Switching modes doesn't delete a cookie created by an earlier test in this browser — cookies just expire on their own. If the inspector below shows a cookie you didn't expect, use <strong>Reset lab state</strong> to clear it before comparing modes.</p>
+        <p style="font-size:.78rem; color:var(--dd-color-muted)">Switching modes doesn't delete a cookie created by an earlier test in this browser — cookies just expire on their own. If the inspector below shows a cookie you didn't expect, use <strong>Reset lab state</strong> to clear it before comparing modes.</p>
 
         <div class="storage-grid">
           <div class="storage-card">
@@ -280,7 +281,7 @@ DD_RUM.init({ ..., trackingConsent: 'pending' })</pre>
         <button class="secondary" onclick="labLogInfo()">📝 Emit Logs info</button>
         <button class="secondary" onclick="labFetchResource()">📦 Fetch a resource</button>
       </div>
-      <p style="font-size:.78rem; color:var(--pico-muted-color); margin:0 0 .75rem">
+      <p style="font-size:.78rem; color:var(--dd-color-muted); margin:0 0 .75rem">
         Switching tabs above generates a real RUM <span class="type-badge view">view</span> event (fragment-based, same as the pizza builder). The buttons here generate an <span class="type-badge action">action</span>, a <span class="type-badge info">log</span>, and a <span class="type-badge resource">resource</span> event on demand.
         The <span class="type-badge logs">logs</span> row always works; the <span class="type-badge rum">rum</span> row only appears once you've accepted consent on the Storage Inspector tab — that's the gate working as intended.
       </p>

@@ -106,66 +106,50 @@ html, body {
   padding: 0 1.25rem;
 }
 
-/* Sidebar accordion sections */
-.sidebar-section {
+/* Sidebar accordion sections — <wa-details appearance="plain">.
+   `--spacing: 0` hands padding back to us: the component would otherwise pad
+   both the header and the content, and the section body carries its own.
+   The disclosure marker and its open/close animation come from the component,
+   which is what let the hand-rolled chevron (and its cross-framework rotation
+   fight) be deleted. */
+wa-details.sidebar-section {
+  --spacing: 0;
   border-bottom: 1px solid var(--dd-color-border);
-  margin: 0;
 }
 
-.sidebar-section:last-child { border-bottom: none; }
+wa-details.sidebar-section:last-of-type { border-bottom: none; }
 
-.sidebar-section > summary {
+wa-details.sidebar-section::part(header) {
   padding: 0.75rem 1.25rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  cursor: pointer;
-  list-style: none;
-  display: flex;
-  align-items: center;
   gap: 0.5rem;
-  user-select: none;
   transition: background 0.12s;
 }
 
-.sidebar-section > summary:hover {
+wa-details.sidebar-section::part(header):hover {
   background: var(--dd-color-border);
 }
 
-.sidebar-section > summary::-webkit-details-marker { display: none; }
-.sidebar-section > summary::marker { display: none; content: ''; }
-.sidebar-section > summary::before { display: none; content: none; }
-.sidebar-section > summary::after {
-  content: '›';
-  background-image: none;
-  margin-left: auto;
-  font-size: 1.1rem;
-  line-height: 1;
-  width: 1em;
-  height: 1em;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--dd-color-muted);
-  /* Three stylesheets want a piece of this pseudo-element: Pico rotates it
-     with `transform`, Web Awesome's native layer draws a chevron with `mask`
-     + `background-color` and rotates it with the `rotate` property. Those two
-     rotations compose instead of overriding, so the marker ends up at 180deg.
-     Reset all of it and animate `rotate` alone.
-     Phase 2 replaces these accordions with <wa-details>, which owns its own
-     marker — this whole block goes away with it. */
-  transform: none;
-  mask: none;
-  background-color: transparent;
-  rotate: 0deg;
-  transition: rotate 0.15s;
-  flex-shrink: 0;
-}
-
-.sidebar-section[open] > summary::after { rotate: 90deg; }
-
-.sidebar-section[open] > summary {
+wa-details.sidebar-section[open]::part(header) {
   background: var(--dd-surface);
   border-bottom: 1px solid var(--dd-color-border);
+}
+
+wa-details.sidebar-section > [slot='summary'] {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  /* Slotted light-DOM content inherits from its light-DOM parent, not from
+     the shadow `summary` it lands in, so ::part(header) typography would
+     never reach it. Set it here instead. */
+}
+
+wa-details.sidebar-section::part(icon) {
+  font-size: 0.8rem;
+  color: var(--dd-color-muted);
 }
 
 .sidebar-section-body {
@@ -241,7 +225,7 @@ html, body {
   flex-shrink: 0;
   margin: 0;
 }
-.theme-toggle input { margin: 0; }
+.theme-toggle wa-switch { --width: 2.1rem; --height: 1.1rem; --thumb-size: 0.85rem; }
 .theme-icon { font-size: 0.9rem; line-height: 1; }
 
 /* ============================================================
@@ -257,6 +241,7 @@ html, body {
 
 .tab-btn {
   flex: 1;
+  height: auto;
   background: none;
   border: none;
   border-top: 1px solid var(--dd-color-border);
@@ -314,7 +299,10 @@ html, body {
    Progress bar
    ============================================================ */
 .progress-labels { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--dd-color-muted); margin-bottom: 0.4rem; }
-progress { width: 100%; }
+wa-progress-bar#progress-bar {
+  --track-height: 0.5rem;
+  --indicator-color: var(--dd-color-primary);
+}
 
 /* ============================================================
    Option cards
@@ -362,7 +350,7 @@ progress { width: 100%; }
 #rum-log-header h3 { margin: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dd-color-muted); }
 .log-controls { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 
-.filter-btn { font-size: 0.7rem; padding: 2px 8px; border-radius: 3px; cursor: pointer; border: 1px solid transparent; font-weight: 600; opacity: 0.45; transition: opacity 0.15s; }
+.filter-btn { height: auto; font-size: 0.7rem; padding: 2px 8px; border-radius: 3px; cursor: pointer; border: 1px solid transparent; font-weight: 600; opacity: 0.45; transition: opacity 0.15s; }
 .filter-btn.active { opacity: 1; }
 .filter-btn.view      { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
 .filter-btn.action    { background: #dcfce7; color: #15803d; border-color: #86efac; }

@@ -24,13 +24,27 @@
 <meta name="twitter:image" content="%%PAGES_URL%%/assets/pizza-builder-header.webp">
 
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><text y='32' font-size='32'>🍕</text></svg>">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/picocss/2.0.6/pico.min.css">
+<style>
+  /* Pico stays loaded through the migration as a safety net, but demoted into
+     the lowest cascade layer. Linked normally it would be *unlayered*, and
+     unlayered CSS outranks every layer — including Web Awesome's own
+     native-element styling — so plain <button>s kept rendering as Pico
+     buttons. Declaring the `pico` layer here, before Web Awesome's stylesheet
+     declares its layer order, sorts it below everything. Deleted in Phase 4.
+     Our own tokens.css / style.css / lab-shared.css stay unlayered on purpose,
+     so our custom components still win over both frameworks. */
+  @import url("https://cdnjs.cloudflare.com/ajax/libs/picocss/2.0.6/pico.min.css") layer(pico);
+</style>
 <!-- Web Awesome 3.13.0 — version pinned deliberately (never @latest): the
      project is a young rebrand of Shoelace, so bumps get re-verified by hand.
      Loaded from CDN only, never bundled, so the deploy workflow's terser /
-     source-map step still only has app.js to think about. -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@3.13.0/dist/styles/webawesome.css">
-<script type="module" src="https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@3.13.0/dist/webawesome.loader.js"></script>
+     source-map step still only has app.js to think about.
+     Note the `dist-cdn` path, not `dist`: the `dist` build is the npm one and
+     ships bare module specifiers ("lit", "@shoelace-style/...") that a browser
+     cannot resolve without an import map, so every component silently fails to
+     register. `dist-cdn` is the same code with relative imports. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@3.13.0/dist-cdn/styles/webawesome.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@3.13.0/dist-cdn/webawesome.loader.js"></script>
 <!-- Runs before the RUM/Logs SDK loaders — must stay here.
      The SDK snapshots cookies at module evaluation time, so clearing must
      happen before these <script> tags inject the async SDK scripts. -->
@@ -118,8 +132,8 @@
     <nav class="sidebar-nav">
       <p class="sidebar-nav-label">Training topics</p>
 
-      <details class="sidebar-section" open>
-        <summary><span class="sidebar-tag tag-view">View</span><span class="sidebar-section-title">Fragment-based view tracking</span></summary>
+      <wa-details class="sidebar-section" appearance="plain" open>
+        <span slot="summary"><span class="sidebar-tag tag-view">View</span><span class="sidebar-section-title">Fragment-based view tracking</span></span>
         <div class="sidebar-section-body">
           <p>Each time this wizard changes <code>location.hash</code>, the RUM SDK records a new <strong>View</strong> event — no page reload needed. The SDK detects hash changes automatically and starts a fresh view with its own load time, action count, and frustration signal tracking.</p>
           <p>In <strong>RUM › Explorer</strong>, set the event type to <em>Views</em> and group by <code>@view.url_hash</code> to see per-step engagement. Each hash is a named wizard step:</p>
@@ -135,10 +149,10 @@
           <pre>source:browser service:datadog-rum-pizza-builder @type:view
 | stats count() by @view.url_hash</pre>
         </div>
-      </details>
+      </wa-details>
 
-      <details class="sidebar-section">
-        <summary><span class="sidebar-tag tag-funnel">Funnel</span><span class="sidebar-section-title">Conversion funnel by action</span></summary>
+      <wa-details class="sidebar-section" appearance="plain">
+        <span slot="summary"><span class="sidebar-tag tag-funnel">Funnel</span><span class="sidebar-section-title">Conversion funnel by action</span></span>
         <div class="sidebar-section-body">
           <p>In <strong>RUM › Explorer</strong>, set the scope to <em>Sessions</em> and switch the visualization to <strong>Funnel</strong>. Each funnel step can be a <em>View</em> or an <em>Action</em>.</p>
           <p>For this wizard, the most meaningful action-based funnel tracks the three key events across the full flow:</p>
@@ -148,10 +162,10 @@ Step 3  Action: pizza_order_submitted</pre>
           <p>This matches exactly what Datadog shows — sessions that clicked <em>Start Building</em>, then reached the final step, then successfully fired the custom submission action. The drop-off between steps tells you where users abandoned and how many made it through end-to-end.</p>
           <p>To investigate a drop-off step, click into it and review individual sessions — session replays will show whether an error blocked the user or they simply left.</p>
         </div>
-      </details>
+      </wa-details>
 
-      <details class="sidebar-section">
-        <summary><span class="sidebar-tag tag-metric">Metric</span><span class="sidebar-section-title">Custom metrics from actions</span></summary>
+      <wa-details class="sidebar-section" appearance="plain">
+        <span slot="summary"><span class="sidebar-tag tag-metric">Metric</span><span class="sidebar-section-title">Custom metrics from actions</span></span>
         <div class="sidebar-section-body">
           <p>When a user reaches the results screen, this app fires a custom RUM <strong>Action</strong> with the full order as context attributes:</p>
           <pre>DD_RUM.addAction('pizza_order_submitted', {
@@ -178,10 +192,10 @@ Group by:    @context.pizza_order.crust
           <p>At submission, the app also calls <code>DD_RUM.setUser()</code> with a generated name, email, and a deterministic ID hashed from those values. This lets you filter all sessions for a given fictional user via <code>@usr.id</code>, <code>@usr.name</code>, or <code>@usr.email</code> in the Explorer — simulating a returning customer.</p>
           <p>The <strong>Results</strong> tab shows the metric broken down using <em>toplist</em>, <em>timeseries</em>, <em>sunburst</em>, and <em>geomap</em> widgets, each filterable via dashboard template variables.</p>
         </div>
-      </details>
+      </wa-details>
 
-      <details class="sidebar-section">
-        <summary><span class="sidebar-tag tag-slo">SLO</span><span class="sidebar-section-title">Synthetic tests &amp; error budget</span></summary>
+      <wa-details class="sidebar-section" appearance="plain">
+        <span slot="summary"><span class="sidebar-tag tag-slo">SLO</span><span class="sidebar-section-title">Synthetic tests &amp; error budget</span></span>
         <div class="sidebar-section-body">
           <p>A Datadog <strong>Browser Synthetic test</strong> runs against this app on a schedule, simulating the full wizard from start to finish. Option order is randomized per run so "always click first" produces varied data.</p>
           <p>On ~20% of runs, a simulated JS error is injected at a random step, blocking completion and producing intentional funnel drop-off for training purposes. Each session is tagged with <code>@context.synthetic.will_fail</code> and <code>@context.synthetic.intended_fail_step</code> so you can filter intentional failures in the Explorer. The error surfaces as <code>@error.source:console</code> — captured automatically from <code>console.error()</code> with no custom instrumentation.</p>
@@ -191,7 +205,7 @@ Target:     99% uptime (1% error budget)
 Window:     7-day rolling</pre>
           <p>The Results dashboard includes an SLO widget. A breach beyond the simulated noise level signals a real problem — investigate in the RUM funnel and session replays.</p>
         </div>
-      </details>
+      </wa-details>
     </nav>
 
     <footer class="sidebar-footer">
@@ -201,7 +215,7 @@ Window:     7-day rolling</pre>
       </div>
       <label class="theme-toggle" aria-label="Toggle light/dark mode">
         <span class="theme-icon">☀️</span>
-        <input type="checkbox" role="switch" id="theme-toggle" onchange="toggleTheme(this)">
+        <wa-switch id="theme-toggle" onchange="toggleTheme(this)"></wa-switch>
         <span class="theme-icon">🌙</span>
       </label>
     </footer>
@@ -226,7 +240,7 @@ Window:     7-day rolling</pre>
           <span id="step-label">Step 1 of 5</span>
           <span id="step-name"></span>
         </div>
-        <progress id="progress-bar" value="0" max="5"></progress>
+        <wa-progress-bar id="progress-bar" value="0"></wa-progress-bar>
       </div>
 
       <div class="screen active" id="screen-start">
@@ -234,7 +248,7 @@ Window:     7-day rolling</pre>
           <div class="pizza-hero">🍕</div>
           <h2>Ready to build your pizza?</h2>
           <p>Choose your crust, sauce, cheese, toppings, and size — we'll handle the rest.</p>
-          <button onclick="goTo(1)">Start Building</button>
+          <button class="wa-brand" data-dd-action-name="Start Building" onclick="goTo(1)">Start Building</button>
         </div>
       </div>
 
@@ -247,8 +261,8 @@ Window:     7-day rolling</pre>
           <div class="option-card" onclick="select(1,this,'Gluten-Free')"><span class="emoji">🌾</span><div class="label">Gluten-Free</div><div class="desc">Light rice crust</div></div>
         </div>
         <div class="btn-row">
-          <button class="secondary outline" onclick="goTo(0)">Back</button>
-          <button id="btn-1" disabled onclick="goTo(2)">Continue</button>
+          <button class="wa-neutral wa-outlined" onclick="goTo(0)">Back</button>
+          <button class="wa-brand" id="btn-1" disabled onclick="goTo(2)">Continue</button>
         </div>
       </div>
 
@@ -261,8 +275,8 @@ Window:     7-day rolling</pre>
           <div class="option-card" onclick="select(2,this,'Pesto')"><span class="emoji">🌿</span><div class="label">Pesto</div><div class="desc">Fresh basil blend</div></div>
         </div>
         <div class="btn-row">
-          <button class="secondary outline" onclick="goTo(1)">Back</button>
-          <button id="btn-2" disabled onclick="goTo(3)">Continue</button>
+          <button class="wa-neutral wa-outlined" onclick="goTo(1)">Back</button>
+          <button class="wa-brand" id="btn-2" disabled onclick="goTo(3)">Continue</button>
         </div>
       </div>
 
@@ -275,8 +289,8 @@ Window:     7-day rolling</pre>
           <div class="option-card" onclick="select(3,this,'No Cheese')"><span class="emoji">🚫</span><div class="label">No Cheese</div><div class="desc">Sauce only</div></div>
         </div>
         <div class="btn-row">
-          <button class="secondary outline" onclick="goTo(2)">Back</button>
-          <button id="btn-3" disabled onclick="goTo(4)">Continue</button>
+          <button class="wa-neutral wa-outlined" onclick="goTo(2)">Back</button>
+          <button class="wa-brand" id="btn-3" disabled onclick="goTo(4)">Continue</button>
         </div>
       </div>
 
@@ -289,8 +303,8 @@ Window:     7-day rolling</pre>
           <div class="option-card" onclick="select(4,this,'Jalapeños')"><span class="emoji">🌶️</span><div class="label">Jalapeños</div><div class="desc">Bring the heat</div></div>
         </div>
         <div class="btn-row">
-          <button class="secondary outline" onclick="goTo(3)">Back</button>
-          <button id="btn-4" disabled onclick="goTo(5)">Continue</button>
+          <button class="wa-neutral wa-outlined" onclick="goTo(3)">Back</button>
+          <button class="wa-brand" id="btn-4" disabled onclick="goTo(5)">Continue</button>
         </div>
       </div>
 
@@ -303,8 +317,8 @@ Window:     7-day rolling</pre>
           <div class="option-card" onclick="select(5,this,'XL Party (20 in)')"><span class="emoji">🎉</span><div class="label">XL Party</div><div class="desc">20" · 12 slices</div></div>
         </div>
         <div class="btn-row">
-          <button class="secondary outline" onclick="goTo(4)">Back</button>
-          <button id="btn-5" disabled onclick="goTo('results')">See My Pizza</button>
+          <button class="wa-neutral wa-outlined" onclick="goTo(4)">Back</button>
+          <button class="wa-brand" id="btn-5" disabled data-dd-action-name="See My Pizza" onclick="goTo('results')">See My Pizza</button>
         </div>
       </div>
 
@@ -313,7 +327,7 @@ Window:     7-day rolling</pre>
         <p>Here's what you built:</p>
         <ul class="result-list" id="result-list"></ul>
         <div class="btn-row" style="justify-content:center; margin-top:2rem">
-          <button onclick="stopAndRestart()">Start Over</button>
+          <button class="wa-brand" onclick="stopAndRestart()">Start Over</button>
         </div>
       </div>
 
@@ -327,7 +341,7 @@ Window:     7-day rolling</pre>
             <button class="filter-btn resource"         onclick="toggleFilter('resource')">resource</button>
             <button class="filter-btn error active"     onclick="toggleFilter('error')">error</button>
             <button class="filter-btn long_task active" onclick="toggleFilter('long_task')">long_task</button>
-            <button class="secondary outline" id="clear-log-btn" onclick="clearLog()">Clear</button>
+            <button class="wa-neutral wa-outlined" id="clear-log-btn" onclick="clearLog()">Clear</button>
           </div>
         </div>
         <div id="rum-table-wrap">

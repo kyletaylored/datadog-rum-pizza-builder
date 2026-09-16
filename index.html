@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="wa-brand-purple wa-cloak">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -25,6 +25,12 @@
 
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><text y='32' font-size='32'>🍕</text></svg>">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/picocss/2.0.6/pico.min.css">
+<!-- Web Awesome 3.13.0 — version pinned deliberately (never @latest): the
+     project is a young rebrand of Shoelace, so bumps get re-verified by hand.
+     Loaded from CDN only, never bundled, so the deploy workflow's terser /
+     source-map step still only has app.js to think about. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@3.13.0/dist/styles/webawesome.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@3.13.0/dist/webawesome.loader.js"></script>
 <!-- Runs before the RUM/Logs SDK loaders — must stay here.
      The SDK snapshots cookies at module evaluation time, so clearing must
      happen before these <script> tags inject the async SDK scripts. -->
@@ -71,10 +77,19 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="lab-shared.css">
 <script>
-  // Apply saved theme before paint to avoid flash.
-  (function() {
-    var t = localStorage.getItem('theme');
-    if (t) document.documentElement.setAttribute('data-theme', t);
+  // Resolve and apply the theme before first paint to avoid a flash.
+  // One source of truth drives two mechanisms:
+  //   data-theme="light|dark"  — our own CSS (tokens.css, JSON syntax colors)
+  //   class="wa-light|wa-dark" — Web Awesome's theming
+  // Kept inline and duplicated per page on purpose: it has to run before the
+  // first paint, which rules out the deferred lab-shared.js.
+  (function () {
+    var saved = localStorage.getItem('theme');
+    var dark = saved ? saved === 'dark'
+                     : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var theme = dark ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.classList.add('wa-' + theme);
   })();
 </script>
 </head>

@@ -11,18 +11,35 @@
 // Theme toggle (shared localStorage key with the pizza builder)
 // ---------------------------------------------------------------------------
 
-function toggleTheme(checkbox) {
-  const next = checkbox.checked ? 'dark' : 'light';
-  document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('theme', next);
+/**
+ * Apply a theme to <html>, driving both theming mechanisms from one call:
+ * `data-theme` for our own CSS and the `wa-light`/`wa-dark` class for Web
+ * Awesome. Persisted so it survives refreshes and carries across pages.
+ *
+ * @param {'light'|'dark'} theme
+ */
+function applyTheme(theme) {
+  const root = document.documentElement;
+  root.setAttribute('data-theme', theme);
+  root.classList.toggle('wa-dark', theme === 'dark');
+  root.classList.toggle('wa-light', theme === 'light');
+  localStorage.setItem('theme', theme);
 }
 
+/**
+ * Theme switch handler.
+ *
+ * @param {{checked: boolean}} sw - The <wa-switch> (or checkbox) element
+ */
+function toggleTheme(sw) {
+  applyTheme(sw.checked ? 'dark' : 'light');
+}
+
+// Sync the switch with the theme the pre-paint script already resolved, which
+// may have come from the OS rather than localStorage.
 (function () {
-  const saved = localStorage.getItem('theme');
-  if (saved) {
-    const toggle = document.getElementById('theme-toggle');
-    if (toggle) toggle.checked = saved === 'dark';
-  }
+  const toggle = document.getElementById('theme-toggle');
+  if (toggle) toggle.checked = document.documentElement.dataset.theme === 'dark';
 })();
 
 // ---------------------------------------------------------------------------

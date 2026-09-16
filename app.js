@@ -1,27 +1,32 @@
 /**
- * Toggle between light and dark mode by setting `data-theme` on <html>.
- * Persists the preference to localStorage so it survives page refreshes.
- * Updates the toggle button icon to reflect the current mode.
- */
-/**
- * Toggle between light and dark mode driven by the switch checkbox state.
- * Persists the preference to localStorage so it survives page refreshes.
+ * Apply a theme to <html>, driving both theming mechanisms from one call:
+ * `data-theme` for our own CSS and the `wa-light`/`wa-dark` class for Web
+ * Awesome. Persisted so it survives refreshes and carries across pages.
  *
- * @param {HTMLInputElement} checkbox - The switch input element
+ * @param {'light'|'dark'} theme
  */
-function toggleTheme(checkbox) {
-  const next = checkbox.checked ? 'dark' : 'light';
-  document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('theme', next);
+function applyTheme(theme) {
+  const root = document.documentElement;
+  root.setAttribute('data-theme', theme);
+  root.classList.toggle('wa-dark', theme === 'dark');
+  root.classList.toggle('wa-light', theme === 'light');
+  localStorage.setItem('theme', theme);
 }
 
-// Sync switch checked state with the theme applied in <head>.
+/**
+ * Theme switch handler.
+ *
+ * @param {{checked: boolean}} sw - The <wa-switch> (or checkbox) element
+ */
+function toggleTheme(sw) {
+  applyTheme(sw.checked ? 'dark' : 'light');
+}
+
+// Sync the switch with the theme the pre-paint script already resolved, which
+// may have come from the OS rather than localStorage.
 (function () {
-  const saved = localStorage.getItem('theme');
-  if (saved) {
-    const toggle = document.getElementById('theme-toggle');
-    if (toggle) toggle.checked = saved === 'dark';
-  }
+  const toggle = document.getElementById('theme-toggle');
+  if (toggle) toggle.checked = document.documentElement.dataset.theme === 'dark';
 })();
 
 /**

@@ -29,6 +29,7 @@
 .tag-consent { background: var(--dd-cyan-fill); color: var(--dd-cyan-on); }
 .tag-storage { background: var(--dd-indigo-fill); color: var(--dd-indigo-on); }
 .tag-tabs { background: var(--dd-orange-fill); color: var(--dd-orange-on); }
+.tag-sessions { background: var(--dd-pink-fill); color: var(--dd-pink-on); }
 .tag-error { background: var(--dd-red-fill); color: var(--dd-red-on); }
 
 /* ============================================================
@@ -138,3 +139,57 @@ table.compare-table code { font-size: .8rem; }
 .type-badge.warn { background: var(--dd-yellow-fill); color: var(--dd-yellow-on); }
 .type-badge.info { background: var(--dd-indigo-fill); color: var(--dd-indigo-on); }
 .type-badge.debug { background: var(--dd-gray-fill); color: var(--dd-gray-on); }
+
+/* Log `origin` values, as reported by the Logs SDK: which layer produced the
+   error. Used by the error-source coverage matrix. */
+.type-badge.source  { background: var(--dd-purple-fill); color: var(--dd-purple-on); }
+.type-badge.console { background: var(--dd-orange-fill); color: var(--dd-orange-on); }
+.type-badge.logger  { background: var(--dd-indigo-fill); color: var(--dd-indigo-on); }
+.type-badge.network { background: var(--dd-cyan-fill);   color: var(--dd-cyan-on); }
+
+/* ============================================================
+   Error-source coverage matrix — one row per error source, with a
+   trigger button and the measured result of firing it.
+   ============================================================ */
+table.et-matrix td { vertical-align: top; }
+table.et-matrix th:first-child { width: 4.5rem; }
+
+.et-fire-btn {
+  height: auto;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.75rem;
+}
+
+/* The "how it's produced" line under each source name. */
+.et-how {
+  font-family: monospace;
+  font-size: 0.72rem;
+  color: var(--dd-color-muted);
+}
+
+/* A field the SDK did not populate — the reason a row stays a log line
+   instead of becoming an issue, so it should read as absent, not as zero. */
+.et-absent {
+  color: var(--dd-red-on);
+  font-weight: 600;
+}
+
+/* A requirement the source structurally can't meet — distinct from "we
+   haven't measured it yet" (—) and from "measured and failed" (log only). */
+.et-na {
+  color: var(--dd-color-muted);
+  font-style: italic;
+}
+
+/* Measured payload disagrees with the documented expectation. Surfaced rather
+   than swallowed, so a docs change or SDK change shows up here first. */
+.et-drift { cursor: help; }
+
+.et-verdict {
+  margin: 0.85rem 0 0;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--dd-color-border);
+  border-radius: var(--dd-radius);
+  background: var(--dd-surface-sunken);
+  font-size: 0.85rem;
+}

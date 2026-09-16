@@ -67,6 +67,7 @@ function switchLabTab(tab) {
   Object.values(panels).forEach(id => { document.getElementById(id).style.display = 'none'; });
   document.getElementById(panels[tab]).style.display = 'block';
   if (tab === 'config') renderConfigTable();
+  if (tab === 'errors') renderErrorMatrix();
 
   // Changing the hash is what makes RUM treat this as a new View — same
   // fragment-based tracking the main pizza builder uses. Without this, RUM
@@ -99,9 +100,34 @@ function getConsent() {
   return ['granted', 'not-granted', 'pending'].includes(v) ? v : 'pending';
 }
 
+/**
+ * Switch the session store both SDKs use, then reload — `sessionPersistence`
+ * can only be set at init time.
+ *
+ * Switching to a cookie-free mode also clears any Datadog cookie left behind
+ * by an earlier run. Cookies otherwise just sit there until they expire, so
+ * the storage inspector would keep showing one while you're trying to
+ * demonstrate that the page creates none — which is the whole claim under
+ * test. The cookie-free modes are the ones where a stale cookie is actively
+ * misleading, so those are the ones that clean up.
+ *
+ * @param {'cookie'|'local-storage'|'memory'} mode
+ */
 function reloadWithPersistence(mode) {
   sessionStorage.setItem('consentLab.persistence', mode);
+  if (mode !== 'cookie') clearDatadogCookies();
   window.location.reload();
+}
+
+/** Expire every Datadog-owned cookie on this host. */
+function clearDatadogCookies() {
+  document.cookie.split(';').forEach(c => {
+    const name = c.split('=')[0].trim();
+    if (!name || !/^(_dd|datadog)/i.test(name)) return;
+    const expire = name + '=; Max-Age=0; path=/';
+    document.cookie = expire;
+    document.cookie = expire + '; domain=' + window.location.hostname;
+  });
 }
 
 /**
@@ -191,6 +217,7 @@ window.DD_RUM && window.DD_RUM.onReady(function () {
     trackingConsent: getConsent(),
     beforeSend: function (event) {
       pushActivity('rum', ...rumEventCols(event));
+      recordRumErrorProbe(event);
       return true;
     },
   });
@@ -204,13 +231,24 @@ window.DD_LOGS && window.DD_LOGS.onReady(function () {
     service: cfg.service,
     version: cfg.version,
     env: cfg.env,
-    sessionPersistence: 'local-storage', // never a cookie — always on, independent of RUM consent
+    // Must match RUM's sessionPersistence. Both SDKs on a page share one
+    // session manager and one `_dd_s` store, so if they disagree, RUM never
+    // establishes a session and silently sends nothing at all — no error, no
+    // warning. Verified in this lab: with RUM on 'cookie' and Logs pinned to
+    // 'local-storage', RUM's beforeSend was never invoked and
+    // getInternalContext() returned undefined.
+    //
+    // The consequence for a strict-consent design is the important part: you
+    // cannot pair a cookie-free Logs pipe with a cookie-based RUM pipe. Going
+    // cookie-free is a whole-page decision, not a per-SDK one.
+    sessionPersistence: getPersistence(),
     trackingConsent: 'granted',
     forwardErrorsToLogs: true,
     forwardConsoleLogs: 'all',
     sessionSampleRate: 100,
     beforeSend: function (log) {
       pushActivity('logs', ...logEventCols(log));
+      recordErrorProbe(log);
       return true;
     },
   });
@@ -468,6 +506,359 @@ function labLogInfo() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Error Tracking coverage matrix — "can this replace Sentry, cookie-free?"
+//
+// The trap this exists to expose: an error log leaving the Browser Logs SDK
+// does NOT necessarily become an Error Tracking issue. Browser errors have
+// two separate front doors into Error Tracking, with different requirements:
+//
+//   1. Frontend Error Tracking  — fed by the RUM Browser SDK. Processes
+//      errors whose source is custom / source / report / console and that
+//      carry a stack trace. RUM is consent-gated here, so this door is shut
+//      until the user accepts.
+//        https://docs.datadoghq.com/error_tracking/frontend/browser/
+//
+//   2. Error Tracking for Logs  — fed by the Browser Logs SDK (v4.36.0+,
+//      forwardErrorsToLogs: true). Needs a stack trace in `error.stack`, and
+//      per the docs "Error Tracking only considers errors that are instances
+//      of Error". A valid stack means at least two lines with at least one
+//      meaningful frame. This door is open pre-consent and cookie-free — and
+//      it has to be enabled for the org separately.
+//        https://docs.datadoghq.com/error_tracking/frontend/logs/
+//
+// So "we see the error in the Logs Explorer" and "we have an Error Tracking
+// issue" are different claims. This table measures the first precisely and
+// predicts the second from the documented rules.
+//
+// SCOPE — what this can and cannot verify: everything here is measured in the
+// browser, from what each SDK actually built in its beforeSend callback. It
+// cannot confirm an issue was created server-side, which also depends on
+// Error Tracking for Logs being enabled for the org. Read the columns as
+// "this payload does / does not meet the documented requirements".
+// ---------------------------------------------------------------------------
+
+/**
+ * The error sources worth testing, ordered so the eligible ones read first
+ * and the near-misses read last. `logsIssue` / `rumIssue` are what the docs
+ * say *should* happen; the table shows measured payloads beside them, so a
+ * wrong expectation surfaces as a mismatch rather than hiding.
+ *
+ * @type {Array<{id: string, label: string, how: string, logsIssue: boolean, rumIssue: boolean}>}
+ */
+const ET_SOURCES = [
+  { id: 'uncaught',       label: 'Uncaught exception',          how: 'throw new Error(…)',                     logsIssue: true,  rumIssue: true },
+  { id: 'rejection',      label: 'Unhandled promise rejection', how: 'Promise.reject(new Error(…))',           logsIssue: true,  rumIssue: true },
+  { id: 'console-error',  label: 'console.error(Error)',        how: 'console.error(new Error(…))',            logsIssue: true,  rumIssue: true },
+  { id: 'logger-error',   label: 'logger.error(msg, ctx, err)', how: 'the Error as the 3rd argument',          logsIssue: true,  rumIssue: false },
+  { id: 'rum-adderror',   label: 'DD_RUM.addError(err)',        how: 'the RUM manual-report API',              logsIssue: false, rumIssue: true },
+  { id: 'network',        label: 'Failed network request',      how: 'fetch() to an unreachable host',         logsIssue: true,  rumIssue: true },
+  { id: 'console-string', label: 'console.error("text")',       how: 'a string — no Error instance',           logsIssue: false, rumIssue: false },
+  { id: 'logger-message', label: 'logger.error("msg")',         how: 'message only — no Error instance',       logsIssue: false, rumIssue: false },
+  { id: 'logger-nonerror',label: 'logger.error(msg, ctx, "s")', how: 'a string as the 3rd argument',           logsIssue: false, rumIssue: false },
+  { id: 'throw-string',   label: 'throw "a bare string"',       how: 'uncaught, but not an Error instance',    logsIssue: false, rumIssue: false },
+];
+
+/** Measured results, keyed by source id. @type {Object<string, object>} */
+const etResults = {};
+
+/**
+ * Tag every probe's message with its source id so each SDK's beforeSend can
+ * attribute the resulting event back to the button that fired it. The network
+ * probe is the exception — the SDK writes that message itself ("Fetch error
+ * GET …") — so it's matched on the URL instead.
+ */
+let etFireSeq = 0;
+function etTag(id) {
+  // The sequence number keeps repeat fires of the same source distinct, so
+  // neither SDK's duplicate-error throttling can swallow a re-run.
+  return '[et:' + id + '] Consent Lab error-source probe #' + (++etFireSeq);
+}
+
+const ET_NETWORK_MARKER = 'et-probe-network';
+
+/** Pull a probe id back out of an event message. */
+function etIdFromMessage(message) {
+  const tagged = (String(message || '').match(/\[et:([a-z-]+)\]/) || [])[1];
+  if (tagged) return tagged;
+  return String(message || '').includes(ET_NETWORK_MARKER) ? 'network' : null;
+}
+
+/**
+ * The Logs SDK's own diagnostic, which it writes into `error.stack` when you
+ * hand `logger.error` something that isn't an Error. Worth surfacing verbatim
+ * in the UI — it's the most actionable message a developer could get, and it
+ * appears in a field nobody thinks to read.
+ */
+const ET_NO_STACK_SENTINEL = 'No stack, consider using an instance of Error';
+
+/**
+ * Approximate the documented stack-validity rule: "The stack must have at
+ * least two lines and one meaningful frame (a frame with a function name and
+ * a filename in most languages)."
+ *
+ * This is a client-side prediction of a server-side rule, so it's deliberately
+ * strict about what counts as a meaningful frame. Two observed cases drove the
+ * details, both verified in-browser:
+ *
+ *   - `logger.error(msg, ctx, 'a string')` puts ET_NO_STACK_SENTINEL in
+ *     `error.stack`. It's prose, not frames.
+ *   - `throw 'a bare string'` gets a synthesized stack whose only frame reads
+ *     `at undefined @ file.js:1:2` — a filename, but no function name, so it
+ *     fails the documented "function name and a filename" bar.
+ *
+ * @param {string|undefined} stack
+ * @returns {boolean}
+ */
+function etStackLooksValid(stack) {
+  if (!stack) return false;
+  const text = String(stack);
+  if (text.includes(ET_NO_STACK_SENTINEL)) return false;
+
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length < 2) return false;
+
+  // A meaningful frame names a function AND points at a file with a position.
+  // `at undefined @ …` is the SDK saying it could not determine the function.
+  return lines.slice(1).some(l =>
+    /(?::\d+:\d+|:\d+\))/.test(l) && !/\bat\s+undefined\b/.test(l));
+}
+
+/**
+ * Record what the Logs SDK built for one of our probes.
+ *
+ * @param {object} log - The log event from DD_LOGS beforeSend
+ */
+function recordErrorProbe(log) {
+  const id = etIdFromMessage(log.message);
+  if (!id || !ET_SOURCES.some(src => src.id === id)) return;
+
+  const stack = log.error?.stack;
+  etResults[id] = etResults[id] || {};
+  etResults[id].logs = {
+    origin: log.origin || log.error?.origin || 'logger',
+    kind: log.error?.kind || null,
+    hasStack: Boolean(stack),
+    stackValid: etStackLooksValid(stack),
+    sdkSaidNoStack: Boolean(stack && String(stack).includes(ET_NO_STACK_SENTINEL)),
+  };
+  etResults[id].cookiesAtCapture = etDatadogCookieCount();
+  renderErrorMatrix();
+}
+
+/**
+ * Record what the RUM SDK built for one of our probes. Only ever called once
+ * tracking consent is granted — which is the point: pre-consent, the RUM
+ * column stays empty while the Logs column fills in.
+ *
+ * @param {object} event - A RUM error event from DD_RUM beforeSend
+ */
+function recordRumErrorProbe(event) {
+  if (event.type !== 'error') return;
+  const id = etIdFromMessage(event.error?.message);
+  if (!id || !ET_SOURCES.some(src => src.id === id)) return;
+
+  const stack = event.error?.stack;
+  // Frontend Error Tracking processes these four sources, with a stack.
+  const processedSource = ['custom', 'source', 'report', 'console'].includes(event.error?.source);
+  etResults[id] = etResults[id] || {};
+  etResults[id].rum = {
+    source: event.error?.source || '—',
+    hasStack: Boolean(stack),
+    stackValid: etStackLooksValid(stack),
+    processedSource,
+  };
+  renderErrorMatrix();
+}
+
+/** Count Datadog-owned cookies right now — the number that has to stay 0. */
+function etDatadogCookieCount() {
+  if (!document.cookie) return 0;
+  return document.cookie.split(';').filter(c => /^\s*(_dd|datadog)/i.test(c)).length;
+}
+
+/**
+ * Fire one error source, produced the way real application code would produce
+ * it — no custom Datadog instrumentation on the error path except where the
+ * row is explicitly about a manual-report API.
+ *
+ * @param {string} id - A source id from ET_SOURCES
+ */
+function etTrigger(id) {
+  const msg = etTag(id);
+  const logger = window.DD_LOGS && window.DD_LOGS.logger;
+
+  switch (id) {
+    case 'uncaught':
+      // Escape the current call stack so this is a genuine uncaught exception
+      // rather than something we catch and report ourselves.
+      setTimeout(function () { throw new Error(msg); }, 10);
+      break;
+    case 'rejection':
+      Promise.reject(new Error(msg));
+      break;
+    case 'network':
+      // An unresolvable host is a real network failure. A 404 from a reachable
+      // host is NOT — that's a successful HTTP exchange, and neither SDK
+      // treats it as an error.
+      fetch('https://' + ET_NETWORK_MARKER + '-' + Date.now() + '.invalid/probe')
+        .catch(() => { /* the failure is the point */ });
+      break;
+    case 'console-error':
+      console.error(new Error(msg));
+      break;
+    case 'console-string':
+      console.error(msg);
+      break;
+    case 'logger-error':
+      if (logger) {
+        try { throw new Error(msg); }
+        catch (err) { logger.error(msg, { probe: id }, err); }
+      }
+      break;
+    case 'logger-message':
+      if (logger) logger.error(msg, { probe: id });
+      break;
+    case 'logger-nonerror':
+      // A string where the Error belongs. Looks reasonable, logs fine, and
+      // never becomes an issue: "Error Tracking only considers errors that
+      // are instances of Error."
+      if (logger) logger.error(msg, { probe: id }, /** @type {any} */ ('not an Error instance'));
+      break;
+    case 'throw-string':
+      setTimeout(function () { throw msg; }, 10); // eslint-disable-line no-throw-literal
+      break;
+    case 'rum-adderror':
+      if (window.DD_RUM && window.DD_RUM.addError) {
+        window.DD_RUM.addError(new Error(msg), { probe: id });
+      }
+      break;
+  }
+}
+
+/** Fire every source, spaced out so the table fills in visibly. */
+function etTriggerAll() {
+  ET_SOURCES.forEach((src, i) => setTimeout(() => etTrigger(src.id), i * 220));
+}
+
+/** Clear measured results and start over. */
+function etReset() {
+  Object.keys(etResults).forEach(k => delete etResults[k]);
+  renderErrorMatrix();
+}
+
+/** Render one surface's verdict cell. */
+function etVerdictCell(measured, meetsBar, neverApplies) {
+  if (neverApplies) return '<span class="et-na">n/a</span>';
+  if (!measured) return '—';
+  return meetsBar
+    ? '<span class="type-badge action">issue</span>'
+    : '<span class="type-badge error">log only</span>';
+}
+
+function renderErrorMatrix() {
+  const tbody = document.getElementById('et-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = ET_SOURCES.map(src => {
+    const r = etResults[src.id] || {};
+    const logs = r.logs;
+    const rum = r.rum;
+
+    // Logs door: an Error instance with a valid stack. We infer "was an Error
+    // instance" from the SDK having populated error.kind/error.stack at all.
+    const logsMeets = Boolean(logs && logs.hasStack && logs.stackValid);
+    // RUM door: a processed source, with a usable stack. Same meaningful-frame
+    // bar as the Logs door — an uncaught `throw "string"` gets a synthesized
+    // stack whose only frame has no function name, and that isn't enough.
+    const rumMeets = Boolean(rum && rum.processedSource && rum.hasStack && rum.stackValid);
+
+    const logsDrift = logs && logsMeets !== src.logsIssue;
+    const rumDrift = rum && rumMeets !== src.rumIssue;
+    const drift = logsDrift || rumDrift
+      ? ' <span class="et-drift" title="Measured payload differs from the documented expectation">⚠︎</span>'
+      : '';
+
+    let stackNote;
+    if (!logs) {
+      stackNote = '';
+    } else if (!logs.hasStack) {
+      stackNote = '<span class="et-absent">none</span>';
+    } else if (logs.stackValid) {
+      stackNote = 'valid';
+    } else if (logs.sdkSaidNoStack) {
+      // Quote the SDK back at the reader — it diagnosed this itself.
+      stackNote = `<span class="et-absent">unusable</span> — the SDK wrote ` +
+        `<q>${escapeHtml(ET_NO_STACK_SENTINEL)}</q> into the stack field`;
+    } else {
+      stackNote = '<span class="et-absent">unusable</span> — no frame with both a function name and a file';
+    }
+
+    const detail = logs
+      ? `<span class="et-how">origin <code>${escapeHtml(logs.origin)}</code> · ` +
+        `kind ${logs.kind ? `<code>${escapeHtml(logs.kind)}</code>` : '<span class="et-absent">none</span>'} · ` +
+        `stack ${stackNote}</span>`
+      : `<span class="et-how">${escapeHtml(src.how)}</span>`;
+
+    return `<tr>
+      <td><button class="wa-neutral wa-outlined et-fire-btn" onclick="etTrigger('${src.id}')">Fire</button></td>
+      <td><strong>${escapeHtml(src.label)}</strong><br>${detail}</td>
+      <td>${etVerdictCell(logs, logsMeets, src.id === 'rum-adderror')}</td>
+      <td>${etVerdictCell(rum, rumMeets, false)}${drift}</td>
+    </tr>`;
+  }).join('');
+
+  const verdictEl = document.getElementById('et-verdict');
+  if (!verdictEl) return;
+
+  const fired = Object.keys(etResults).length;
+  if (!fired) {
+    verdictEl.innerHTML = 'Fire the sources above (or <strong>Run all</strong>) to measure what each pipe actually builds.';
+    return;
+  }
+
+  const logsIssues = Object.values(etResults).filter(r => r.logs && r.logs.hasStack && r.logs.stackValid).length;
+  const rumIssues = Object.values(etResults).filter(r => r.rum && r.rum.processedSource && r.rum.hasStack).length;
+  const cookies = etDatadogCookieCount();
+  const consent = getConsent();
+
+  verdictEl.innerHTML =
+    `Of <strong>${fired}</strong> fired source${fired === 1 ? '' : 's'}: ` +
+    `<strong>${logsIssues}</strong> meet the bar for Error Tracking <em>for Logs</em>, ` +
+    `<strong>${rumIssues}</strong> for <em>Frontend</em> Error Tracking. ` +
+    `RUM consent is <strong>${escapeHtml(consent)}</strong>; Datadog cookies on this page: <strong>${cookies}</strong>.` +
+    (consent === 'granted'
+      ? ''
+      : ' <br>With consent still pending, the Frontend column stays empty — that gap is exactly what the cookie-free Logs pipe is covering.');
+}
+
+/**
+ * Generate an error on demand, shaped the way you want every reported error
+ * in the codebase to be shaped. It's deliberately the canonical "good" case:
+ * a real Error instance handed to both pipes, so it satisfies both doors.
+ *
+ * The 3rd argument to logger.error is the part teams miss. Without it the log
+ * still arrives, still reads `status:error` in the Logs Explorer, and still
+ * never becomes an Error Tracking issue — because it has no `error.stack`.
+ */
+let labErrorSeq = 0;
+function labGenerateError() {
+  const msg = 'Consent Lab generated error #' + (++labErrorSeq);
+  try {
+    throw new Error(msg);
+  } catch (err) {
+    // Logs pipe — always on, cookie-free. The Error instance must be the
+    // third argument for this to reach Error Tracking for Logs.
+    if (window.DD_LOGS && window.DD_LOGS.logger) {
+      window.DD_LOGS.logger.error(msg, { origin: 'generate-error-button' }, err);
+    }
+    // RUM pipe — consent-gated, so this only lands once consent is granted.
+    if (window.DD_RUM && window.DD_RUM.addError) {
+      window.DD_RUM.addError(err, { origin: 'generate-error-button' });
+    }
+  }
+}
+
 /**
  * Fetch this same page with a cache-busting query string to generate a
  * genuine "resource" RUM event without any custom instrumentation.
@@ -516,7 +907,7 @@ function renderConfigTable(force) {
     site: cfg.site || '—',
     service: cfg.service || '—',
     env: cfg.env || '—',
-    sessionPersistence: 'local-storage',
+    sessionPersistence: getPersistence(), // must match RUM — shared session store
     trackingConsent: 'granted',
     forwardErrorsToLogs: true,
   };

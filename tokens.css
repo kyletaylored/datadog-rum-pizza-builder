@@ -49,6 +49,18 @@
   --dd-color-primary-fill: var(--wa-color-brand-fill-loud);
   --dd-color-on-primary: var(--wa-color-brand-on-loud);
 
+  /* --- Density -----------------------------------------------------------
+     The framework's defaults are sized for marketing pages. Left alone,
+     --wa-form-control-height resolves to 2 x 0.75em padding + 1.5em line
+     height = ~48px buttons, and --wa-panel-border-radius to 12px, which made
+     every control and card read oversized next to this site's dense tables
+     and logs. Tightened here rather than per component so framework
+     internals (cards, details, switches) come along too.                    */
+  --wa-form-control-padding-block: 0.45em;   /* ~48px buttons -> ~38px       */
+  --wa-form-control-padding-inline: 0.85em;
+  --wa-panel-border-radius: var(--wa-border-radius-m);
+  --wa-space-scale: 0.92;
+
   /* --- Type scale --------------------------------------------------------
      Absolute sizes, not ratios. The sidebar's sizes were originally authored
      against Pico's 20px root; on a 16px root every one of them shrank ~20%,
@@ -59,6 +71,14 @@
   --dd-text-s: 0.75rem;     /* 12px — code blocks, table body, log header   */
   --dd-text-m: 0.8125rem;   /* 13px — sidebar prose, accordion titles       */
   --dd-text-l: 0.9375rem;   /* 15px — tabs, main-column supporting text     */
+
+  /* Main-column scale. Body was inheriting the framework's 16px with
+     proportionally large headings, which is a lot of room for a training
+     page whose point is the data underneath the prose.                      */
+  --dd-text-body: 0.9375rem; /* 15px */
+  --dd-text-h2: 1.5rem;      /* 24px */
+  --dd-text-h3: 1.1875rem;   /* 19px */
+  --dd-text-h4: 1rem;        /* 16px */
 
   /* Comfortable measure for prose. Unconstrained, the main column runs to
      ~130 characters a line, which is roughly twice a readable length.       */

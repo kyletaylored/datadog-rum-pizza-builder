@@ -62,3 +62,35 @@
   window.addEventListener('touchmove', (e) => { if (dragging && e.touches[0]) onMove(e.touches[0].clientX); }, { passive: true });
   window.addEventListener('touchend', () => { dragging = false; resizer.classList.remove('dragging'); });
 })();
+
+/**
+ * Collapse/expand the docked activity log.
+ *
+ * The log is pinned to the bottom of the scrolling column so it can't be
+ * buried by tall tab content, but that means it overlays whatever is passing
+ * underneath while you scroll. This hands that trade-off to the reader: the
+ * header strip stays put so the log is never lost, and the table folds away
+ * when the content matters more. The choice is shared across pages.
+ */
+(function () {
+  const wrap = document.getElementById('rum-log-wrap');
+  const btn = document.getElementById('log-collapse-btn');
+  if (!wrap || !btn) return;
+
+  const STORAGE_KEY = 'ddLab.logCollapsed';
+
+  function apply(collapsed) {
+    wrap.classList.toggle('collapsed', collapsed);
+    btn.setAttribute('aria-expanded', String(!collapsed));
+    btn.innerHTML = collapsed ? '&#9652;' : '&#9662;';
+    btn.title = collapsed ? 'Show activity log' : 'Hide activity log';
+  }
+
+  apply(localStorage.getItem(STORAGE_KEY) === '1');
+
+  btn.addEventListener('click', function () {
+    const collapsed = !wrap.classList.contains('collapsed');
+    localStorage.setItem(STORAGE_KEY, collapsed ? '1' : '0');
+    apply(collapsed);
+  });
+})();

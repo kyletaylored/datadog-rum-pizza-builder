@@ -96,7 +96,7 @@ html, body { background: var(--dd-surface-page); }
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
-  padding: 0.75rem 0 0;
+  padding: 0.6rem 0 0.75rem;
 }
 
 .sidebar-nav-label {
@@ -105,35 +105,43 @@ html, body { background: var(--dd-surface-page); }
   letter-spacing: 0.09em;
   font-weight: 700;
   color: var(--dd-color-muted);
-  margin: 0 0 0.4rem;
-  padding: 0 1.25rem;
+  margin: 0 0 0.5rem;
+  padding: 0 1.35rem;
 }
 
 /* Sidebar accordion sections — <wa-details appearance="plain">.
    `--spacing: 0` hands padding back to us: the component would otherwise pad
-   both the header and the content, and the section body carries its own.
-   The disclosure marker and its open/close animation come from the component,
-   which is what let the hand-rolled chevron (and its cross-framework rotation
-   fight) be deleted. */
+   both the header and the content, and the section body carries its own. The
+   disclosure marker and its animation come from the component.
+   Laid out as inset cards with gaps: previously each section was full-bleed
+   with only a hairline divider, so the list read as one squashed block
+   wedged against the sidebar edges. */
 wa-details.sidebar-section {
   --spacing: 0;
-  border-bottom: 1px solid var(--dd-color-border);
+  margin: 0 0.6rem 0.35rem;
+  border: 1px solid transparent;
+  border-radius: var(--dd-radius);
+  overflow: hidden;
+  transition: border-color var(--dd-speed-fast) var(--dd-ease),
+              background var(--dd-speed-fast) var(--dd-ease);
 }
 
-wa-details.sidebar-section:last-of-type { border-bottom: none; }
+wa-details.sidebar-section:hover { border-color: var(--dd-color-border); }
+
+wa-details.sidebar-section[open] {
+  background: var(--dd-surface);
+  border-color: var(--dd-color-border);
+  box-shadow: var(--dd-shadow-s);
+  margin-bottom: 0.6rem;
+}
 
 wa-details.sidebar-section::part(header) {
-  padding: 0.8rem 1.25rem;
-  gap: 0.7rem;
-  transition: background 0.12s;
-}
-
-wa-details.sidebar-section::part(header):hover {
-  background: var(--dd-color-border);
+  padding: 0.6rem 0.75rem;
+  gap: 0.6rem;
+  border-radius: calc(var(--dd-radius) - 1px);
 }
 
 wa-details.sidebar-section[open]::part(header) {
-  background: var(--dd-surface);
   border-bottom: 1px solid var(--dd-color-border);
 }
 
@@ -157,8 +165,7 @@ wa-details.sidebar-section::part(icon) {
 }
 
 .sidebar-section-body {
-  padding: 0.75rem 1.25rem 1rem;
-  background: var(--dd-surface);
+  padding: 0.7rem 0.75rem 0.85rem;
 }
 
 .sidebar-section-body p {
@@ -214,9 +221,23 @@ wa-details.sidebar-section::part(icon) {
   display: flex;
   flex-direction: column;
   background: var(--dd-surface);
+  font-size: var(--dd-text-body);
 }
 
+.training-main h2 { font-size: var(--dd-text-h2); line-height: 1.25; letter-spacing: -0.01em; }
+.training-main h3 { font-size: var(--dd-text-h3); line-height: 1.3; margin-block: 1.75rem 0.6rem; }
+.training-main h4 { font-size: var(--dd-text-h4); line-height: 1.35; margin-block: 1.4rem 0.5rem; }
+.training-main h3:first-child,
+.training-main h2:first-child { margin-top: 0; }
+.training-main p { line-height: 1.6; }
+
 .tab-panel {
+  /* Flex column so the docked log can be pushed to the bottom with an auto
+     margin when a tab's content is short, instead of leaving dead space
+     under it. On the consent lab the log sits outside the panel and gets the
+     same treatment from .training-main's own flex column. */
+  display: flex;
+  flex-direction: column;
   flex: 1;
 }
 
@@ -419,18 +440,40 @@ wa-progress-bar#progress-bar {
   position: sticky;
   bottom: 0;
   z-index: 5;
-  margin-top: 3rem;
+  /* auto, not a fixed margin: pushes the panel to the bottom of a short tab
+     instead of leaving dead space under it, and collapses to 0 once content
+     fills the column. */
+  margin-top: auto;
   /* Bleed the panel out through the main column's 2rem gutters so it reads as
      a docked footer, then pad the content back in off its own edges. */
   margin-inline: -2rem;
-  padding: 1rem 1.5rem 0;
+  padding: 0.75rem 1.5rem 0;
   background: var(--dd-surface);
   border-top: 1px solid var(--dd-color-border);
   box-shadow: 0 -0.5rem 1rem -0.5rem var(--wa-color-shadow, rgb(0 0 0 / 0.12));
 }
 
+/* Collapsed: keep the header strip docked, fold everything else away. */
+#rum-log-wrap.collapsed { padding-bottom: 0.6rem; }
+#rum-log-wrap.collapsed #rum-log-header { margin-bottom: 0; }
+#rum-log-wrap.collapsed .log-hint,
+#rum-log-wrap.collapsed .btn-row,
+#rum-log-wrap.collapsed #rum-table-wrap { display: none; }
+
+.log-collapse-btn {
+  height: auto;
+  padding: 0 0.5rem;
+  font-size: var(--dd-text-s);
+  line-height: 1.6;
+}
+
 /* Keep the pinned panel to a sane share of the viewport. */
-#rum-log-wrap #rum-table-wrap { max-height: min(220px, 26vh); }
+#rum-log-wrap #rum-table-wrap { max-height: min(180px, 22vh); }
+
+/* The auto margin collapses to 0 on tall content, so keep a gap from
+   whatever ends up directly above the panel. */
+.tab-panel > *:not(#rum-log-wrap):last-child,
+.training-main > *:not(#rum-log-wrap):last-of-type { margin-bottom: 2rem; }
 /* One-line orientation inside the pinned log panel. Anything longer belongs
    in a tab or the sidebar — this strip is permanent viewport real estate. */
 .log-hint {

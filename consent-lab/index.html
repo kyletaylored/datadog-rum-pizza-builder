@@ -486,6 +486,46 @@ console.error('Checkout failed')</pre>
         <pre class="config-code"><code id="config-rum-json"></code></pre>
         <h4>Logs (always-on error pipe)</h4>
         <pre class="config-code"><code id="config-logs-json"></code></pre>
+
+        <h3>Capturing error attributes</h3>
+        <p>Config alone doesn't get you Error Tracking issues — the call site decides. A log needs a <code>service</code>, an error-level <code>status</code>, and <strong>either</strong> <code>error.kind</code> <strong>or</strong> a valid <code>error.stack</code>. These are the exact calls this page makes; the <strong>Error capture</strong> tab measures what each one produces.</p>
+
+        <h4>Automatic — no instrumentation</h4>
+        <p><code>forwardErrorsToLogs: true</code> covers uncaught exceptions, unhandled promise rejections and failed requests. All three arrive with a usable stack.</p>
+        <pre class="config-code"><code>// nothing to write — these are captured for you
+throw new Error('Checkout exploded')
+Promise.reject(new Error('Payment provider timed out'))
+fetch('https://api.example.com/pay')   // network failure</code></pre>
+
+        <h4>Handled errors — pass the Error as the third argument</h4>
+        <p>This is the one teams miss. The third argument is what populates <code>error.kind</code>, <code>error.message</code> and <code>error.stack</code>; without it the log still reads <code>status:error</code> and still never becomes an issue.</p>
+        <pre class="config-code"><code>try {
+  submitOrder(order)
+} catch (err) {
+  DD_LOGS.logger.error('Order submission failed', { orderId: order.id }, err)
+  //                    message                   context             Error ◄── required
+}</code></pre>
+
+        <h4>No Error to pass — set <code>error.kind</code> yourself</h4>
+        <p>For a rejected API response or a failed validation there may be no <code>Error</code> object. <code>error.kind</code> alone satisfies Error Tracking — no stack needed — and becomes the issue title, so use a real type name.</p>
+        <pre class="config-code"><code>DD_LOGS.logger.error('Checkout rejected by provider', {
+  error: { kind: 'CheckoutRejected' },   // enough on its own
+  orderId: order.id,
+  providerCode: res.code,
+})</code></pre>
+
+        <h4>What not to do</h4>
+        <p>A <code>kind</code> in the context object <em>overrides</em> the one derived from a real <code>Error</code>, replacing an accurate type name with a hardcoded one and degrading issue grouping. Pass the <code>Error</code> and let the SDK fill all three fields in.</p>
+        <pre class="config-code"><code>// ✗ clobbers the real kind — this log groups as 'AppError', not 'TypeError'
+DD_LOGS.logger.error(msg, { error: { kind: 'AppError' } }, err)
+
+// ✗ no kind, no stack — a log line forever
+DD_LOGS.logger.error('Something went wrong')
+console.error('Something went wrong')</code></pre>
+
+        <h4>RUM's own path, for comparison</h4>
+        <p>Post-consent, <code>addError</code> reports the same <code>Error</code> into Frontend Error Tracking. The <strong>Generate error</strong> button in the activity log below calls both pipes at once.</p>
+        <pre class="config-code"><code>DD_RUM.addError(err, { orderId: order.id })</code></pre>
       </div>
     </div><!-- /#tab-config -->
 
@@ -497,6 +537,7 @@ console.error('Checkout failed')</pre>
           <button class="filter-btn rum active"  onclick="toggleActivityFilter('rum')">rum</button>
           <button class="filter-btn logs active" onclick="toggleActivityFilter('logs')">logs</button>
           <button class="wa-neutral wa-outlined" id="clear-log-btn" onclick="clearActivityLog()">Clear</button>
+          <button class="wa-neutral wa-outlined log-collapse-btn" id="log-collapse-btn" aria-expanded="true" aria-controls="rum-table-wrap" title="Hide activity log">&#9662;</button>
         </div>
       </div>
       <div class="btn-row" style="margin:0 0 .75rem; flex-wrap:wrap">

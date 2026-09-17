@@ -56,7 +56,9 @@ function switchTab(tab) {
   Object.values(panels).forEach(id => {
     document.getElementById(id).style.display = 'none';
   });
-  document.getElementById(panels[tab]).style.display = 'block';
+  // Clear the inline value rather than setting 'block': the panel is a
+  // flex column in CSS, and an inline display would override it.
+  document.getElementById(panels[tab]).style.display = '';
 
   if (tab === 'config') renderConfigTable();
 }

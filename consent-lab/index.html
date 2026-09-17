@@ -175,16 +175,22 @@ DD_RUM.init({
         <div class="sidebar-section-body">
           <p>The customer is moving off Sentry and needs <strong>100% error capture</strong>, cookie-free, before any consent is given. Two things to get right.</p>
           <p>First, browser errors reach Error Tracking through <strong>two separate front doors</strong>. <a href="https://docs.datadoghq.com/error_tracking/frontend/browser/" target="_blank" rel="noopener">Frontend Error Tracking</a> is fed by the <strong>RUM</strong> SDK — consent-gated, so unavailable pre-consent. <a href="https://docs.datadoghq.com/error_tracking/frontend/logs/" target="_blank" rel="noopener">Error Tracking for Logs</a> is fed by the <strong>Logs</strong> SDK and is the one that works pre-consent, enabled separately for the org.</p>
-          <p>Second, sending an error log is not the same as creating an issue. The Logs door needs a stack trace in <code>error.stack</code>, and <em>"Error Tracking only considers errors that are instances of <code>Error</code>"</em>:</p>
-          <pre>// becomes an issue — real Error, so a real stack
+          <p>Second, sending an error log is not the same as creating an issue. The Logs door needs a <code>service</code>, an error-level <code>status</code>, and <strong>either</strong> <code>error.kind</code> <strong>or</strong> a valid <code>error.stack</code> — either of those two alone is enough:</p>
+          <pre>// becomes an issue — the Error supplies kind + message + stack
 try { risky() } catch (err) {
   DD_LOGS.logger.error('Checkout failed', { step }, err)
 }
 
-// stays a log line — no Error object, no stack
+// also becomes an issue — kind alone is enough, no Error needed
+DD_LOGS.logger.error('Checkout failed', {
+  error: { kind: 'CheckoutFailed' },
+})
+
+// stays a log line forever — no kind, no stack
 DD_LOGS.logger.error('Checkout failed')
 console.error('Checkout failed')</pre>
           <p>Hand <code>logger.error</code> a string where the Error belongs and the SDK writes <q>No stack, consider using an instance of Error</q> into the stack field — a diagnostic in a field nobody reads.</p>
+          <p>Don't set <code>error.kind</code> when you already have an <code>Error</code>: a context-supplied kind overrides the derived one and degrades grouping. Use it only where there's no <code>Error</code> to derive from.</p>
           <p>Uncaught exceptions, unhandled promise rejections and failed network requests are picked up automatically by <code>forwardErrorsToLogs: true</code>, with usable stacks, and need no instrumentation at all.</p>
           <p>The <strong>Error capture</strong> tab fires each source and reports what each SDK actually built for it, per front door, so the coverage claim is measured rather than assumed.</p>
         </div>
@@ -343,20 +349,35 @@ console.error('Checkout failed')</pre>
               <tr>
                 <td><a href="https://docs.datadoghq.com/error_tracking/frontend/logs/" target="_blank" rel="noopener">Error Tracking for Logs</a></td>
                 <td><strong>Logs</strong> Browser SDK (v4.36.0+, <code>forwardErrorsToLogs: true</code>)</td>
-                <td>Stack trace in <code>error.stack</code>, and the error must be an <strong>instance of <code>Error</code></strong></td>
+                <td>A <code>service</code>, an error-level <code>status</code>, and <strong>either</strong> <code>error.kind</code> <strong>or</strong> a valid <code>error.stack</code></td>
                 <td><strong>Yes</strong> — cookie-free, and enabled separately for the org</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <p>So "we can see the error in the Logs Explorer" and "we have an Error Tracking issue" are two different claims, and the second is the one the customer is actually buying when they retire Sentry. Two rules do most of the damage:</p>
+        <p>So "we can see the error in the Logs Explorer" and "we have an Error Tracking issue" are two different claims, and the second is the one the customer is actually buying when they retire Sentry. Three attributes decide it:</p>
         <ul>
-          <li><strong>"Error Tracking only considers errors that are instances of <code>Error</code>."</strong> A string gets you a log line and nothing more.</li>
-          <li>The stack must be usable — <strong>at least two lines with at least one meaningful frame</strong> (a function name and a file with a position).</li>
+          <li><code>service</code> — the SDK attaches this from <code>init()</code>, so it's the one requirement you can't forget.</li>
+          <li>An error-level <code>status</code> — <code>error</code>, <code>critical</code>, <code>alert</code> or <code>emergency</code>. A log with a perfect stack still won't become an issue at <code>info</code> or <code>warn</code>.</li>
+          <li><strong>Either</strong> <code>error.kind</code> <strong>or</strong> a valid <code>error.stack</code>. Either alone is enough — which is the useful part, because it means a report site with no <code>Error</code> to hand isn't stuck. <code>error.message</code> is optional but improves grouping.</li>
         </ul>
+        <p>A valid stack means <strong>at least two lines with at least one meaningful frame</strong> — a function name and a file with a position. Passing a real <code>Error</code> gets you kind, message and stack in one go; the matrix rows below that fail are the ones where none of the three arrived.</p>
 
-        <p>Fire each source below and read the measured payload. The <em>for Logs</em> column is what works today, pre-consent; the <em>Frontend</em> column stays empty until you grant consent on the Storage Inspector tab, which is the coverage gap the Logs pipe exists to fill.</p>
+        <p>When there genuinely is no <code>Error</code> object — a failed validation, a rejected API response — set the attributes yourself and the log still becomes an issue:</p>
+        <pre>DD_LOGS.logger.error('Checkout rejected', {
+  error: { kind: 'CheckoutRejected' },   // enough on its own — no stack needed
+  orderId,
+})</pre>
+        <wa-callout variant="warning" class="lab-callout">
+          <strong>Don't set <code>error.kind</code> when you already have an <code>Error</code>.</strong>
+          A kind supplied in the context object <em>overrides</em> the one derived from the
+          Error — verified here: a context kind beat a real <code>TypeError</code> while the
+          real stack survived. That swaps an accurate type name for a hardcoded one and
+          degrades issue grouping. Pass the <code>Error</code> and let the SDK fill all three in.
+        </wa-callout>
+
+        <p>Fire each source below and read the measured payload — every row shows all three attributes, so a failing row tells you exactly which one was missing. The <em>for Logs</em> column is what works today, pre-consent; the <em>Frontend</em> column stays empty until you grant consent on the Storage Inspector tab, which is the coverage gap the Logs pipe exists to fill.</p>
 
         <div class="btn-row" style="margin:1rem 0">
           <button class="wa-brand" onclick="etTriggerAll()">Run all sources</button>
@@ -391,10 +412,12 @@ console.error('Checkout failed')</pre>
           <strong>The near-misses are what a Sentry codebase is full of.</strong>
           <code>console.error("some string")</code>, <code>logger.error("some message")</code>
           and passing a string where the <code>Error</code> belongs all produce a healthy-looking
-          <code>status:error</code> log with no usable stack — so none of them ever become an
-          issue. <code>Sentry.captureMessage()</code> accepted exactly these, so they tend to be
-          everywhere after a migration. The fix is mechanical: pass the real <code>Error</code>
-          object as the third argument, <code>logger.error(msg, ctx, err)</code>.
+          <code>status:error</code> log with neither a kind nor a usable stack — so none of them
+          ever become an issue. <code>Sentry.captureMessage()</code> accepted exactly these, so
+          they tend to be everywhere after a migration. Two mechanical fixes: pass the real
+          <code>Error</code> as the third argument where you have one
+          (<code>logger.error(msg, ctx, err)</code>), and set <code>error.kind</code> yourself
+          where you don't.
         </wa-callout>
 
         <wa-details class="lab-aside" summary="If they'd rather not touch the error-reporting code at all">

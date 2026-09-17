@@ -527,11 +527,15 @@ function labLogInfo() {
 //        https://docs.datadoghq.com/error_tracking/frontend/browser/
 //
 //   2. Error Tracking for Logs  — fed by the Browser Logs SDK (v4.36.0+,
-//      forwardErrorsToLogs: true). Needs a stack trace in `error.stack`, and
-//      per the docs "Error Tracking only considers errors that are instances
-//      of Error". A valid stack means at least two lines with at least one
-//      meaningful frame. This door is open pre-consent and cookie-free — and
-//      it has to be enabled for the org separately.
+//      forwardErrorsToLogs: true). Three things are required of the log:
+//        - a `service` attribute            (the SDK sets this from init)
+//        - `status` of error/critical/alert/emergency  (logger.error gives this)
+//        - EITHER `error.kind` OR a valid `error.stack` — either alone is
+//          enough. A valid stack means at least two lines with at least one
+//          meaningful frame. `error.message` is optional but improves grouping.
+//      This door is open pre-consent and cookie-free, and has to be enabled
+//      for the org separately.
+//        https://docs.datadoghq.com/error_tracking/backend/logs/
 //        https://docs.datadoghq.com/error_tracking/frontend/logs/
 //
 // So "we see the error in the Logs Explorer" and "we have an Error Tracking
@@ -562,6 +566,7 @@ const ET_SOURCES = [
   { id: 'network',        label: 'Failed network request',      how: 'fetch() to an unreachable host',         logsIssue: true,  rumIssue: true },
   { id: 'console-string', label: 'console.error("text")',       how: 'a string — no Error instance',           logsIssue: false, rumIssue: false },
   { id: 'logger-message', label: 'logger.error("msg")',         how: 'message only — no Error instance',       logsIssue: false, rumIssue: false },
+  { id: 'logger-kind',    label: 'logger.error(msg, {error:{kind}})', how: 'explicit kind, no Error and no stack', logsIssue: true,  rumIssue: false },
   { id: 'logger-nonerror',label: 'logger.error(msg, ctx, "s")', how: 'a string as the 3rd argument',           logsIssue: false, rumIssue: false },
   { id: 'throw-string',   label: 'throw "a bare string"',       how: 'uncaught, but not an Error instance',    logsIssue: false, rumIssue: false },
 ];
@@ -598,6 +603,14 @@ function etIdFromMessage(message) {
  * appears in a field nobody thinks to read.
  */
 const ET_NO_STACK_SENTINEL = 'No stack, consider using an instance of Error';
+
+/**
+ * Log statuses Error Tracking will consider. A log carrying a perfectly good
+ * stack still won't become an issue at info or warn level.
+ *
+ * @type {string[]}
+ */
+const ET_ERROR_STATUSES = ['error', 'critical', 'alert', 'emergency'];
 
 /**
  * Approximate the documented stack-validity rule: "The stack must have at
@@ -644,6 +657,8 @@ function recordErrorProbe(log) {
   etResults[id] = etResults[id] || {};
   etResults[id].logs = {
     origin: log.origin || log.error?.origin || 'logger',
+    service: log.service || null,
+    status: log.status || null,
     kind: log.error?.kind || null,
     hasStack: Boolean(stack),
     stackValid: etStackLooksValid(stack),
@@ -726,6 +741,16 @@ function etTrigger(id) {
     case 'logger-message':
       if (logger) logger.error(msg, { probe: id });
       break;
+    case 'logger-kind':
+      // No Error instance and no stack — just the attributes Error Tracking
+      // actually requires, set by hand. This is the rescue for report sites
+      // that genuinely have no Error to pass (a validation failure, a rejected
+      // API response), and it's why `logger.error("msg")` failing isn't a dead
+      // end. `error.kind` becomes the issue title, so make it a real type name.
+      if (logger) {
+        logger.error(msg, { probe: id, error: { kind: 'ConsentLabProbeError' } });
+      }
+      break;
     case 'logger-nonerror':
       // A string where the Error belongs. Looks reasonable, logs fine, and
       // never becomes an issue: "Error Tracking only considers errors that
@@ -772,9 +797,16 @@ function renderErrorMatrix() {
     const logs = r.logs;
     const rum = r.rum;
 
-    // Logs door: an Error instance with a valid stack. We infer "was an Error
-    // instance" from the SDK having populated error.kind/error.stack at all.
-    const logsMeets = Boolean(logs && logs.hasStack && logs.stackValid);
+    // Logs door: service + an error-level status + (error.kind OR a valid
+    // error.stack). Either of the last two alone is sufficient, which is why
+    // the network row qualifies on its stack with no kind, and the
+    // explicit-kind row qualifies on its kind with no stack at all.
+    const logsMeets = Boolean(
+      logs
+      && logs.service
+      && ET_ERROR_STATUSES.includes(logs.status)
+      && (logs.kind || (logs.hasStack && logs.stackValid))
+    );
     // RUM door: a processed source, with a usable stack. Same meaningful-frame
     // bar as the Logs door — an uncaught `throw "string"` gets a synthesized
     // stack whose only frame has no function name, and that isn't enough.
@@ -801,8 +833,13 @@ function renderErrorMatrix() {
       stackNote = '<span class="et-absent">unusable</span> — no frame with both a function name and a file';
     }
 
+    // Show all three requirements, not just the stack, so a row that fails can
+    // be read off directly: which attribute was missing.
     const detail = logs
-      ? `<span class="et-how">origin <code>${escapeHtml(logs.origin)}</code> · ` +
+      ? `<span class="et-how">` +
+        `service ${logs.service ? '<code>' + escapeHtml(logs.service) + '</code>' : '<span class="et-absent">none</span>'} · ` +
+        `status <code>${escapeHtml(logs.status || '—')}</code>` +
+        `${ET_ERROR_STATUSES.includes(logs.status) ? '' : ' <span class="et-absent">(too low)</span>'}<br>` +
         `kind ${logs.kind ? `<code>${escapeHtml(logs.kind)}</code>` : '<span class="et-absent">none</span>'} · ` +
         `stack ${stackNote}</span>`
       : `<span class="et-how">${escapeHtml(src.how)}</span>`;
@@ -840,13 +877,26 @@ function renderErrorMatrix() {
 }
 
 /**
- * Generate an error on demand, shaped the way you want every reported error
- * in the codebase to be shaped. It's deliberately the canonical "good" case:
- * a real Error instance handed to both pipes, so it satisfies both doors.
+ * Generate an error on demand, shaped the way you want every reported error in
+ * the codebase to be shaped — the canonical "good" case that satisfies both
+ * Error Tracking doors at once.
  *
- * The 3rd argument to logger.error is the part teams miss. Without it the log
- * still arrives, still reads `status:error` in the Logs Explorer, and still
- * never becomes an Error Tracking issue — because it has no `error.stack`.
+ * Against the three things Error Tracking for Logs requires of a log:
+ *   service  the SDK attaches this from init(), so there's nothing to pass
+ *            per call — it's the one requirement you can't forget
+ *   status   logger.error() emits `status:error`, which is in the accepted set
+ *   kind /   the Error instance passed as the THIRD argument is what populates
+ *   stack    error.kind, error.message and error.stack
+ *
+ * That third argument is the part teams miss. Without it the log still arrives,
+ * still reads `status:error` in the Logs Explorer, and still never becomes an
+ * issue — it has neither a kind nor a stack.
+ *
+ * Note what is deliberately NOT done here: no `error.kind` is passed in the
+ * context object. A context-supplied kind overrides the one derived from the
+ * Error (verified in this lab: a context kind beat a real TypeError), which
+ * replaces an accurate type name with a hardcoded one and degrades grouping.
+ * Set kind by hand only when there is no Error to derive it from.
  */
 let labErrorSeq = 0;
 function labGenerateError() {

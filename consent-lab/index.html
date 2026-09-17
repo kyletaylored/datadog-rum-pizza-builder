@@ -100,7 +100,7 @@
         <span slot="summary"><span class="sidebar-tag tag-consent">Consent</span><span class="sidebar-section-title">The compliance problem</span></span>
         <div class="sidebar-section-body">
           <p>A common pattern: RUM's session cookie (<code>_dd_s</code>) is created the moment the page loads, before any consent banner is answered. Session Replay is correctly gated behind consent — but the cookie itself isn't, and some EU jurisdictions' ePrivacy enforcement treats <em>any</em> non-essential cookie, including a "technical" monitoring cookie, as requiring consent.</p>
-          <p>The ask: keep full error visibility (the team is replacing Sentry, which needs 100% error capture) while creating <strong>zero client-side storage</strong> until a user opts in.</p>
+          <p>The ask: keep full error visibility — <strong>100% error capture</strong> — while creating <strong>zero client-side storage</strong> until a user opts in.</p>
         </div>
       </wa-details>
 
@@ -152,7 +152,7 @@ DD_RUM.setTrackingConsent('not-granted')  // stays fully inert, no storage</pre>
       <wa-details class="sidebar-section" appearance="plain">
         <span slot="summary"><span class="sidebar-tag tag-error">Errors</span><span class="sidebar-section-title">The always-on error-tracking backup plan</span></span>
         <div class="sidebar-section-body">
-          <p>If the business also wants <strong>100% error capture even pre-consent</strong> — matching how event-based tools like Sentry behave — RUM itself isn't the right tool for that slice, since it's intentionally gated by consent end-to-end.</p>
+          <p>If the business also wants <strong>100% error capture even pre-consent</strong> — event-based capture with no session or storage dependency — RUM itself isn't the right tool for that slice, since it's intentionally gated by consent end-to-end.</p>
           <p>The pattern: run the <strong>Logs Browser SDK</strong> as an always-on error pipe, and gate only RUM. Note <code>sessionPersistence</code> is the <em>same value in both calls</em> — the two SDKs share one session store, and disagreeing silently stops RUM from sending anything:</p>
           <pre>DD_LOGS.init({
   ...
@@ -171,9 +171,9 @@ DD_RUM.init({
       </wa-details>
 
       <wa-details class="sidebar-section" appearance="plain">
-        <span slot="summary"><span class="sidebar-tag tag-error">Errors</span><span class="sidebar-section-title">Replacing Sentry: what Error Tracking needs</span></span>
+        <span slot="summary"><span class="sidebar-tag tag-error">Errors</span><span class="sidebar-section-title">What Error Tracking needs to actually work</span></span>
         <div class="sidebar-section-body">
-          <p>The customer is moving off Sentry and needs <strong>100% error capture</strong>, cookie-free, before any consent is given. Two things to get right.</p>
+          <p>The requirement is <strong>100% error capture</strong>, cookie-free, before any consent is given. Two things to get right.</p>
           <p>First, browser errors reach Error Tracking through <strong>two separate front doors</strong>. <a href="https://docs.datadoghq.com/error_tracking/frontend/browser/" target="_blank" rel="noopener">Frontend Error Tracking</a> is fed by the <strong>RUM</strong> SDK — consent-gated, so unavailable pre-consent. <a href="https://docs.datadoghq.com/error_tracking/frontend/logs/" target="_blank" rel="noopener">Error Tracking for Logs</a> is fed by the <strong>Logs</strong> SDK and is the one that works pre-consent, enabled separately for the org.</p>
           <p>Second, sending an error log is not the same as creating an issue. The Logs door needs a <code>service</code>, an error-level <code>status</code>, and <strong>either</strong> <code>error.kind</code> <strong>or</strong> a valid <code>error.stack</code> — either of those two alone is enough:</p>
           <pre>// becomes an issue — the Error supplies kind + message + stack
@@ -316,7 +316,7 @@ console.error('Checkout failed')</pre>
     <div id="tab-errors" role="tabpanel" class="tab-panel" style="display:none">
       <div class="lab-container">
         <h3>Always-on error capture, independent of consent</h3>
-        <p>The Logs SDK on this page is initialized independently of the consent banner on the Storage Inspector tab: it runs from first paint with <code>trackingConsent: 'granted'</code> and <code>forwardErrorsToLogs: true</code>, whatever RUM's consent state is. That's the "Sentry-equivalent" backup plan — 100% error capture before anyone clicks anything.</p>
+        <p>The Logs SDK on this page is initialized independently of the consent banner on the Storage Inspector tab: it runs from first paint with <code>trackingConsent: 'granted'</code> and <code>forwardErrorsToLogs: true</code>, whatever RUM's consent state is. That's the always-on backup plan — 100% error capture before anyone clicks anything.</p>
         <wa-callout variant="warning" class="lab-callout">
           <strong>Whether it's cookie-free is not up to the Logs SDK.</strong> Both SDKs on a
           page share one session manager and one <code>_dd_s</code> store, so Logs uses
@@ -333,7 +333,7 @@ console.error('Checkout failed')</pre>
 
         <hr>
 
-        <h3>Does this actually replace Sentry? Error-source coverage</h3>
+        <h3>Is every error source actually covered? Error-source coverage</h3>
         <p>An error log leaving the Browser Logs SDK does <strong>not</strong> necessarily become an Error Tracking issue. Browser errors have two separate front doors into Error Tracking, and they have different requirements:</p>
 
         <div class="compare-table-wrap">
@@ -356,7 +356,7 @@ console.error('Checkout failed')</pre>
           </table>
         </div>
 
-        <p>So "we can see the error in the Logs Explorer" and "we have an Error Tracking issue" are two different claims, and the second is the one the customer is actually buying when they retire Sentry. Three attributes decide it:</p>
+        <p>So "we can see the error in the Logs Explorer" and "we have an Error Tracking issue" are two different claims, and the second is the one that actually determines whether error-tracking coverage is real. Three attributes decide it:</p>
         <ul>
           <li><code>service</code> — the SDK attaches this from <code>init()</code>, so it's the one requirement you can't forget.</li>
           <li>An error-level <code>status</code> — <code>error</code>, <code>critical</code>, <code>alert</code> or <code>emergency</code>. A log with a perfect stack still won't become an issue at <code>info</code> or <code>warn</code>.</li>
@@ -409,26 +409,16 @@ console.error('Checkout failed')</pre>
         </wa-callout>
 
         <wa-callout variant="danger" class="lab-callout">
-          <strong>The near-misses are what a Sentry codebase is full of.</strong>
+          <strong>The near-misses are what a codebase without strict error-tracking hygiene is full of.</strong>
           <code>console.error("some string")</code>, <code>logger.error("some message")</code>
           and passing a string where the <code>Error</code> belongs all produce a healthy-looking
           <code>status:error</code> log with neither a kind nor a usable stack — so none of them
-          ever become an issue. <code>Sentry.captureMessage()</code> accepted exactly these, so
-          they tend to be everywhere after a migration. Two mechanical fixes: pass the real
-          <code>Error</code> as the third argument where you have one
+          ever become an issue. Plenty of logging call sites accept a plain string like this, so
+          the pattern tends to be everywhere once you look for it. Two mechanical fixes: pass the
+          real <code>Error</code> as the third argument where you have one
           (<code>logger.error(msg, ctx, err)</code>), and set <code>error.kind</code> yourself
           where you don't.
         </wa-callout>
-
-        <wa-details class="lab-aside" summary="If they'd rather not touch the error-reporting code at all">
-        <p>There's a path that keeps their existing Sentry SDK calls exactly as written: Datadog accepts Sentry's own wire format, so repointing the <code>dsn</code> at Datadog forwards everything the Sentry SDK already captures.</p>
-        <pre>Sentry.init({
-  dsn: 'https://&lt;TOKEN&gt;@sentry-intake.&lt;DD_SITE&gt;/1',
-  initialScope: { tags: { service: 'my-app' } },
-})</pre>
-        <p>Those events <a href="https://docs.datadoghq.com/error_tracking/guides/sentry_sdk/" target="_blank" rel="noopener">arrive as logs</a> and need Error Tracking for Logs enabled, same as the pipe on this page — so the same <code>instanceof Error</code> and stack-trace rules apply. Useful as a migration bridge, or where rewriting every <code>captureException</code> call isn't realistic. Worth checking the Sentry SDK's own storage behavior against the cookie constraint before proposing it.</p>
-
-        </wa-details>
 
         <wa-details class="lab-aside" summary="Recommended shape for a strict-consent deployment" open>
         <wa-callout variant="danger" class="lab-callout">
@@ -452,7 +442,7 @@ console.error('Checkout failed')</pre>
                 <td><strong>Logs</strong> → Error Tracking for Logs</td>
                 <td>Always, from first paint<br><code>trackingConsent: 'granted'</code></td>
                 <td rowspan="2" style="vertical-align:middle"><code>local-storage</code><br><span class="et-how">shared — must match</span></td>
-                <td>100% error capture, the Sentry replacement</td>
+                <td>100% error capture, independent of consent</td>
               </tr>
               <tr>
                 <td><strong>RUM</strong> → Frontend Error Tracking + Replay</td>

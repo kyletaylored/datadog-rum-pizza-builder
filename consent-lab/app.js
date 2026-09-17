@@ -199,7 +199,7 @@ function renderConsentPills() {
 
 // ---------------------------------------------------------------------------
 // SDK init — RUM is fully consent-gated; Logs is an independent, always-on,
-// cookie-free error pipe (the "Sentry-equivalent" backup plan).
+// cookie-free error pipe.
 // ---------------------------------------------------------------------------
 
 window.DD_RUM && window.DD_RUM.onReady(function () {
@@ -516,7 +516,7 @@ function labLogInfo() {
 }
 
 // ---------------------------------------------------------------------------
-// Error Tracking coverage matrix — "can this replace Sentry, cookie-free?"
+// Error Tracking coverage matrix — "is 100% error capture actually happening, cookie-free?"
 //
 // The trap this exists to expose: an error log leaving the Browser Logs SDK
 // does NOT necessarily become an Error Tracking issue. Browser errors have

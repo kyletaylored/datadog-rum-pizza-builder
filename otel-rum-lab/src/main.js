@@ -40,17 +40,16 @@ import { initSession, getSessionId, endSession } from "./session.js";
 
 // The OTLP export target is optional and *off* by default so this page
 // works standalone on a static host (e.g. GitHub Pages) with zero backend.
-// The live event table below works purely client-side either way.
-//
-// Two mutually exclusive ways to turn export on (set from the Config tab,
-// see app.js): a local proxy via ?proxy= in the URL, or — for a quick
-// personal test with no proxy — an API key held only in sessionStorage for
-// this tab. Never read from the URL: URLs land in browser history and
-// server logs, sessionStorage doesn't.
+// The live event table below works purely client-side either way. Turned
+// on via ?proxy= in the URL, set from the Config tab (see app.js) — a
+// local proxy is the only supported path. A "straight from the browser,
+// no proxy" mode used to live here; removed because Datadog's OTLP intake
+// has no CORS support, confirmed empirically (every attempt failed with a
+// CORS preflight error and retried forever in the background). It only
+// ever could have worked against an endpoint you host yourself, which is
+// exactly what the proxy already is.
 const params = new URLSearchParams(location.search);
 const PROXY_BASE = params.get("proxy") || window.__OTEL_LAB_CONFIG__?.proxyBase || null;
-const DIRECT_ENDPOINT = sessionStorage.getItem("otelLabDirectEndpoint") || null;
-const DIRECT_API_KEY = sessionStorage.getItem("otelLabDirectApiKey") || null;
 const DD_APPLICATION_ID = window.__OTEL_LAB_CONFIG__?.applicationId ?? "UNSET";
 
 const resource = resourceFromAttributes({
@@ -68,18 +67,7 @@ const processors = [new LiveTableLogProcessor()];
 if (params.get("console") !== "0") {
   processors.push(new SimpleLogRecordProcessor(new ConsoleLogRecordExporter()));
 }
-if (DIRECT_ENDPOINT && DIRECT_API_KEY) {
-  // Experimental: straight to Datadog, no proxy. Datadog's OTLP intake is
-  // built for server-side exporters/collectors, not browsers, so a custom
-  // "dd-api-key" header here triggers a CORS preflight this endpoint may
-  // not be configured to allow — untested and may simply fail. See the
-  // Config tab's "Option B" callout.
-  processors.push(
-    new BatchLogRecordProcessor({
-      exporter: new OTLPLogExporter({ url: DIRECT_ENDPOINT, headers: { "dd-api-key": DIRECT_API_KEY } }),
-    })
-  );
-} else if (PROXY_BASE) {
+if (PROXY_BASE) {
   processors.push(
     new BatchLogRecordProcessor({ exporter: new OTLPLogExporter({ url: `${PROXY_BASE}/v1/logs` }) })
   );

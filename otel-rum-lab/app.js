@@ -254,17 +254,18 @@ function clearLog() {
 }
 
 /* ============================================================
-   Export config — two mutually exclusive paths:
-     A) proxy — ?proxy= in the URL, no secret involved, safe to reload with.
-     B) direct — endpoint + API key held ONLY in sessionStorage for this
-        tab, never in the URL (URLs land in browser history / server logs)
-        and never in localStorage (survives beyond this tab on purpose —
-        we don't want that for key material). See main.js for how each
-        is read back out on load.
-   Both reload to apply, same pattern as ../consent-lab's mode picker.
+   Export config — proxy only. A "direct from the browser, no proxy"
+   mode used to live here, but Datadog's OTLP intake has no CORS support
+   (confirmed empirically — every attempt failed with a CORS preflight
+   error, retried forever in the background with zero visible feedback,
+   and left credentials sitting in sessionStorage on every reload). It
+   only ever could have worked against an endpoint you host yourself,
+   which is exactly what the proxy already is — so removed rather than
+   fixed. This one-time cleanup clears any leftover credentials a
+   previous version of this page may have saved into sessionStorage.
    ============================================================ */
-const DIRECT_ENDPOINT_KEY = 'otelLabDirectEndpoint';
-const DIRECT_API_KEY_KEY = 'otelLabDirectApiKey';
+sessionStorage.removeItem('otelLabDirectEndpoint');
+sessionStorage.removeItem('otelLabDirectApiKey');
 
 function currentExportParams() {
   const params = new URLSearchParams(location.search);
@@ -273,16 +274,11 @@ function currentExportParams() {
 
 function renderExportStatus() {
   const { proxy, consoleOff } = currentExportParams();
-  const directEndpoint = sessionStorage.getItem(DIRECT_ENDPOINT_KEY);
   const pill = document.getElementById('export-status-pill');
   const input = document.getElementById('proxy-url-input');
   const consoleToggle = document.getElementById('console-toggle');
-  const directInput = document.getElementById('direct-endpoint-input');
 
-  if (directEndpoint) {
-    pill.textContent = `direct from this browser → ${directEndpoint}`;
-    pill.className = 'consent-state-pill warning';
-  } else if (proxy) {
+  if (proxy) {
     pill.textContent = `via your proxy → ${proxy}`;
     pill.className = 'consent-state-pill granted';
   } else {
@@ -291,47 +287,28 @@ function renderExportStatus() {
   }
   input.value = proxy;
   consoleToggle.checked = !consoleOff;
-  // Leave the site dropdown at its default (US1) when nothing's connected,
-  // rather than forcing it blank.
-  if (directInput && directEndpoint) directInput.value = directEndpoint;
+
+  // Restore the Config tab after the reload these buttons trigger, so the
+  // status change above is the first thing visible instead of the wizard.
+  if (new URLSearchParams(location.search).get('tab') === 'config') {
+    switchTab('config');
+  }
 }
 
 function applyExportSettings(event) {
   event.preventDefault();
   const url = document.getElementById('proxy-url-input').value.trim();
   const consoleChecked = document.getElementById('console-toggle').checked;
-  // Proxy and direct mode are mutually exclusive.
-  sessionStorage.removeItem(DIRECT_ENDPOINT_KEY);
-  sessionStorage.removeItem(DIRECT_API_KEY_KEY);
   const params = new URLSearchParams();
   if (url) params.set('proxy', url);
   if (!consoleChecked) params.set('console', '0');
+  params.set('tab', 'config');
   location.search = params.toString();
 }
 
 function disconnectExport() {
   document.getElementById('proxy-url-input').value = '';
   applyExportSettings({ preventDefault() {} });
-}
-
-function applyDirectSettings(event) {
-  event.preventDefault();
-  const endpoint = document.getElementById('direct-endpoint-input').value.trim();
-  const apiKey = document.getElementById('direct-key-input').value.trim();
-  if (!endpoint || !apiKey) return;
-  sessionStorage.setItem(DIRECT_ENDPOINT_KEY, endpoint);
-  sessionStorage.setItem(DIRECT_API_KEY_KEY, apiKey);
-  // Proxy and direct mode are mutually exclusive — drop ?proxy= on reload.
-  const params = new URLSearchParams(location.search);
-  params.delete('proxy');
-  location.search = params.toString();
-}
-
-function clearDirectSettings() {
-  sessionStorage.removeItem(DIRECT_ENDPOINT_KEY);
-  sessionStorage.removeItem(DIRECT_API_KEY_KEY);
-  document.getElementById('direct-key-input').value = '';
-  location.reload();
 }
 
 document.addEventListener('DOMContentLoaded', renderExportStatus);

@@ -147,6 +147,13 @@ table.compare-table code { font-size: .8rem; }
 .type-badge.logger  { background: var(--dd-indigo-fill); color: var(--dd-indigo-on); }
 .type-badge.network { background: var(--dd-cyan-fill);   color: var(--dd-cyan-on); }
 
+/* Extra event-type colors for the OTel lab's activity log — everything else
+   it needs (view/action/resource/error) already exists above. */
+.filter-btn.vital { background: var(--dd-cyan-fill); color: var(--dd-cyan-on); border-color: var(--dd-cyan-border); }
+.type-badge.vital { background: var(--dd-cyan-fill); color: var(--dd-cyan-on); }
+.filter-btn.custom { background: var(--dd-purple-fill); color: var(--dd-purple-on); border-color: var(--dd-purple-border); }
+.type-badge.custom { background: var(--dd-purple-fill); color: var(--dd-purple-on); }
+
 /* ============================================================
    Error-source coverage matrix — one row per error source, with a
    trigger button and the measured result of firing it.

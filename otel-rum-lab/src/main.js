@@ -113,6 +113,8 @@ initSession({
 getSessionId(); // prime the first session
 
 // Custom action parity with the RUM-SDK version's addAction('pizza_order_submitted', ...).
+// app.js (loaded before this bundle — see index.html) already defines
+// window.otelLab.logEvent for the live table; this just adds to the same object.
 window.otelLab = window.otelLab ?? {};
 window.otelLab.submitOrder = function submitOrder(pizzaOrder) {
   emitCustomLog({

@@ -270,7 +270,7 @@
         <form id="export-form" onsubmit="applyExportSettings(event)">
           <input type="url" id="proxy-url-input" placeholder="http://localhost:8791">
           <button type="submit" class="wa-brand">Connect</button>
-          <button type="button" class="wa-neutral wa-outlined" onclick="disconnectExport()">Use static mode</button>
+          <button type="button" class="wa-neutral wa-outlined" onclick="disconnectExport()" title="Disconnects the proxy — nothing will be sent to Datadog">Disconnect</button>
         </form>
         <label class="export-toggle">
           <input type="checkbox" id="console-toggle" checked onchange="document.getElementById('export-form').requestSubmit()">

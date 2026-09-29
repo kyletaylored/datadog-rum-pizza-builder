@@ -54,7 +54,7 @@ const DIRECT_API_KEY = sessionStorage.getItem("otelLabDirectApiKey") || null;
 const DD_APPLICATION_ID = window.__OTEL_LAB_CONFIG__?.applicationId ?? "UNSET";
 
 const resource = resourceFromAttributes({
-  [ATTR_SERVICE_NAME]: "otel-rum-pizza-builder",
+  [ATTR_SERVICE_NAME]: "datadog-rum-pizza-otlp",
   "telemetry.sdk.language": "webjs",
 });
 
@@ -75,13 +75,13 @@ if (DIRECT_ENDPOINT && DIRECT_API_KEY) {
   // not be configured to allow — untested and may simply fail. See the
   // Config tab's "Option B" callout.
   processors.push(
-    new BatchLogRecordProcessor(
-      new OTLPLogExporter({ url: DIRECT_ENDPOINT, headers: { "dd-api-key": DIRECT_API_KEY } })
-    )
+    new BatchLogRecordProcessor({
+      exporter: new OTLPLogExporter({ url: DIRECT_ENDPOINT, headers: { "dd-api-key": DIRECT_API_KEY } }),
+    })
   );
 } else if (PROXY_BASE) {
   processors.push(
-    new BatchLogRecordProcessor(new OTLPLogExporter({ url: `${PROXY_BASE}/v1/logs` }))
+    new BatchLogRecordProcessor({ exporter: new OTLPLogExporter({ url: `${PROXY_BASE}/v1/logs` }) })
   );
 }
 
@@ -101,7 +101,7 @@ registerInstrumentations({
   ],
 });
 
-const logger = logs.getLogger("otel-rum-pizza-builder");
+const logger = logs.getLogger("datadog-rum-pizza-otlp");
 
 // Working-assumption fields (session id, application id) added on top of
 // the instrumentation's own log events — see PLAN.md's "Working assumptions"

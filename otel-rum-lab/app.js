@@ -291,7 +291,9 @@ function renderExportStatus() {
   }
   input.value = proxy;
   consoleToggle.checked = !consoleOff;
-  if (directInput) directInput.value = directEndpoint || '';
+  // Leave the site dropdown at its default (US1) when nothing's connected,
+  // rather than forcing it blank.
+  if (directInput && directEndpoint) directInput.value = directEndpoint;
 }
 
 function applyExportSettings(event) {

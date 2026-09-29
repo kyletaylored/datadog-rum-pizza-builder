@@ -33,7 +33,7 @@
   #export-form, #direct-form { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
   #direct-form { margin-top: .75rem; }
   #export-form input[type="url"],
-  #direct-form input[type="url"],
+  #direct-form select,
   #direct-form input[type="password"] {
     flex: 1 1 220px; min-width: 0; font-family: monospace; font-size: .85rem;
     padding: .45em .7em; border: 1px solid var(--dd-color-border); border-radius: var(--dd-radius);
@@ -262,13 +262,10 @@
     <div id="tab-config" role="tabpanel" class="tab-panel" style="display:none">
       <div class="lab-container">
         <h3>Send events to Datadog</h3>
-        <p>Off by default, so this page works with zero backend. Two ways to turn it on:</p>
+        <p>Off by default, so this page works with zero backend.</p>
 
-        <h4>Option A — your own local proxy (recommended)</h4>
-        <p>A proxy is a tiny script that runs on <em>your</em> machine, holds your real Datadog API key, and forwards whatever this page sends it straight through to Datadog — adding just the <code>dd-api-key</code> header. The key never leaves your machine, and this page never sees it. Source: <a href="https://github.com/kyletaylored/datadog-rum-pizza-builder/blob/main/otel-rum-lab/proxy/server.js" target="_blank" rel="noopener"><code>proxy/server.js</code> on GitHub</a> (~80 lines).</p>
-        <pre class="config-code"><code># in the otel-rum-lab/ directory, on your own machine
-cp .env.example .env    # fill in a real DD_API_KEY + OTLP endpoint
-npm run proxy            # starts listening on localhost, holds the key</code></pre>
+        <h4>Option A: Proxy</h4>
+        <p>A local proxy that forwards OTel requests to Datadog. See <a href="https://github.com/kyletaylored/datadog-rum-pizza-builder/blob/main/otel-rum-lab/proxy/server.js" target="_blank" rel="noopener">example</a>.</p>
 
         <form id="export-form" onsubmit="applyExportSettings(event)">
           <input type="url" id="proxy-url-input" placeholder="http://localhost:8791">
@@ -281,13 +278,17 @@ npm run proxy            # starts listening on localhost, holds the key</code></
         </label>
         <p style="margin-top:.85rem">Status: <span id="export-status-pill" class="consent-state-pill pending">static mode</span></p>
 
-        <wa-details class="lab-aside" summary="Option B — send directly from this browser (no proxy, experimental)">
-          <wa-callout variant="warning" class="lab-callout">
-            <strong>Personal testing only, never a real/production key.</strong> This puts your API key in this browser tab's memory so it can call Datadog's OTLP intake directly, with no proxy in between. It's <strong>not saved anywhere</strong> — not in this page's code, not in localStorage, not in the URL — only <code>sessionStorage</code> for this tab, cleared by "Clear key" below or when you close the tab. But it's still real key material sitting in browser memory, so treat it the way you'd treat pasting a key into a terminal: fine for your own quick test, not something to do on a machine or session you don't trust.
-          </wa-callout>
-          <p>Also unverified whether this works at all: Datadog's OTLP intake is built for server-side exporters and collectors, not browsers, so it may not allow cross-origin requests the way Datadog's own RUM intake does. If it fails, check devtools for a CORS error — that means this path isn't available and Option A is the way.</p>
+        <wa-details class="lab-aside" summary="Option B: Browser Direct">
+          <p><strong>Personal testing only.</strong> Sends requests directly from the browser to Datadog's OTLP endpoint — no proxy. Key lives only in <code>sessionStorage</code> for this tab.</p>
           <form id="direct-form" onsubmit="applyDirectSettings(event)">
-            <input type="url" id="direct-endpoint-input" placeholder="https://your-otlp-logs-endpoint">
+            <select id="direct-endpoint-input">
+              <option value="https://otlp.datadoghq.com/v1/logs">US1 (datadoghq.com)</option>
+              <option value="https://otlp.us3.datadoghq.com/v1/logs">US3</option>
+              <option value="https://otlp.us5.datadoghq.com/v1/logs">US5</option>
+              <option value="https://otlp.datadoghq.eu/v1/logs">EU1 (datadoghq.eu)</option>
+              <option value="https://otlp.ap1.datadoghq.com/v1/logs">AP1</option>
+              <option value="https://otlp.ap2.datadoghq.com/v1/logs">AP2</option>
+            </select>
             <input type="password" id="direct-key-input" placeholder="dd-api-key" autocomplete="off">
             <button type="submit" class="wa-brand">Connect directly</button>
             <button type="button" class="wa-neutral wa-outlined" onclick="clearDirectSettings()">Clear key</button>

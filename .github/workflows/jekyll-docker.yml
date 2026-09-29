@@ -56,6 +56,12 @@ jobs:
             -e "s/%%VERSION%%/${GITHUB_SHA:0:7}/" \
             config.template.js > config.js
 
+          # otel-rum-lab doesn't load config.js (it never initializes the RUM
+          # SDK), but it still stamps datadog.application.id on every event
+          # it sends — same app as the RUM-SDK version, from the same secret,
+          # so the two never drift apart.
+          sed -i "s/%%DD_APP_ID%%/${DD_APP_ID}/" otel-rum-lab/index.html
+
       - name: Inject GitHub URLs
         env:
           PAGES_URL: ${{ steps.pages.outputs.base_url }}
@@ -127,6 +133,11 @@ jobs:
           if grep -q '%%' config.js; then
             echo "ERROR: Unreplaced placeholders remain in config.js — check that DD_APP_ID and DD_CLIENT_TOKEN secrets are set"
             grep '%%' config.js
+            exit 1
+          fi
+
+          if grep -q '%%DD_APP_ID%%' otel-rum-lab/index.html; then
+            echo "ERROR: Unreplaced %%DD_APP_ID%% remains in otel-rum-lab/index.html — check that the DD_APP_ID secret is set"
             exit 1
           fi
 

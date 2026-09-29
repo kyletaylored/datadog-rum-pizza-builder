@@ -30,9 +30,12 @@
   /* ===== OTel lab — page-specific components only. Everything reusable
      (sidebar, tabs, wizard, activity log, mode-picker, state pill) lives in
      ../style.css / ../lab-shared.css. ===== */
-  #export-form { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
-  #export-form input[type="url"] {
-    flex: 1 1 260px; min-width: 0; font-family: monospace; font-size: .85rem;
+  #export-form, #direct-form { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+  #direct-form { margin-top: .75rem; }
+  #export-form input[type="url"],
+  #direct-form input[type="url"],
+  #direct-form input[type="password"] {
+    flex: 1 1 220px; min-width: 0; font-family: monospace; font-size: .85rem;
     padding: .45em .7em; border: 1px solid var(--dd-color-border); border-radius: var(--dd-radius);
     background: var(--dd-surface); color: inherit;
   }
@@ -258,7 +261,13 @@
     <div id="tab-config" role="tabpanel" class="tab-panel" style="display:none">
       <div class="lab-container">
         <h3>Send events to Datadog</h3>
-        <p>Point this page at your own local proxy (holds the real API key — see <code>proxy/server.js</code>) to actually forward events, or leave it blank to stay fully static.</p>
+        <p>Off by default, so this page works with zero backend. Two ways to turn it on:</p>
+
+        <h4>Option A — your own local proxy (recommended)</h4>
+        <p>A proxy is a tiny script that runs on <em>your</em> machine, holds your real Datadog API key, and forwards whatever this page sends it straight through to Datadog — adding just the <code>dd-api-key</code> header. The key never leaves your machine, and this page never sees it. Source: <a href="https://github.com/kyletaylored/datadog-rum-pizza-builder/blob/main/otel-rum-lab/proxy/server.js" target="_blank" rel="noopener"><code>proxy/server.js</code> on GitHub</a> (~80 lines).</p>
+        <pre class="config-code"><code># in the otel-rum-lab/ directory, on your own machine
+cp .env.example .env    # fill in a real DD_API_KEY + OTLP endpoint
+npm run proxy            # starts listening on localhost, holds the key</code></pre>
 
         <form id="export-form" onsubmit="applyExportSettings(event)">
           <input type="url" id="proxy-url-input" placeholder="http://localhost:8791">
@@ -271,13 +280,21 @@
         </label>
         <p style="margin-top:.85rem">Status: <span id="export-status-pill" class="consent-state-pill pending">static mode</span></p>
 
-        <h4>Running the proxy</h4>
-        <pre class="config-code"><code># in the otel-rum-lab/ directory
-cp .env.example .env    # fill in a real DD_API_KEY + OTLP endpoint
-npm run proxy            # holds the key, forwards to Datadog</code></pre>
+        <wa-details class="lab-aside" summary="Option B — send directly from this browser (no proxy, experimental)">
+          <wa-callout variant="warning" class="lab-callout">
+            <strong>Personal testing only, never a real/production key.</strong> This puts your API key in this browser tab's memory so it can call Datadog's OTLP intake directly, with no proxy in between. It's <strong>not saved anywhere</strong> — not in this page's code, not in localStorage, not in the URL — only <code>sessionStorage</code> for this tab, cleared by "Clear key" below or when you close the tab. But it's still real key material sitting in browser memory, so treat it the way you'd treat pasting a key into a terminal: fine for your own quick test, not something to do on a machine or session you don't trust.
+          </wa-callout>
+          <p>Also unverified whether this works at all: Datadog's OTLP intake is built for server-side exporters and collectors, not browsers, so it may not allow cross-origin requests the way Datadog's own RUM intake does. If it fails, check devtools for a CORS error — that means this path isn't available and Option A is the way.</p>
+          <form id="direct-form" onsubmit="applyDirectSettings(event)">
+            <input type="url" id="direct-endpoint-input" placeholder="https://your-otlp-logs-endpoint">
+            <input type="password" id="direct-key-input" placeholder="dd-api-key" autocomplete="off">
+            <button type="submit" class="wa-brand">Connect directly</button>
+            <button type="button" class="wa-neutral wa-outlined" onclick="clearDirectSettings()">Clear key</button>
+          </form>
+        </wa-details>
 
         <h3>What's on this page right now</h3>
-        <p>Reflects the actual pipeline configuration for your current settings.</p>
+        <p>Reflects the actual pipeline configuration for your current settings. Never includes the direct-mode key.</p>
         <pre class="config-code"><code id="config-json"></code></pre>
       </div>
     </div><!-- /#tab-config -->
@@ -288,7 +305,10 @@ npm run proxy            # holds the key, forwards to Datadog</code></pre>
 
 <script>
   window.__OTEL_LAB_CONFIG__ = {
-    applicationId: "4a79b017-ea18-4839-9153-ce2b058b4db6", // same app as the RUM-SDK version
+    // Templated at deploy time from the same DD_APP_ID secret the root app's
+    // config.template.js uses (see the workflow's "Generate config.js from
+    // template" step) — not a separate hardcoded copy that could drift from it.
+    applicationId: "%%DD_APP_ID%%",
   };
 </script>
 <script src="../lab-shared.js"></script>
@@ -298,6 +318,7 @@ npm run proxy            # holds the key, forwards to Datadog</code></pre>
   document.getElementById('config-json').textContent = JSON.stringify({
     applicationId: window.__OTEL_LAB_CONFIG__.applicationId,
     proxy: new URLSearchParams(location.search).get('proxy') || null,
+    directMode: Boolean(sessionStorage.getItem('otelLabDirectEndpoint')), // key itself never shown
     consoleExport: new URLSearchParams(location.search).get('console') !== '0',
   }, null, 2);
 </script>

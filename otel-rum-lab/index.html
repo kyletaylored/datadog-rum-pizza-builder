@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OTel → Datadog RUM Lab</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><text y='32' font-size='32'>🔬</text></svg>">
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+  h1 { font-size: 1.4rem; }
+  .banner { background: #fff8db; border: 1px solid #e6d27a; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1.5rem; font-size: 0.9rem; }
+  @media (prefers-color-scheme: dark) { .banner { background: #3a3410; border-color: #6b5f1f; } }
+  .steps { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 1rem 0; }
+  .step-chip { padding: 0.3rem 0.7rem; border-radius: 999px; border: 1px solid currentColor; opacity: 0.4; font-size: 0.85rem; }
+  .step-chip.active { opacity: 1; font-weight: 600; }
+  .screen { display: none; border: 1px solid #8883; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; }
+  .screen.active { display: block; }
+  .options { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.6rem; margin: 1rem 0; }
+  .option-card { border: 1px solid #8883; border-radius: 8px; padding: 0.8rem; cursor: pointer; text-align: center; }
+  .option-card.selected { border-color: #6a5acd; background: #6a5acd1a; }
+  .btn-row { display: flex; justify-content: space-between; margin-top: 1rem; gap: 0.5rem; }
+  button { font: inherit; padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid #8883; cursor: pointer; background: transparent; }
+  button.primary { background: #6a5acd; color: white; border-color: #6a5acd; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.78rem; font-family: ui-monospace, monospace; }
+  th, td { border-bottom: 1px solid #8883; padding: 0.3rem 0.5rem; text-align: left; vertical-align: top; word-break: break-word; }
+  #otel-live-table-wrap { max-height: 360px; overflow: auto; border: 1px solid #8883; border-radius: 8px; }
+  .diag-row { display: flex; gap: 0.5rem; margin: 1rem 0; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<h1>🔬 OTel Browser → Datadog RUM Lab</h1>
+
+<div class="banner">
+  Everything below runs the real <code>@opentelemetry/sdk-logs</code> pipeline plus stock auto-instrumentation
+  from <code>@opentelemetry/browser-instrumentation</code> — nothing here is a simulated event. Exporting to
+  Datadog is off by default so this page works standalone with no backend (e.g. on GitHub Pages); add
+  <code>?proxy=http://localhost:8791</code> to the URL to send events through your own local proxy instead.
+  See <code>README.md</code> for details — this page never holds a Datadog API key either way.
+</div>
+
+<div class="steps" id="steps">
+  <span class="step-chip" data-hash="">start</span>
+  <span class="step-chip" data-hash="#crust">crust</span>
+  <span class="step-chip" data-hash="#sauce">sauce</span>
+  <span class="step-chip" data-hash="#cheese">cheese</span>
+  <span class="step-chip" data-hash="#toppings">toppings</span>
+  <span class="step-chip" data-hash="#size">size</span>
+  <span class="step-chip" data-hash="#results">results</span>
+</div>
+
+<div class="screen" id="screen-start">
+  <h2>Ready to build your pizza?</h2>
+  <button class="primary" onclick="goTo('crust')">Start Building</button>
+</div>
+
+<div class="screen" id="screen-crust">
+  <h2>Choose your crust</h2>
+  <div class="options" id="opts-crust"></div>
+  <div class="btn-row">
+    <button onclick="goTo('')">Back</button>
+    <button class="primary" id="btn-crust" disabled onclick="goTo('sauce')">Continue</button>
+  </div>
+</div>
+
+<div class="screen" id="screen-sauce">
+  <h2>Pick your sauce</h2>
+  <div class="options" id="opts-sauce"></div>
+  <div class="btn-row">
+    <button onclick="goTo('crust')">Back</button>
+    <button class="primary" id="btn-sauce" disabled onclick="goTo('cheese')">Continue</button>
+  </div>
+</div>
+
+<div class="screen" id="screen-cheese">
+  <h2>Select your cheese</h2>
+  <div class="options" id="opts-cheese"></div>
+  <div class="btn-row">
+    <button onclick="goTo('sauce')">Back</button>
+    <button class="primary" id="btn-cheese" disabled onclick="goTo('toppings')">Continue</button>
+  </div>
+</div>
+
+<div class="screen" id="screen-toppings">
+  <h2>Add your toppings</h2>
+  <div class="options" id="opts-toppings"></div>
+  <div class="btn-row">
+    <button onclick="goTo('cheese')">Back</button>
+    <button class="primary" id="btn-toppings" disabled onclick="goTo('size')">Continue</button>
+  </div>
+</div>
+
+<div class="screen" id="screen-size">
+  <h2>Choose your size</h2>
+  <div class="options" id="opts-size"></div>
+  <div class="btn-row">
+    <button onclick="goTo('toppings')">Back</button>
+    <button class="primary" id="btn-size" disabled onclick="submitOrder()">See My Pizza</button>
+  </div>
+</div>
+
+<div class="screen" id="screen-results">
+  <h2>🎉 Your Pizza Order</h2>
+  <ul id="result-list"></ul>
+  <div class="diag-row">
+    <button onclick="restart()">Start Over</button>
+    <button onclick="window.otelLab.forceError()">Force an error (test ERROR mapping)</button>
+    <button onclick="fakeBackendCall()">Fake backend call (test resource-timing capture)</button>
+  </div>
+</div>
+
+<h3>Live OTel event feed</h3>
+<p style="font-size:0.85rem; opacity:0.75">
+  Every log flowing through the pipeline lands here first — auto-instrumented (navigation, clicks, errors, web
+  vitals, resource timing, console) and hand-emitted (session lifecycle, custom order-submitted action) alike —
+  before it's optionally exported.
+</p>
+<div id="otel-live-table-wrap">
+  <table id="otel-live-table">
+    <thead><tr><th>time</th><th>event name</th><th>attributes</th></tr></thead>
+    <tbody id="otel-live-table-body"></tbody>
+  </table>
+</div>
+
+<script>
+  window.__OTEL_LAB_CONFIG__ = {
+    applicationId: "4a79b017-ea18-4839-9153-ce2b058b4db6", // same app as the RUM-SDK version
+    // proxyBase: "http://localhost:8791", // or pass ?proxy=... in the URL instead
+  };
+</script>
+<script src="dist/bundle.js"></script>
+<script>
+  const OPTIONS = {
+    crust: ["Thin & Crispy", "Hand-Tossed", "Deep Dish", "Gluten-Free"],
+    sauce: ["Classic Tomato", "White Garlic", "BBQ", "Pesto"],
+    cheese: ["Mozzarella", "Four Cheese", "Vegan", "No Cheese"],
+    toppings: ["Pepperoni", "Mushrooms", "Bell Peppers", "Jalapeños"],
+    size: ["Personal (6 in)", "Medium (12 in)", "Large (16 in)", "XL Party (20 in)"],
+  };
+  const order = {};
+
+  for (const [step, values] of Object.entries(OPTIONS)) {
+    const wrap = document.getElementById(`opts-${step}`);
+    for (const value of values) {
+      const card = document.createElement("div");
+      card.className = "option-card";
+      card.textContent = value;
+      card.onclick = () => {
+        wrap.querySelectorAll(".option-card").forEach((c) => c.classList.remove("selected"));
+        card.classList.add("selected");
+        order[step] = value;
+        document.getElementById(`btn-${step}`).disabled = false;
+      };
+      wrap.appendChild(card);
+    }
+  }
+
+  function goTo(hash) {
+    location.hash = hash;
+  }
+
+  function render() {
+    const hash = location.hash.replace("#", "");
+    document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+    document.getElementById(`screen-${hash || "start"}`)?.classList.add("active");
+    document.querySelectorAll(".step-chip").forEach((c) => {
+      c.classList.toggle("active", c.dataset.hash === (hash ? `#${hash}` : ""));
+    });
+  }
+  window.addEventListener("hashchange", render);
+  render();
+
+  function submitOrder() {
+    window.otelLab.submitOrder(order);
+    const list = document.getElementById("result-list");
+    list.innerHTML = "";
+    for (const [k, v] of Object.entries(order)) {
+      const li = document.createElement("li");
+      li.textContent = `${k}: ${v}`;
+      list.appendChild(li);
+    }
+    goTo("results");
+  }
+
+  function restart() {
+    window.otelLab.restart();
+    for (const key of Object.keys(order)) delete order[key];
+    document.querySelectorAll(".option-card.selected").forEach((c) => c.classList.remove("selected"));
+    document.querySelectorAll("[id^=btn-]").forEach((b) => (b.disabled = true));
+    goTo("");
+  }
+
+  function fakeBackendCall() {
+    // ResourceTimingInstrumentation observes this passively via the
+    // Resource Timing API and logs it — no fetch wrapping needed. Actual
+    // trace correlation (a traceId linking this call to a backend span)
+    // isn't wired up in this lab; see README.md.
+    fetch("https://httpbin.org/get").catch(() => {});
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+
+# Internal working docs — dev-only, not for the public repo.
+NOTES.md
+PLAN.md

@@ -24,7 +24,18 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # Runs first because everything below needs the real site URL. Its
+      # dist/ is gitignored (it's a build output, not source), so the lab
+      # needs its bundle built here — the checkout alone has no bundle.js.
+      # Runs before everything else so a build failure fails fast, before
+      # spending time on config generation / source maps / uploads.
+      - name: Build otel-rum-lab
+        run: |
+          cd otel-rum-lab
+          npm ci
+          npm run build
+
+      # Runs first among the URL/config-dependent steps because everything
+      # below needs the real site URL. Its
       # base_url output comes from the Pages API, so it reflects a custom
       # domain; GITHUB_REPOSITORY_OWNER can only ever reconstruct the default
       # github.io host, which is wrong the moment a CNAME is in play. Note a
@@ -165,7 +176,7 @@ jobs:
             --minified-path-prefix "${PAGES_URL%/}/"
 
       - name: Clean up build artifacts
-        run: rm -rf sourcemaps-upload .entrypoints
+        run: rm -rf sourcemaps-upload .entrypoints otel-rum-lab/node_modules
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4

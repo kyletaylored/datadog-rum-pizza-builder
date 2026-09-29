@@ -254,18 +254,27 @@ function clearLog() {
 }
 
 /* ============================================================
-   Export config — proxy only. A "direct from the browser, no proxy"
-   mode used to live here, but Datadog's OTLP intake has no CORS support
-   (confirmed empirically — every attempt failed with a CORS preflight
-   error, retried forever in the background with zero visible feedback,
-   and left credentials sitting in sessionStorage on every reload). It
-   only ever could have worked against an endpoint you host yourself,
-   which is exactly what the proxy already is — so removed rather than
-   fixed. This one-time cleanup clears any leftover credentials a
-   previous version of this page may have saved into sessionStorage.
+   Export config — two mutually exclusive paths:
+     A) your own local proxy — ?proxy= in the URL, no secret involved.
+     B) corsproxy.io — a third-party relay that adds the CORS headers
+        Datadog's OTLP intake doesn't send. Both your corsproxy.io key and
+        your Datadog key are real secrets, held only in sessionStorage for
+        this tab (never the URL, never localStorage). See main.js for how
+        each gets read back out on load.
+   A "straight from the browser, no relay at all" mode used to live here;
+   removed because Datadog's OTLP intake has no CORS support at all, so
+   there was nothing a browser alone could ever do about it — confirmed
+   empirically (every attempt failed with a CORS preflight error and
+   retried forever in the background with zero visible feedback). This
+   one-time cleanup clears any leftover credentials that mode may have
+   saved into sessionStorage.
    ============================================================ */
 sessionStorage.removeItem('otelLabDirectEndpoint');
 sessionStorage.removeItem('otelLabDirectApiKey');
+
+const CORSPROXY_ENDPOINT_KEY = 'otelLabCorsProxyEndpoint';
+const CORSPROXY_KEY_KEY = 'otelLabCorsProxyKey';
+const CORSPROXY_DD_KEY_KEY = 'otelLabCorsProxyDdKey';
 
 function currentExportParams() {
   const params = new URLSearchParams(location.search);
@@ -274,11 +283,16 @@ function currentExportParams() {
 
 function renderExportStatus() {
   const { proxy, consoleOff } = currentExportParams();
+  const corsProxyEndpoint = sessionStorage.getItem(CORSPROXY_ENDPOINT_KEY);
   const pill = document.getElementById('export-status-pill');
   const input = document.getElementById('proxy-url-input');
   const consoleToggle = document.getElementById('console-toggle');
+  const corsProxySelect = document.getElementById('corsproxy-endpoint-input');
 
-  if (proxy) {
+  if (corsProxyEndpoint) {
+    pill.textContent = `via corsproxy.io → ${corsProxyEndpoint}`;
+    pill.className = 'consent-state-pill warning';
+  } else if (proxy) {
     pill.textContent = `via your proxy → ${proxy}`;
     pill.className = 'consent-state-pill granted';
   } else {
@@ -287,6 +301,9 @@ function renderExportStatus() {
   }
   input.value = proxy;
   consoleToggle.checked = !consoleOff;
+  // Restore the (non-secret) endpoint selection; never echo the keys back
+  // into the password fields.
+  if (corsProxySelect && corsProxyEndpoint) corsProxySelect.value = corsProxyEndpoint;
 
   // Restore the Config tab after the reload these buttons trigger, so the
   // status change above is the first thing visible instead of the wizard.
@@ -299,6 +316,10 @@ function applyExportSettings(event) {
   event.preventDefault();
   const url = document.getElementById('proxy-url-input').value.trim();
   const consoleChecked = document.getElementById('console-toggle').checked;
+  // Local proxy and corsproxy.io are mutually exclusive.
+  sessionStorage.removeItem(CORSPROXY_ENDPOINT_KEY);
+  sessionStorage.removeItem(CORSPROXY_KEY_KEY);
+  sessionStorage.removeItem(CORSPROXY_DD_KEY_KEY);
   const params = new URLSearchParams();
   if (url) params.set('proxy', url);
   if (!consoleChecked) params.set('console', '0');
@@ -309,6 +330,33 @@ function applyExportSettings(event) {
 function disconnectExport() {
   document.getElementById('proxy-url-input').value = '';
   applyExportSettings({ preventDefault() {} });
+}
+
+function applyCorsProxySettings(event) {
+  event.preventDefault();
+  const endpoint = document.getElementById('corsproxy-endpoint-input').value.trim();
+  const corsProxyKey = document.getElementById('corsproxy-key-input').value.trim();
+  const ddKey = document.getElementById('corsproxy-dd-key-input').value.trim();
+  if (!endpoint || !corsProxyKey || !ddKey) return;
+  sessionStorage.setItem(CORSPROXY_ENDPOINT_KEY, endpoint);
+  sessionStorage.setItem(CORSPROXY_KEY_KEY, corsProxyKey);
+  sessionStorage.setItem(CORSPROXY_DD_KEY_KEY, ddKey);
+  // Mutually exclusive with the local proxy — drop ?proxy= on reload.
+  const params = new URLSearchParams(location.search);
+  params.delete('proxy');
+  params.set('tab', 'config');
+  location.search = params.toString();
+}
+
+function clearCorsProxySettings() {
+  sessionStorage.removeItem(CORSPROXY_ENDPOINT_KEY);
+  sessionStorage.removeItem(CORSPROXY_KEY_KEY);
+  sessionStorage.removeItem(CORSPROXY_DD_KEY_KEY);
+  document.getElementById('corsproxy-key-input').value = '';
+  document.getElementById('corsproxy-dd-key-input').value = '';
+  const params = new URLSearchParams(location.search);
+  params.set('tab', 'config');
+  location.search = params.toString();
 }
 
 document.addEventListener('DOMContentLoaded', renderExportStatus);

@@ -68,6 +68,59 @@ jobs:
             -e "s|%%GITHUB_REPO%%|${GITHUB_REPO_URL}|g" \
             index.html README.md
 
+      # Cloudflare fronts the custom domain and caches static assets for
+      # up to 4h (cache-control: max-age=14400) independent of anything
+      # GitHub Pages does — a deploy alone doesn't purge it. Busted a real
+      # lab-shared.css staleness this way once already: the file changed,
+      # the deploy succeeded, but visitors kept getting the old edge-cached
+      # copy until the TTL expired. Appending ?v=<sha> changes the URL every
+      # deploy, so there's nothing to have gone stale — old cache entries
+      # just sit unused instead of getting served.
+      # Generic over every *.html file and every local (non-http) .css/.js
+      # reference, so a new page or asset needs no workflow change here.
+      - name: Cache-bust local CSS/JS asset references
+        run: |
+          python3 - << 'EOF'
+          import os
+          import re
+
+          sha = os.environ["GITHUB_SHA"][:7]
+          skip_dirs = {".git", "node_modules", "sourcemaps-upload"}
+          pattern = re.compile(r'(href|src)="([^"]+)"')
+
+          def should_version(path):
+              if path.startswith(("http://", "https://", "//", "data:")):
+                  return False
+              if "?" in path:
+                  return False
+              return path.endswith(".css") or path.endswith(".js")
+
+          def repl(m):
+              attr, path = m.group(1), m.group(2)
+              if should_version(path):
+                  return f'{attr}="{path}?v={sha}"'
+              return m.group(0)
+
+          touched = []
+          for root, dirs, files in os.walk("."):
+              dirs[:] = [d for d in dirs if d not in skip_dirs and not d.startswith(".")]
+              for name in files:
+                  if not name.endswith(".html"):
+                      continue
+                  path = os.path.join(root, name)
+                  with open(path) as f:
+                      content = f.read()
+                  new_content = pattern.sub(repl, content)
+                  if new_content != content:
+                      with open(path, "w") as f:
+                          f.write(new_content)
+                      touched.append(path)
+
+          print(f"Cache-busted assets in {len(touched)} file(s):")
+          for path in touched:
+              print(f"  {path}")
+          EOF
+
       - name: Validate config.js
         run: |
           # Fast check: no unreplaced placeholders

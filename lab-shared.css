@@ -24,6 +24,22 @@
 @media (max-width: 860px) { .sidebar-resizer { display: none; } }
 
 /* ============================================================
+   Resizable docked activity log — drag the top edge of #rum-log-wrap
+   to change how much vertical space the event table takes up.
+   #rum-log-wrap is already position: sticky, which is enough to serve
+   as this handle's containing block.
+   ============================================================ */
+.log-resizer {
+  position: absolute; top: -4px; left: 0; right: 0; height: 8px;
+  cursor: row-resize; z-index: 20; background: transparent;
+}
+.log-resizer {
+  transition: background var(--dd-speed-fast) var(--dd-ease);
+}
+.log-resizer:hover,
+.log-resizer.dragging { background: var(--dd-color-primary-fill); opacity: .5; }
+
+/* ============================================================
    Sidebar topic-tag palette — add more as new labs need them
    ============================================================ */
 .tag-consent { background: var(--dd-cyan-fill); color: var(--dd-cyan-on); }

@@ -64,6 +64,77 @@
 })();
 
 /**
+ * Drag-resize the docked activity log's table height. Requires markup:
+ *
+ *   <div id="rum-log-wrap">
+ *     <div class="log-resizer" id="log-resizer" title="Drag to resize"></div>
+ *     ...
+ *     <div id="rum-table-wrap">...</div>
+ *   </div>
+ *
+ * Height is stored in px (not vh) since the panel's own default is a
+ * min(180px, 22vh) — pick whichever unit the drag lands on and keep it
+ * simple. Shared across every page that includes this script, same as the
+ * sidebar width.
+ */
+(function () {
+  const resizer = document.getElementById('log-resizer');
+  const table = document.getElementById('rum-table-wrap');
+  if (!resizer || !table) return;
+
+  const MIN_HEIGHT = 80;
+  const MAX_HEIGHT = 600;
+  const STORAGE_KEY = 'ddLab.logHeight';
+
+  function applyHeight(px) {
+    const clamped = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, Math.round(px)));
+    // A fixed height, not max-height: the CSS default is a ceiling that only
+    // matters once content overflows it, which means dragging would have no
+    // visible effect on a short table. Setting height directly makes the
+    // drag always take effect, scrolling internally if content is taller.
+    table.style.height = clamped + 'px';
+    table.style.maxHeight = 'none';
+    return clamped;
+  }
+
+  const saved = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+  if (saved) applyHeight(saved);
+
+  let dragging = false;
+  let startY = 0;
+  let startHeight = 0;
+
+  function beginDrag(clientY) {
+    dragging = true;
+    startY = clientY;
+    startHeight = table.getBoundingClientRect().height;
+    resizer.classList.add('dragging');
+    document.body.style.userSelect = 'none';
+  }
+
+  // The panel is pinned to the bottom of the column, so dragging the top
+  // edge UP (clientY decreasing) should grow it — the delta is inverted
+  // relative to the sidebar resizer's left-to-right drag above.
+  function onMove(clientY) {
+    const height = applyHeight(startHeight + (startY - clientY));
+    localStorage.setItem(STORAGE_KEY, height);
+  }
+
+  resizer.addEventListener('mousedown', (e) => { beginDrag(e.clientY); e.preventDefault(); });
+  window.addEventListener('mousemove', (e) => { if (dragging) onMove(e.clientY); });
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    resizer.classList.remove('dragging');
+    document.body.style.userSelect = '';
+  });
+
+  resizer.addEventListener('touchstart', (e) => { if (e.touches[0]) beginDrag(e.touches[0].clientY); }, { passive: true });
+  window.addEventListener('touchmove', (e) => { if (dragging && e.touches[0]) onMove(e.touches[0].clientY); }, { passive: true });
+  window.addEventListener('touchend', () => { dragging = false; resizer.classList.remove('dragging'); });
+})();
+
+/**
  * Collapse/expand the docked activity log.
  *
  * The log is pinned to the bottom of the scrolling column so it can't be

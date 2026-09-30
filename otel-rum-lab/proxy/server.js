@@ -59,15 +59,20 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  const target = ROUTES[req.url];
-  if (req.method !== "POST" || !target) {
+  // A real 404 (unknown path/method) and "this route exists but has no
+  // endpoint configured" used to return the identical bare 404, making
+  // the two indistinguishable from the browser. Split them: only an
+  // actually-unrecognized route is a 404; a known route with an unset
+  // DD_OTLP_*_ENDPOINT says so.
+  if (req.method !== "POST" || !(req.url in ROUTES)) {
     res.writeHead(404).end("not found");
     return;
   }
 
-  if (!target.startsWith("http")) {
+  const target = ROUTES[req.url];
+  if (!target || !target.startsWith("http")) {
     res.writeHead(500).end(
-      `${req.url} has no configured upstream endpoint — set the matching DD_OTLP_*_ENDPOINT in .env`
+      `${req.url} has no configured upstream endpoint — set the matching DD_OTLP_*_ENDPOINT in .env and restart the proxy`
     );
     return;
   }

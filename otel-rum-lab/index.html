@@ -279,7 +279,7 @@
 
         <wa-details class="lab-aside" summary="Option B: via a CORS proxy service (corsproxy.io)">
           <p>An alternative to running your own proxy: <a href="https://corsproxy.io/" target="_blank" rel="noopener">corsproxy.io</a> relays the request and adds the CORS headers Datadog's OTLP intake doesn't send. Requires your own corsproxy.io account (their paid tier if you want a DPA covering this data) — both your corsproxy.io key <em>and</em> your Datadog key travel through their infrastructure, governed by whatever agreement you have with them. Same session-only storage as below: never saved to this page's code, never localStorage, only <code>sessionStorage</code> for this tab.</p>
-          <p style="font-size:.82rem; color:var(--dd-color-muted)">Unverified end-to-end — corsproxy.io's docs don't fully cover POST bodies with custom headers, so this is worth confirming actually reaches Datadog before relying on it.</p>
+          <p style="font-size:.82rem; color:var(--dd-color-muted)">Uses corsproxy.io's <code>reqHeaders</code> query param to forward <code>dd-api-key</code> (per their <a href="https://corsproxy.io/docs/header-rewrites/" target="_blank" rel="noopener">header-rewrites docs</a>) — sending it as a normal header instead gets the CORS preflight itself rejected. Verified the request shape matches their docs; whether it lands in Datadog end-to-end still needs confirming with a real account.</p>
           <form id="corsproxy-form" onsubmit="applyCorsProxySettings(event)">
             <select id="corsproxy-endpoint-input">
               <option value="https://otlp.datadoghq.com/v1/logs">US1 (datadoghq.com)</option>

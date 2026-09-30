@@ -84,13 +84,20 @@ if (CORSPROXY_ENDPOINT && CORSPROXY_KEY && CORSPROXY_DD_KEY) {
   // (forwarded through to the actual target). See the Config tab's
   // "Option B" callout for what that does and doesn't change about where
   // these secrets end up.
+  //
+  // Both go in the URL, not as fetch() headers: per corsproxy.io's own
+  // docs (corsproxy.io/docs/header-rewrites/), headers meant for the
+  // destination must be passed via a `reqHeaders=name:value` query
+  // param — it does not forward arbitrary request headers itself. Setting
+  // dd-api-key/x-cors-api-key as literal headers made the browser's CORS
+  // preflight ask corsproxy.io to allow headers it doesn't recognize,
+  // which it rejected outright (confirmed: preflight came back non-200).
+  const corsProxyUrl =
+    `https://corsproxy.io/?key=${encodeURIComponent(CORSPROXY_KEY)}` +
+    `&url=${encodeURIComponent(CORSPROXY_ENDPOINT)}` +
+    `&reqHeaders=dd-api-key:${encodeURIComponent(CORSPROXY_DD_KEY)}`;
   processors.push(
-    new BatchLogRecordProcessor({
-      exporter: new OTLPLogExporter({
-        url: `https://corsproxy.io/?url=${encodeURIComponent(CORSPROXY_ENDPOINT)}`,
-        headers: { "x-cors-api-key": CORSPROXY_KEY, "dd-api-key": CORSPROXY_DD_KEY },
-      }),
-    })
+    new BatchLogRecordProcessor({ exporter: new OTLPLogExporter({ url: corsProxyUrl }) })
   );
 } else if (PROXY_BASE) {
   processors.push(

@@ -40,26 +40,18 @@ import { initSession, getSessionId, endSession } from "./session.js";
 
 // The OTLP export target is optional and *off* by default so this page
 // works standalone on a static host (e.g. GitHub Pages) with zero backend.
-// The live event table below works purely client-side either way.
+// The live event table below works purely client-side either way. Turned
+// on via ?proxy= in the URL, set from the Config tab (see app.js) — a
+// local proxy is the only supported path.
 //
-// Two mutually exclusive ways to turn export on (set from the Config tab,
-// see app.js): a local proxy via ?proxy= in the URL (no secret involved),
-// or — for a quick test without running anything yourself — relaying
-// through corsproxy.io, which adds the CORS headers Datadog's OTLP intake
-// doesn't send. corsproxy.io's own key and the Datadog key are read from
-// sessionStorage, never the URL: URLs land in browser history and server
-// logs, sessionStorage doesn't.
-//
-// A "straight from the browser, no relay at all" mode used to live here;
-// removed because Datadog's OTLP intake has no CORS support at all, so
-// there was nothing a browser alone could ever do about it — confirmed
-// empirically (every attempt failed with a CORS preflight error and
-// retried forever in the background).
+// Two other modes used to live here: a "straight from the browser, no
+// relay at all" mode (removed — Datadog's OTLP intake has no CORS
+// support at all, confirmed empirically), and relaying through
+// corsproxy.io (removed — worked, but forwarding dd-api-key needs their
+// paid-plan-gated `reqHeaders` parameter, confirmed by their own 403).
+// Just running the proxy needs no third party or billing plan at all.
 const params = new URLSearchParams(location.search);
 const PROXY_BASE = params.get("proxy") || window.__OTEL_LAB_CONFIG__?.proxyBase || null;
-const CORSPROXY_ENDPOINT = sessionStorage.getItem("otelLabCorsProxyEndpoint") || null;
-const CORSPROXY_KEY = sessionStorage.getItem("otelLabCorsProxyKey") || null;
-const CORSPROXY_DD_KEY = sessionStorage.getItem("otelLabCorsProxyDdKey") || null;
 const DD_APPLICATION_ID = window.__OTEL_LAB_CONFIG__?.applicationId ?? "UNSET";
 
 const resource = resourceFromAttributes({
@@ -77,29 +69,7 @@ const processors = [new LiveTableLogProcessor()];
 if (params.get("console") !== "0") {
   processors.push(new SimpleLogRecordProcessor(new ConsoleLogRecordExporter()));
 }
-if (CORSPROXY_ENDPOINT && CORSPROXY_KEY && CORSPROXY_DD_KEY) {
-  // corsproxy.io relays the request and stamps the CORS headers Datadog's
-  // OTLP intake doesn't send. Two credentials travel with every request:
-  // corsproxy.io's own key (authenticates us to them) and the Datadog key
-  // (forwarded through to the actual target). See the Config tab's
-  // "Option B" callout for what that does and doesn't change about where
-  // these secrets end up.
-  //
-  // Both go in the URL, not as fetch() headers: per corsproxy.io's own
-  // docs (corsproxy.io/docs/header-rewrites/), headers meant for the
-  // destination must be passed via a `reqHeaders=name:value` query
-  // param — it does not forward arbitrary request headers itself. Setting
-  // dd-api-key/x-cors-api-key as literal headers made the browser's CORS
-  // preflight ask corsproxy.io to allow headers it doesn't recognize,
-  // which it rejected outright (confirmed: preflight came back non-200).
-  const corsProxyUrl =
-    `https://corsproxy.io/?key=${encodeURIComponent(CORSPROXY_KEY)}` +
-    `&url=${encodeURIComponent(CORSPROXY_ENDPOINT)}` +
-    `&reqHeaders=dd-api-key:${encodeURIComponent(CORSPROXY_DD_KEY)}`;
-  processors.push(
-    new BatchLogRecordProcessor({ exporter: new OTLPLogExporter({ url: corsProxyUrl }) })
-  );
-} else if (PROXY_BASE) {
+if (PROXY_BASE) {
   processors.push(
     new BatchLogRecordProcessor({ exporter: new OTLPLogExporter({ url: `${PROXY_BASE}/v1/logs` }) })
   );

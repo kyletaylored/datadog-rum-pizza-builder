@@ -30,11 +30,8 @@
   /* ===== OTel lab — page-specific components only. Everything reusable
      (sidebar, tabs, wizard, activity log, mode-picker, state pill) lives in
      ../style.css / ../lab-shared.css. ===== */
-  #export-form, #corsproxy-form { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
-  #corsproxy-form { margin-top: .75rem; }
-  #export-form input[type="url"],
-  #corsproxy-form select,
-  #corsproxy-form input[type="password"] {
+  #export-form { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+  #export-form input[type="url"] {
     flex: 1 1 200px; min-width: 0; font-family: monospace; font-size: .85rem;
     padding: .45em .7em; border: 1px solid var(--dd-color-border); border-radius: var(--dd-radius);
     background: var(--dd-surface); color: inherit;
@@ -277,25 +274,6 @@
         </label>
         <p style="margin-top:.85rem">Status: <span id="export-status-pill" class="consent-state-pill pending">static mode</span></p>
 
-        <wa-details class="lab-aside" summary="Option B: via a CORS proxy service (corsproxy.io)">
-          <p>An alternative to running your own proxy: <a href="https://corsproxy.io/" target="_blank" rel="noopener">corsproxy.io</a> relays the request and adds the CORS headers Datadog's OTLP intake doesn't send. Requires your own corsproxy.io account — both your corsproxy.io key <em>and</em> your Datadog key travel through their infrastructure, governed by whatever agreement you have with them. Same session-only storage as below: never saved to this page's code, never localStorage, only <code>sessionStorage</code> for this tab.</p>
-          <p style="font-size:.82rem; color:var(--dd-color-muted)">Forwards <code>dd-api-key</code> via corsproxy.io's <code>reqHeaders</code> query param (per their <a href="https://corsproxy.io/docs/header-rewrites/" target="_blank" rel="noopener">header-rewrites docs</a>) rather than as a normal header, which gets the CORS preflight itself rejected. <strong>Confirmed this needs their paid plan</strong> — their free tier returns <code>403 "Advanced parameters require a paid plan"</code> for <code>reqHeaders</code>. On a paid plan, the request shape is verified correct; whether it lands in Datadog end-to-end still hasn't been confirmed against a real paid account.</p>
-          <form id="corsproxy-form" onsubmit="applyCorsProxySettings(event)">
-            <select id="corsproxy-endpoint-input">
-              <option value="https://otlp.datadoghq.com/v1/logs">US1 (datadoghq.com)</option>
-              <option value="https://otlp.us3.datadoghq.com/v1/logs">US3</option>
-              <option value="https://otlp.us5.datadoghq.com/v1/logs">US5</option>
-              <option value="https://otlp.datadoghq.eu/v1/logs">EU1 (datadoghq.eu)</option>
-              <option value="https://otlp.ap1.datadoghq.com/v1/logs">AP1</option>
-              <option value="https://otlp.ap2.datadoghq.com/v1/logs">AP2</option>
-            </select>
-            <input type="password" id="corsproxy-key-input" placeholder="corsproxy.io API key" autocomplete="off">
-            <input type="password" id="corsproxy-dd-key-input" placeholder="dd-api-key" autocomplete="off">
-            <button type="submit" class="wa-brand">Connect via corsproxy.io</button>
-            <button type="button" class="wa-neutral wa-outlined" onclick="clearCorsProxySettings()">Clear keys</button>
-          </form>
-        </wa-details>
-
         <h3>What's on this page right now</h3>
         <p>Reflects the actual pipeline configuration for your current settings.</p>
         <pre class="config-code"><code id="config-json"></code></pre>
@@ -321,7 +299,6 @@
   document.getElementById('config-json').textContent = JSON.stringify({
     applicationId: window.__OTEL_LAB_CONFIG__.applicationId,
     proxy: new URLSearchParams(location.search).get('proxy') || null,
-    corsProxy: Boolean(sessionStorage.getItem('otelLabCorsProxyEndpoint')), // keys themselves never shown
     consoleExport: new URLSearchParams(location.search).get('console') !== '0',
   }, null, 2);
 </script>

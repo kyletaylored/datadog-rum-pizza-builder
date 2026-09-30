@@ -75,10 +75,6 @@ wa-callout.lab-callout {
 .consent-state-pill.granted     { background: var(--dd-green-fill);  color: var(--dd-green-on); }
 .consent-state-pill.not-granted { background: var(--dd-red-fill);    color: var(--dd-red-on); }
 .consent-state-pill.pending     { background: var(--dd-yellow-fill); color: var(--dd-yellow-on); }
-/* Active, but carrying elevated risk (e.g. a secret relayed through a
-   third-party service) — distinct from "granted" so the extra caution
-   stays visible at a glance. */
-.consent-state-pill.warning     { background: var(--dd-orange-fill); color: var(--dd-orange-on); }
 
 /* ============================================================
    Storage grid / card — live read-only inspector panels

@@ -103,8 +103,8 @@
       <wa-details class="sidebar-section" appearance="plain">
         <span slot="summary"><span class="sidebar-tag tag-storage">Export</span><span class="sidebar-section-title">Why there's a proxy at all</span></span>
         <div class="sidebar-section-body">
-          <p>Datadog's OTLP intake takes a real API key (<code>dd-api-key</code> header) — unlike the RUM SDK's public <code>clientToken</code>, that's not meant to ship in a browser bundle. So this page talks to your own small local proxy instead, which holds the key server-side.</p>
-          <p>Wire it up from the <strong>Config</strong> tab.</p>
+          <p>Datadog's OTLP intake has no CORS support at all — confirmed by probing the preflight response directly, every combination comes back with zero <code>Access-Control-*</code> headers. A browser can never call it directly, so this page talks to your own small local proxy instead (server-to-server, no CORS involved).</p>
+          <p>The key the proxy holds doesn't need to be a separate Datadog API key — the RUM app's own public <code>clientToken</code> works fine in that slot, confirmed by testing. Wire it up from the <strong>Config</strong> tab.</p>
         </div>
       </wa-details>
 

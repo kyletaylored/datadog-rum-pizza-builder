@@ -26,7 +26,7 @@ Two things shape the whole design:
 
 **1. Everything here is log-based, not span-based — on purpose.** `@opentelemetry/browser-instrumentation` publishes separate modules for navigation, clicks, errors, web vitals, resource timing, and console capture, and all of them emit OpenTelemetry **log records**, not spans. That means the whole pipeline needs is `@opentelemetry/sdk-logs` — no `sdk-trace-web`, no Zone.js/`context-zone`, no per-instrumentation trace-context plumbing. (The same package also ships `fetch`/`xhr` instrumentations, but those two are span-based and need a full trace pipeline to do anything; this lab leaves them out to stay minimal — see "What's not included" below.) Dropping the span pipeline entirely roughly halved the bundle size compared to an earlier version of this lab that assembled `sdk-trace-web` + individual instrumentation packages by hand.
 
-**2. Datadog's OTLP intake is authenticated with a real API key (`dd-api-key` header), not a public client token.** The RUM SDK's `clientToken` is explicitly designed to be embedded in shipped JS; a Datadog API key is not — even a scoped one, since intake is billed on volume and a leaked key can still be used to run up ingestion costs. So **this page never holds a key, and OTLP export is off by default.** The live event table works with zero network calls either way — that's the actual educational payload. To see events actually land in Datadog, run the small local proxy in `proxy/server.js` (~20 lines) that holds the real key server-side, then point the page at it from the **Config** tab (a small form — no manual URL editing).
+**2. Datadog's OTLP intake has no CORS support, full stop** — confirmed by directly probing the preflight response: every combination we tried (key as a header, key as a query param, `/v1/logs`, `/api/v2/otlplogs`, with or without a key at all) comes back with zero `Access-Control-*` headers, because the backend runs its normal auth check even for an `OPTIONS` preflight and just 403s before ever reaching CORS logic. So a browser can never call it directly, no matter what credential is used or how it's supplied — **this page never holds a key, and OTLP export is off by default.** The live event table works with zero network calls either way — that's the actual educational payload. To see events actually land in Datadog, run the small local proxy in `proxy/server.js` (~20 lines; server-to-server, so CORS doesn't apply), then point the page at it from the **Config** tab (a small form — no manual URL editing). The `dd-api-key` it holds doesn't have to be a separate, broadly-scoped Datadog API key, either — confirmed empirically that the RUM app's own public `clientToken` (already sitting in the deployed root app) works fine in that slot, which is the lower-stakes credential to reuse here.
 
 ## The live event table
 
@@ -82,7 +82,7 @@ npx serve .                   # from the repo root — not file://, instrumentat
 
 Click through the wizard — the live event table fills in immediately, no proxy or API key required.
 
-To also forward events to a real Datadog org: copy `otel-rum-lab/.env.example` to `.env` with a real API key and your org's OTLP logs endpoint, run `npm run proxy` in a second terminal, then use the form on the **Config** tab to connect to it (defaults to `http://localhost:8791`).
+To also forward events to a real Datadog org: copy `otel-rum-lab/.env.example` to `.env` with your org's OTLP logs endpoint and a key in the `dd-api-key` slot — the RUM app's own client token works (see `.env.example`), no separate API key needed — then run `npm run proxy` in a second terminal and use the form on the **Config** tab to connect to it (defaults to `http://localhost:8791`).
 
 ## Deployment
 
@@ -96,4 +96,4 @@ To also forward events to a real Datadog org: copy `otel-rum-lab/.env.example` t
 - esbuild — bundles the npm-only OTel packages into `dist/bundle.js`
 - `app.js` — plain, unbundled page UI (theme, tabs, wizard, table, the export form), loaded *before* the bundle so `window.otelLab.logEvent` exists by the time events start arriving. Same split as `../app.js` and `../consent-lab/app.js`: OTel setup only in the bundle, everything about how the page looks and behaves lives here instead
 - `../tokens.css`, `../style.css`, `../lab-shared.css`, `../lab-shared.js` — this lab is a skin on the same design system as the rest of the site, not a one-off page
-- A minimal Node proxy — the only thing holding the real API key, and entirely optional
+- A minimal Node proxy — the only thing holding a key (your RUM app's client token works fine), and entirely optional

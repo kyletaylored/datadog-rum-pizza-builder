@@ -84,7 +84,22 @@ registerInstrumentations({
     new UserActionInstrumentation(),
     new ErrorsInstrumentation(),
     new WebVitalsInstrumentation(),
-    new ResourceTimingInstrumentation(),
+    new ResourceTimingInstrumentation({
+      // Two fixes borrowed from the official sandbox
+      // (opentelemetry-browser/tree/main/sandbox), which hits the same two
+      // problems and solves them at the source instead of at display time:
+      //   - initiatorTypes: only fetch/xhr calls are "real" network activity
+      //     worth a row. Without this, every static asset load (~55 Web
+      //     Awesome chunks) gets captured — and, once export is on, actually
+      //     shipped to Datadog, not just shown in the table. app.js's own
+      //     isLoggableResourceTiming filter only ever hid them from the UI.
+      //   - ignoreUrls: without this, exporting a batch to our own proxy is
+      //     itself a fetch the instrumentation captures, which gets exported
+      //     in the next batch, which gets captured again — a self-feeding
+      //     trickle for as long as the tab stays open with export on.
+      initiatorTypes: ["fetch", "xmlhttprequest"],
+      ignoreUrls: [/\/v1\/logs$/, /\/v1\/traces$/],
+    }),
     // Restricted to warn/error so this doesn't flood the live table with
     // routine console.log noise from the page or its dependencies.
     new ConsoleInstrumentation({ logMethods: ["warn", "error"] }),

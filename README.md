@@ -150,7 +150,7 @@ Environments are discovered, not listed: the root plus any top-level directory w
 
 ## Deployment
 
-This repo is deployed via **GitHub Pages** by [the Pages workflow](.github/workflows/jekyll-docker.yml), which runs `npm ci`, `npm run build`, and `npm run sourcemaps:upload`, then publishes `_site/`. Any push to `main` updates the live demo automatically.
+This repo is deployed via **GitHub Pages** by [the Pages workflow](.github/workflows/jekyll-docker.yml), which runs `npm ci`, `npm run build`, and `npm run sourcemaps:upload`, then publishes `_site/`. Any push to `main` updates the live demo automatically; pull requests run the same build as a check but never deploy.
 
 ---
 

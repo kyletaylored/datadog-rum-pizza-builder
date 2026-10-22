@@ -72,21 +72,18 @@ Everything in the first six rows is stock instrumentation from the npm package �
 This page shares its CSS/JS chrome (`tokens.css`, `style.css`, `lab-shared.css`, `lab-shared.js`) with the rest of the site via `../` paths — the same way `../consent-lab/` does — so **serve from the repo root**, not from inside this directory, or those requests 404.
 
 ```bash
-cd otel-rum-lab
-npm install
-npm run build                # bundles src/main.js → dist/bundle.js
-cd ..
-npx serve .                   # from the repo root — not file://, instrumentation needs real HTTP
-# open http://localhost:3000/otel-rum-lab/
+npm install                  # from the repo root — one package.json builds every lab
+npm run dev                  # bundles src/main.js → dist/bundle.js on change, serves the repo root
+# open http://localhost:8765/otel-rum-lab/
 ```
 
 Click through the wizard — the live event table fills in immediately, no proxy or API key required.
 
-To also forward events to a real Datadog org: copy `otel-rum-lab/.env.example` to `.env` with your org's OTLP logs endpoint and a key in the `dd-api-key` slot — the RUM app's own client token works (see `.env.example`), no separate API key needed — then run `npm run proxy` in a second terminal and use the form on the **Config** tab to connect to it (defaults to `http://localhost:8791`).
+To also forward events to a real Datadog org: copy `otel-rum-lab/.env.example` to `.env` with your org's OTLP logs endpoint and a key in the `dd-api-key` slot — the RUM app's own client token works (see `.env.example`), no separate API key needed — then run `npm run proxy` (from the repo root) in a second terminal and use the form on the **Config** tab to connect to it (defaults to `http://localhost:8791`).
 
 ## Deployment
 
-`dist/` is gitignored — it's a build output, not source. The repo's GitHub Pages workflow builds this lab (`npm ci && npm run build`) before publishing, so the committed source is all that needs to exist; the bundle is generated fresh on every deploy.
+`dist/` is gitignored — it's a build output, not source. The repo's root `npm run build` bundles this lab along with every other environment, and the GitHub Pages workflow runs it before publishing, so the committed source is all that needs to exist; the bundle is generated fresh on every deploy.
 
 ## Stack
 

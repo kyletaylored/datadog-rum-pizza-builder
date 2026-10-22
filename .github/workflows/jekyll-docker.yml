@@ -24,19 +24,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # dist/ is gitignored (it's a build output, not source), so the lab
-      # needs its bundle built here — the checkout alone has no bundle.js.
-      # Runs before everything else so a build failure fails fast, before
-      # spending time on config generation / source maps / uploads.
-      - name: Build otel-rum-lab
-        run: |
-          cd otel-rum-lab
-          npm ci
-          npm run build
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
 
-      # Runs first among the URL/config-dependent steps because everything
-      # below needs the real site URL. Its
-      # base_url output comes from the Pages API, so it reflects a custom
+      - name: Install dependencies
+        run: npm ci
+
+      # Its base_url output comes from the Pages API, so it reflects a custom
       # domain; GITHUB_REPOSITORY_OWNER can only ever reconstruct the default
       # github.io host, which is wrong the moment a CNAME is in play. Note a
       # custom domain on the *user* site (owner.github.io) also rebases every
@@ -45,207 +41,27 @@ jobs:
         id: pages
         uses: actions/configure-pages@v6
 
-      - name: Generate config.js from template
+      # One build for every environment (home + each lab directory) into
+      # _site/: bundles, config.js, URL templating, cache-busting, source
+      # maps, and validation. See scripts/build.js — the same command runs
+      # locally, so there's no CI-only build logic to drift from.
+      - name: Build all environments
         env:
           DD_APP_ID: ${{ secrets.DD_APP_ID }}
           DD_CLIENT_TOKEN: ${{ secrets.DD_CLIENT_TOKEN }}
-        run: |
-          sed \
-            -e "s/%%DD_APP_ID%%/${DD_APP_ID}/" \
-            -e "s/%%DD_CLIENT_TOKEN%%/${DD_CLIENT_TOKEN}/" \
-            -e "s/%%VERSION%%/${GITHUB_SHA:0:7}/" \
-            config.template.js > config.js
-
-          # otel-rum-lab doesn't load config.js (it never initializes the RUM
-          # SDK), but it still stamps datadog.application.id on every event
-          # it sends — same app as the RUM-SDK version, from the same secret,
-          # so the two never drift apart.
-          sed -i "s/%%DD_APP_ID%%/${DD_APP_ID}/" otel-rum-lab/index.html
-
-      - name: Inject GitHub URLs
-        env:
           PAGES_URL: ${{ steps.pages.outputs.base_url }}
-        run: |
-          # base_url has no trailing slash, which is what the templates expect
-          # (they write "%%PAGES_URL%%/" and "%%PAGES_URL%%/assets/...").
-          GITHUB_REPO_URL="https://github.com/${GITHUB_REPOSITORY}"
-          sed -i \
-            -e "s|%%PAGES_URL%%|${PAGES_URL%/}|g" \
-            -e "s|%%GITHUB_REPO%%|${GITHUB_REPO_URL}|g" \
-            index.html README.md
-
-      # Cloudflare fronts the custom domain and caches static assets for
-      # up to 4h (cache-control: max-age=14400) independent of anything
-      # GitHub Pages does — a deploy alone doesn't purge it. Busted a real
-      # lab-shared.css staleness this way once already: the file changed,
-      # the deploy succeeded, but visitors kept getting the old edge-cached
-      # copy until the TTL expired. Appending ?v=<sha> changes the URL every
-      # deploy, so there's nothing to have gone stale — old cache entries
-      # just sit unused instead of getting served.
-      # Generic over every *.html file and every local (non-http) .css/.js
-      # reference, so a new page or asset needs no workflow change here.
-      - name: Cache-bust local CSS/JS asset references
-        run: |
-          python3 - << 'EOF'
-          import os
-          import re
-
-          sha = os.environ["GITHUB_SHA"][:7]
-          skip_dirs = {".git", "node_modules", "sourcemaps-upload"}
-          pattern = re.compile(r'(href|src)="([^"]+)"')
-
-          def should_version(path):
-              if path.startswith(("http://", "https://", "//", "data:")):
-                  return False
-              if "?" in path:
-                  return False
-              return path.endswith(".css") or path.endswith(".js")
-
-          def repl(m):
-              attr, path = m.group(1), m.group(2)
-              if should_version(path):
-                  return f'{attr}="{path}?v={sha}"'
-              return m.group(0)
-
-          touched = []
-          for root, dirs, files in os.walk("."):
-              dirs[:] = [d for d in dirs if d not in skip_dirs and not d.startswith(".")]
-              for name in files:
-                  if not name.endswith(".html"):
-                      continue
-                  path = os.path.join(root, name)
-                  with open(path) as f:
-                      content = f.read()
-                  new_content = pattern.sub(repl, content)
-                  if new_content != content:
-                      with open(path, "w") as f:
-                          f.write(new_content)
-                      touched.append(path)
-
-          print(f"Cache-busted assets in {len(touched)} file(s):")
-          for path in touched:
-              print(f"  {path}")
-          EOF
-
-      - name: Validate config.js
-        run: |
-          # Fast check: no unreplaced placeholders
-          if grep -q '%%' config.js; then
-            echo "ERROR: Unreplaced placeholders remain in config.js — check that DD_APP_ID and DD_CLIENT_TOKEN secrets are set"
-            grep '%%' config.js
-            exit 1
-          fi
-
-          if grep -q '%%DD_APP_ID%%' otel-rum-lab/index.html; then
-            echo "ERROR: Unreplaced %%DD_APP_ID%% remains in otel-rum-lab/index.html — check that the DD_APP_ID secret is set"
-            exit 1
-          fi
-
-          # Full validation: required fields are present and non-empty
-          node - << 'EOF'
-          const fs = require('fs');
-
-          // Mock browser globals — simulate a GitHub Pages hostname
-          const owner = process.env.GITHUB_REPOSITORY_OWNER;
-          global.window = { location: { hostname: `${owner}.github.io` } };
-
-          eval(fs.readFileSync('config.js', 'utf8'));
-
-          const cfg = window.DD_CONFIG;
-          const required = ['applicationId', 'clientToken', 'site', 'service', 'version'];
-          const missing = required.filter(k => !cfg[k]);
-
-          if (missing.length) {
-            console.error('ERROR: Missing or empty fields in DD_CONFIG:', missing.join(', '));
-            process.exit(1);
-          }
-
-          console.log('config.js validation passed');
-          console.log('  service:', cfg.service);
-          console.log('  version:', cfg.version);
-          console.log('  env:    ', cfg.env);
-          EOF
-
-      - name: Generate source maps
-        run: |
-          # Discover instrumented entrypoints rather than listing them, so a
-          # new lab directory needs no workflow change.
-          find . -name 'app.js' \
-            -not -path './.git/*' \
-            -not -path './node_modules/*' \
-            -not -path './sourcemaps-upload/*' \
-            | sed 's|^\./||' | sort > .entrypoints
-
-          count=$(wc -l < .entrypoints | tr -d ' ')
-          if [ "$count" -eq 0 ]; then
-            echo "ERROR: no app.js entrypoints found"
-            exit 1
-          fi
-          echo "Found $count entrypoint(s):"
-          sed 's/^/  /' .entrypoints
-
-          while read -r js; do
-            base="$(basename "$js")"
-            # Identity source maps (no minification) so Datadog can link stack
-            # frames to exact GitHub file + line references.
-            npx --yes terser "$js" \
-              --source-map "url='${base}.map',root=''" \
-              --output "$js" \
-              --no-compress \
-              --no-mangle
-            # terser doesn't reliably set the `file` field — datadog-ci uses it
-            # to construct the JS URL, so set it explicitly.
-            node -e "
-              const fs=require('fs');
-              const m=JSON.parse(fs.readFileSync('$js.map','utf8'));
-              m.file='$base';
-              fs.writeFileSync('$js.map', JSON.stringify(m));
-            "
-          done < .entrypoints
-
-      - name: Validate source maps
-        run: |
-          while read -r js; do
-            echo "--- $js"
-            tail -1 "$js"
-            node -e "
-              const m=JSON.parse(require('fs').readFileSync('$js.map','utf8'));
-              console.log('  file:', m.file, '| sources:', JSON.stringify(m.sources));
-              if (!m.file || !m.mappings) { console.error('ERROR: incomplete source map for $js'); process.exit(1); }
-            "
-          done < .entrypoints
+        run: npm run build
 
       - name: Upload source maps to Datadog
         env:
           DATADOG_API_KEY: ${{ secrets.DD_API_KEY }}
           PAGES_URL: ${{ steps.pages.outputs.base_url }}
-        run: |
-          # Stage each file under the same relative path Pages serves it at.
-          # datadog-ci joins that path onto --minified-path-prefix, so one
-          # upload covers every entrypoint:
-          #   app.js             -> $PAGES_URL/app.js
-          #   consent-lab/app.js -> $PAGES_URL/consent-lab/app.js
-          # Staging also keeps datadog-ci's basePath handling from stripping
-          # the dot out of 'app.js' when uploading from '.'.
-          while read -r js; do
-            mkdir -p "sourcemaps-upload/$(dirname "$js")"
-            cp "$js" "$js.map" "sourcemaps-upload/$(dirname "$js")/"
-          done < .entrypoints
-          find sourcemaps-upload -type f | sort
-          # --service and --release-version must match the `service` and
-          # `version` tags on the RUM/Logs events, or frames won't resolve.
-          npx --yes @datadog/datadog-ci sourcemaps upload sourcemaps-upload \
-            --service datadog-rum-pizza-builder \
-            --release-version ${GITHUB_SHA:0:7} \
-            --minified-path-prefix "${PAGES_URL%/}/"
-
-      - name: Clean up build artifacts
-        run: rm -rf sourcemaps-upload .entrypoints otel-rum-lab/node_modules
+        run: npm run sourcemaps:upload
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: '.'
+          path: _site
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5

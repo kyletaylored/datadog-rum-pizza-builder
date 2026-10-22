@@ -1,0 +1,33 @@
+{
+  "name": "datadog-rum-pizza-builder",
+  "private": true,
+  "type": "module",
+  "description": "Datadog RUM playground — the pizza builder home page plus every lab, built from one package.json",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build.js",
+    "build:bundles": "node scripts/bundle.js",
+    "dev": "node scripts/dev.js",
+    "preview": "npm run build && node scripts/serve.js _site",
+    "sourcemaps:upload": "node scripts/upload-sourcemaps.js",
+    "labs": "node scripts/labs.js",
+    "proxy": "node otel-rum-lab/proxy/server.js",
+    "clean": "node -e \"for (const d of ['_site','sourcemaps-upload']) require('fs').rmSync(d,{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/api-logs": "^0.222.0",
+    "@opentelemetry/browser-instrumentation": "^0.8.1",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.222.0",
+    "@opentelemetry/instrumentation": "^0.222.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-logs": "^0.222.0",
+    "@opentelemetry/semantic-conventions": "^1.43.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "terser": "^5.46.0"
+  }
+}

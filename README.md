@@ -125,17 +125,32 @@ The lab also calls out an important caveat: switching to `local-storage` removes
 
 ## Running locally
 
-Just open `index.html` in a browser — no build step, no server required. Everything is loaded from CDN.
+Every environment — this home page and each lab directory — builds from the one `package.json` at the repo root:
 
 ```bash
-open index.html
+npm install
+cp config.template.js config.js   # fill in your applicationId + clientToken
+npm run dev                        # serve the repo root at http://localhost:8765, rebuilding lab bundles on change
 ```
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Watches every lab bundle and serves the repo root with caching disabled — edit and reload |
+| `npm run build` | Builds every environment into `_site/`: bundles, `config.js`, URL templating, cache-busting, source maps, validation |
+| `npm run preview` | `build`, then serves `_site/` exactly as it will be deployed |
+| `npm run labs` | Lists the environments the build discovered |
+| `npm run proxy` | Starts the [OTel lab](otel-rum-lab/)'s optional local OTLP proxy |
+| `npm run sourcemaps:upload` | Uploads `_site/`'s source maps to Datadog (needs `DATADOG_API_KEY` and `PAGES_URL`) |
+
+Environments are discovered, not listed: the root plus any top-level directory with an `index.html` is one, and a lab with a `src/main.js` gets it bundled by esbuild into `<lab>/dist/bundle.js`. Adding a lab needs no build or workflow change. See [`scripts/build.js`](scripts/build.js) for every step.
+
+`npm run build` reads `DD_APP_ID` / `DD_CLIENT_TOKEN` from the environment and falls back to your local `config.js`; `PAGES_URL`, `VERSION`, and `GITHUB_REPOSITORY` are optional.
 
 ---
 
 ## Deployment
 
-This repo is deployed via **GitHub Pages** from the `main` branch root. Any push to `main` updates the live demo automatically.
+This repo is deployed via **GitHub Pages** by [the Pages workflow](.github/workflows/jekyll-docker.yml), which runs `npm ci`, `npm run build`, and `npm run sourcemaps:upload`, then publishes `_site/`. Any push to `main` updates the live demo automatically.
 
 ---
 
@@ -144,4 +159,4 @@ This repo is deployed via **GitHub Pages** from the `main` branch root. Any push
 - [Datadog RUM Browser SDK v6](https://docs.datadoghq.com/real_user_monitoring/browser/)
 - [Web Awesome 3](https://webawesome.com/) — framework-agnostic web components, loaded from CDN
 - A small design-token layer of our own (`tokens.css`) that every custom component reads from, so the framework underneath stays swappable
-- Vanilla JS, no build tooling
+- Vanilla JS pages; one root `package.json` builds every environment (esbuild for the lab bundles, terser for source maps)

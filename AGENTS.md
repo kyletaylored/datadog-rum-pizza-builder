@@ -1,197 +1,141 @@
-# Codex Handoff: `datadog-rum-pizza-builder`
+# Agent Guide: `datadog-rum-pizza-builder`
 
-## What we're doing
+A playground and showcase for testing Datadog RUM events and synthetics hosted on GitHub Pages. It's meant to educate and demonstrate RUM and Synthetic Testing features for different use cases and solutions built on the Datadog Real User Monitoring SDKs.
 
-Setting up a GitHub repo called `datadog-rum-pizza-builder`, adding the pizza wizard HTML demo and a README, then enabling GitHub Pages so it's live at `https://<username>.github.io/datadog-rum-pizza-builder/`.
+The site is a set of **environments**: the pizza builder home page at the repo root, plus one directory per **lab** (`consent-lab/`, `otel-rum-lab/`, …). All of them build from the single `package.json` at the repo root.
 
 ---
 
-## Step 1 — Create the repo
+## Repo layout
 
-Create a new **public** GitHub repo named `datadog-rum-pizza-builder`. No template, no auto-initialized README (we'll add our own).
+| Path | What it is |
+| --- | --- |
+| `index.html`, `app.js` | Home environment — the pizza builder |
+| `<lab>/index.html`, `<lab>/app.js` | A lab environment |
+| `<lab>/src/main.js` | Optional npm-bundled entry for a lab → `<lab>/dist/bundle.js` (gitignored) |
+| `tokens.css`, `style.css`, `lab-shared.css`, `lab-shared.js` | Shared design system and page chrome used by every environment |
+| `config.template.js` | Template for `config.js` (`window.DD_CONFIG`), the shared Datadog RUM/Logs settings |
+| `scripts/` | Build tooling: `labs.js` (discovery), `build.js`, `bundle.js`, `dev.js`, `serve.js`, `upload-sourcemaps.js` |
+| `.github/workflows/jekyll-docker.yml` | Pages deploy: `npm ci` → `npm run build` → `npm run sourcemaps:upload` → publish `_site/` |
+
+## Commands
+
+Run from the repo root.
+
+| Command | What it does |
+| --- | --- |
+| `npm install` | Installs dependencies for every environment |
+| `npm run dev` | Watches every lab bundle and serves the repo root at `http://localhost:8765` with caching disabled |
+| `npm run build` | Builds every environment into `_site/` (bundles, `config.js`, placeholders, cache-busting, source maps, validation) |
+| `npm run preview` | `build`, then serves `_site/` exactly as it will be deployed |
+| `npm run labs` | Lists the environments the build discovered |
+| `npm run proxy` | Starts the OTel lab's optional local OTLP proxy |
+
+For local RUM data, `cp config.template.js config.js` and fill in `applicationId` and `clientToken`. `config.js` is gitignored and must never be committed.
+
+---
+
+## Adding a new lab
+
+Labs are **discovered, not registered**. Any top-level directory with an `index.html` is an environment (see `scripts/labs.js`), so a new lab needs **no build-script or workflow changes**. If you find yourself editing `scripts/build.js` or the workflow just to add a lab, stop and rethink the approach.
+
+### 1. Create the directory
+
+- Put it at the **top level** (`my-thing-lab/`, not `labs/my-thing/`). Discovery only looks one level deep.
+- Use kebab-case and end the name with `-lab`, matching `consent-lab` and `otel-rum-lab`.
+- Don't use a reserved name: `scripts`, `assets`, `_site`, `_reference`, `node_modules`, `sourcemaps-upload`.
+
+### 2. Write `<lab>/index.html`
+
+Start from `consent-lab/index.html` (it uses the RUM/Logs SDKs) or `otel-rum-lab/index.html` (it uses an npm bundle and no Datadog SDK). Keep the same skeleton:
+
+- **`<head>`**, in this order:
+  - Web Awesome, pinned to the same version and loaded from `dist-cdn` (not `dist`) — see the comment in `consent-lab/index.html` for why
+  - the Datadog RUM / Logs CDN snippets, if the lab uses them
+  - `<script src="../config.js"></script>`
+  - `../tokens.css`, `../style.css`, `../lab-shared.css`
+  - the inline pre-paint theme script, copied as-is (it stays duplicated per page on purpose)
+  - a `<style>` block for **page-specific** rules only
+- **Layout markup** that `lab-shared.js` expects: `.training-layout` > `aside.training-sidebar` (including `#sidebar-resizer`) + `.training-main`.
+- **A `← Back to Pizza Builder` link** with `href="../"` in the sidebar intro, plus the standard sidebar footer.
+- **Scripts at the end of `<body>`:** `../lab-shared.js`, then `app.js`, then `dist/bundle.js` if the lab has one.
+
+### 3. Write `<lab>/app.js`
+
+- Page logic goes here. Name it exactly `app.js`: the build only generates and uploads source maps for each environment's `app.js`.
+- Initialize the SDKs from `window.DD_CONFIG`, never from hardcoded values:
+
+  ```javascript
+  window.DD_RUM && window.DD_RUM.onReady(function () {
+    const cfg = window.DD_CONFIG || {};
+    window.DD_RUM.init({
+      applicationId: cfg.applicationId,
+      clientToken: cfg.clientToken,
+      site: cfg.site,
+      service: cfg.service,
+      version: cfg.version,
+      env: cfg.env,
+      // lab-specific options…
+    });
+  });
+  ```
+
+  `service` and `version` have to match what source maps are uploaded under, or stack frames won't resolve. Every environment shares one RUM application and one service.
+- If the lab shows a live event table fed by `beforeSend`, filter out static-asset resources (the Web Awesome autoloader alone pulls ~55 chunks per load) but still `return true` so everything reaches Datadog. `consent-lab/app.js` has the pattern.
+
+### 4. Optional: npm dependencies
+
+- Add packages to the **root** `package.json` (`npm install <pkg>` from the repo root). **Never** add a `package.json`, lockfile or build script inside a lab.
+- Put the entry at `<lab>/src/main.js`. `npm run build` and `npm run dev` bundle it to `<lab>/dist/bundle.js` automatically (IIFE, es2020, with a source map).
+- Keep UI code in `app.js` and only the SDK/library setup in the bundle. Load the bundle after `app.js`, so anything `app.js` exposes on `window` exists before the bundle runs (see `otel-rum-lab`).
+
+### 5. Know what gets published
+
+`_site/` is built from files git knows about, so gitignored files never ship. These are also excluded:
+
+- dotfiles and `node_modules`
+- `scripts/`, `package*.json`, `config.template.js`, `AGENTS.md`, `CLAUDE.md`
+- inside a lab: `src/` (the bundle replaces it) and `proxy/`
+
+Local-only tooling (e.g. a Node proxy) belongs in `<lab>/proxy/`, with a root `npm run` script to start it. Secrets go in a gitignored `<lab>/.env`, with a committed `.env.example`.
+
+### 6. Placeholders
+
+`npm run build` fills these in every `.html` and `.md` file:
+
+| Placeholder | Becomes |
+| --- | --- |
+| `%%PAGES_URL%%` | Site base URL, no trailing slash (empty locally). Write `%%PAGES_URL%%/my-thing-lab/` |
+| `%%GITHUB_REPO%%` | `https://github.com/<owner>/<repo>` |
+| `%%DD_APP_ID%%` | The RUM application ID. Only needed by pages that don't load `config.js` |
+
+One of these left unreplaced fails the build. Any other `%%NAME%%` text, such as a README documenting placeholders or a typo, only prints a warning and is published as-is. A *new* placeholder is the one case that does need a change in `scripts/build.js` (plus `scripts/env.js`, and a workflow secret if it's sensitive).
+
+### 7. Link it and document it
+
+- Add a link from the home page sidebar intro in `index.html`, below the existing lab links (one `<p>` per lab, starting with the lab's emoji).
+- Add a section to the root `README.md` with a `**[Try it →](%%PAGES_URL%%/<lab>/)**` link.
+- Add a `<lab>/README.md` covering what it demonstrates, how to run it, and any caveats.
+
+### 8. Verify before calling it done
 
 ```bash
-gh repo create datadog-rum-pizza-builder --public --description "Datadog RUM demo — interactive pizza wizard showing views, actions, and beforeSend event capture"
+npm run labs      # the new lab is listed (with "bundles …" if it has src/main.js)
+npm run dev       # open http://localhost:8765/<lab>/ and click through it
+npm run build     # completes with no errors; <lab>/app.js appears in the source-maps line
+npm run preview   # check http://localhost:8765/<lab>/ as deployed
 ```
 
----
-
-## Step 2 — Create the project files
-
-Create a local directory and initialize git:
-
-```bash
-mkdir datadog-rum-pizza-builder && cd datadog-rum-pizza-builder
-git init
-git remote add origin https://github.com/<YOUR_GITHUB_USERNAME>/datadog-rum-pizza-builder.git
-```
-
-### `index.html`
-
-Create `index.html` with the contents of the pizza wizard artifact from this conversation (the full single-file HTML page including the Datadog RUM snippet, Pico CSS, wizard UI, and live RUM event log table).
-
-Key things already in the file:
-
-- Datadog RUM SDK loaded from `https://www.datadoghq-browser-agent.com/us1/v6/datadog-rum.js`
-- `clientToken: 'pub067eb57994325a05bf401b11a686e8e3'`
-- `applicationId: '4a79b017-ea18-4839-9153-ce2b058b4db6'`
-- `service: 'datadog-demo-app'`, `env: 'local'`
-- `beforeSend` callback feeding the live event log table
-- `addAction('pizza_order_submitted', { pizza_order: { ... } })` fired on results screen
-- `stopSession()` called on restart
-
-> **Note:** Update `env: 'local'` to `env: 'prod'` (or `'demo'`) before deploying if you want GitHub Pages traffic tagged separately in Datadog.
+In the browser, check that the shared CSS and JS load (no 404s on `../` paths), the theme toggle and sidebar resizer work, and RUM events show up (in the on-page table if the lab has one, or in devtools).
 
 ---
 
-### `README.md`
+## General guidelines
 
-Create `README.md` with the following content:
-
----
-
-# 🍕 Datadog RUM Pizza Builder
-
-A self-contained demo app for exploring [Datadog Real User Monitoring (RUM)](https://docs.datadoghq.com/real_user_monitoring/) — built as an interactive pizza order wizard.
-
-**[Live Demo →](https://<YOUR_GITHUB_USERNAME>.github.io/datadog-rum-pizza-builder/)**
-
----
-
-## What this demonstrates
-
-This app is designed as a hands-on training tool to show how Datadog RUM captures user behavior in a single-page app using URL fragment-based navigation.
-
-### Views
-
-Each wizard step updates the URL hash, triggering a new RUM view:
-
-| Step     | Fragment    |
-| -------- | ----------- |
-| Crust    | `#crust`    |
-| Sauce    | `#sauce`    |
-| Cheese   | `#cheese`   |
-| Toppings | `#toppings` |
-| Size     | `#size`     |
-| Results  | `#results`  |
-
-In the RUM Explorer, these appear as distinct views with their own load times, action counts, and frustration signals — even though no page navigation occurred.
-
-### Actions
-
-RUM auto-captures clicks (e.g. "Continue", "Start Over") as `click` actions. The final step also fires a **custom action**:
-
-```javascript
-DD_RUM.addAction("pizza_order_submitted", {
-  pizza_order: {
-    crust: "Hand-Tossed",
-    sauce: "BBQ",
-    cheese: "Mozzarella",
-    toppings: "Pepperoni",
-    size: "Large (16 in)",
-  },
-});
-```
-
-In the RUM Explorer, filter by `@action.target.name:pizza_order_submitted` and use `@context.pizza_order.*` attributes as facets to see the full order payload.
-
-### `beforeSend` callback
-
-The RUM SDK is initialized with a `beforeSend` callback that intercepts every event before it's sent to Datadog. The demo uses this to power the live event log table at the bottom of the page — showing event type, view path, URL hash, action names, and context payloads in real time.
-
-```javascript
-beforeSend: (event) => {
-  logRumEvent(event); // feeds the on-page event table
-  return true; // always forward to Datadog
-};
-```
-
-Returning `false` from `beforeSend` would discard the event. See the [Datadog docs](https://docs.datadoghq.com/real_user_monitoring/guide/enrich-and-control-rum-data/?tab=npm) for enrichment and filtering patterns.
-
-### Session lifecycle
-
-Clicking **Start Over** calls `DD_RUM.stopSession()`, ending the current RUM session. A new session begins on the next user interaction. This is useful for demonstrating session boundaries in training scenarios.
-
----
-
-## Running locally
-
-Just open `index.html` in a browser — no build step, no server required. Everything is loaded from CDN.
-
-```bash
-open index.html
-```
-
----
-
-## Deployment
-
-This repo is deployed via **GitHub Pages** from the `main` branch root. Any push to `main` updates the live demo automatically.
-
----
-
-## RUM Configuration
-
-| Setting                    | Value                                  |
-| -------------------------- | -------------------------------------- |
-| Application ID             | `4a79b017-ea18-4839-9153-ce2b058b4db6` |
-| Client Token               | `pub067eb57994325a05bf401b11a686e8e3`  |
-| Site                       | `datadoghq.com` (US1)                  |
-| Service                    | `datadog-demo-app`                     |
-| Session Sample Rate        | 100%                                   |
-| Session Replay Sample Rate | 100%                                   |
-| Privacy Level              | `mask-user-input`                      |
-
----
-
-## Stack
-
-- [Datadog RUM Browser SDK v6](https://docs.datadoghq.com/real_user_monitoring/browser/)
-- [Pico CSS](https://picocss.com/) — minimal classless CSS framework
-- Vanilla JS, no build tooling
-
----
-
-_(End of README)_
-
----
-
-## Step 3 — Enable GitHub Pages
-
-```bash
-# Commit and push
-git add .
-git commit -m "Initial commit — RUM pizza builder demo"
-git branch -M main
-git push -u origin main
-```
-
-Then enable Pages via the GitHub CLI or manually in repo settings:
-
-```bash
-gh api repos/kyletaylored/datadog-rum-pizza-builder/pages \
-  --method POST \
-  -f build_type=legacy \
-  -f source.branch=main \
-  -f source.path=/
-```
-
-Or in the GitHub UI: **Settings → Pages → Source → Deploy from branch → `main` / `/ (root)`**
-
-The site will be live at:
-
-```
-https://kyletaylored.github.io/datadog-rum-pizza-builder/
-```
-
----
-
-## Step 4 — Final touches (optional)
-
-- Update `env: 'local'` → `env: 'demo'` in the RUM init config in `index.html` so GitHub Pages traffic is tagged separately from local testing in Datadog
-- Replace `<YOUR_GITHUB_USERNAME>` in the README live demo link with your actual username
-- Add a `version` tag to the RUM init (e.g. `version: '1.0.0'`) to track future changes
-
-## Imported Claude Cowork project instructions
-
-A playground and showcase for testing Datadog RUM events and synthetics hosted on Github pages. This is meant to educate and implement various RUM and Synthetic Testing features for different use cases and solutions for Datadog Real User Monitoring SDKs.
+- **Relative paths only.** The site is served from a subpath (`/datadog-rum-pizza-builder/`), so `/tokens.css` breaks in production. Use `../tokens.css`.
+- **No `file://`.** Use `npm run dev`, because instrumentation and `fetch` need real HTTP.
+- **Pin every CDN version** (never `@latest`), and bump it deliberately across every page at once.
+- **Reuse before adding.** Generic components belong in `lab-shared.css` / `lab-shared.js` so every environment gets them; page-specific rules stay in the page's `<style>`. Colors and spacing come from `tokens.css` variables.
+- **Measure, don't assert.** Labs teach by showing what the SDK actually did (from `beforeSend`, storage inspectors, etc.). Don't hardcode claims about what Datadog does with the data.
+- **Don't edit `_site/` or `<lab>/dist/`.** They are build output and get regenerated.
+- **Never commit credentials.** Client tokens come from `config.js` locally and from repo secrets in CI; API keys only ever live in a gitignored `.env`.

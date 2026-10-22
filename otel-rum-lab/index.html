@@ -286,9 +286,9 @@
 
 <script>
   window.__OTEL_LAB_CONFIG__ = {
-    // Templated at deploy time from the same DD_APP_ID secret the root app's
-    // config.template.js uses (see the workflow's "Generate config.js from
-    // template" step) — not a separate hardcoded copy that could drift from it.
+    // Templated by `npm run build` (scripts/build.js) from the same DD_APP_ID
+    // the root app's config.js gets — not a separate hardcoded copy that
+    // could drift from it.
     applicationId: "%%DD_APP_ID%%",
   };
 </script>

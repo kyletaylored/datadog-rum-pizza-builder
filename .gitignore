@@ -4,3 +4,9 @@ config.js
 .vscode
 PRD-*.md
 _reference
+
+# Build output (npm run build)
+node_modules/
+_site/
+sourcemaps-upload/
+*/dist/

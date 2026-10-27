@@ -123,6 +123,18 @@ The lab also calls out an important caveat: switching to `local-storage` removes
 
 ---
 
+## Trace Sampling Lab
+
+**[Try it →](%%PAGES_URL%%/trace-sampling-lab/)**
+
+A lab at `/trace-sampling-lab/` on how two RUM options, `traceSampleRate` and `traceContextInjection`, decide which browser requests end up as backend traces in Datadog, and which of those link back to RUM. It fires real `fetch` calls through the real RUM SDK. A service worker stands in for the backend, so it runs on GitHub Pages with no server.
+
+- **Live requests.** The three classic scenarios are one click each: forced keep (`100` / `'all'`), controlled drop (`0` / `'all'`) and backend decision (`20` / `'sampled'`). A docked table shows the headers the backend actually received (`x-datadog-sampling-priority`, `traceparent` flags), what the simulated tracer did with them, and whether RUM's resource event carries the same `_dd.trace_id` as the kept trace. The same requests are in devtools › Network.
+- **Per session, not per request.** The SDK hashes the session ID to make the trace decision, so at `traceSampleRate: 20` a single session sends priority 1 on every request or on none. The 20% only shows up across sessions. A **New RUM session** button and a per-session table make that visible.
+- **A ReactFlow model.** The Flow tab draws both `traceContextInjection` routes on one graph, with `sessionSampleRate`, `traceSampleRate` and `DD_TRACE_SAMPLE_RATE` sliders. It shows how many of N requests become traces linked to RUM, traces that exist only in the backend, or nothing.
+
+---
+
 ## Running locally
 
 Every environment — this home page and each lab directory — builds from the one `package.json` at the repo root:

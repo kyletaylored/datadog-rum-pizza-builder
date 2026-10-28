@@ -16,7 +16,7 @@ The site is a set of **environments**: the pizza builder home page at the repo r
 | `tokens.css`, `style.css`, `lab-shared.css`, `lab-shared.js` | Shared design system and page chrome used by every environment |
 | `config.template.js` | Template for `config.js` (`window.DD_CONFIG`), the shared Datadog RUM/Logs settings |
 | `scripts/` | Build tooling: `labs.js` (discovery), `build.js`, `bundle.js`, `dev.js`, `serve.js`, `upload-sourcemaps.js` |
-| `.github/workflows/jekyll-docker.yml` | Pages deploy: `npm ci` → `npm run build` → `npm run sourcemaps:upload` → publish `_site/` |
+| `.github/workflows/jekyll-docker.yml` | `build` job (every push and PR): `npm ci` → `npm run build` (+ `npm run sourcemaps:upload` on `main`). `deploy` job (`main` only): publish `_site/` |
 
 ## Commands
 

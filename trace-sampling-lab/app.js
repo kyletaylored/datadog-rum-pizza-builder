@@ -54,10 +54,22 @@ function switchTab(tab) {
 /* ============================================================
    Config under test
    ============================================================ */
+// `expect` is what to look for once requests are flowing: what the config
+// asks for, not a claim about the results. Step 4 reports what actually
+// happened.
 const PRESETS = {
-  'forced-keep':      { tsr: 100, tci: 'all',     label: 'Forced keep' },
-  'controlled-drop':  { tsr: 0,   tci: 'all',     label: 'Controlled drop' },
-  'backend-decision': { tsr: 20,  tci: 'sampled', label: 'Backend decision' },
+  'forced-keep': {
+    tsr: 100, tci: 'all',
+    expect: '<strong>What to look for:</strong> every request leaves with "keep" headers, and every row ends as a trace linked to RUM. The backend never uses its own rate. Move the slider in step 2 and nothing changes.',
+  },
+  'controlled-drop': {
+    tsr: 0, tci: 'all',
+    expect: '<strong>What to look for:</strong> every request still carries trace headers, but they say "drop". The backend follows them, so nothing reaches Datadog. Move the slider in step 2: it makes no difference, because the browser already decided.',
+  },
+  'backend-decision': {
+    tsr: 20, tci: 'sampled',
+    expect: '<strong>What to look for:</strong> about 1 session in 5 is traced, and in that session every request says "keep". In the other sessions requests leave with <em>no</em> headers, and the backend keeps some on its own, at the rate from step 2. Send 10, start a new RUM session, and repeat a few times to see both kinds.',
+  },
 };
 const DEFAULTS = PRESETS['backend-decision'];
 
@@ -89,7 +101,15 @@ function applyPreset(id) {
 
 function applyCustomConfig(event) {
   event.preventDefault();
-  applyRumConfig(clampRate(document.getElementById('tsr-input').value, DEFAULTS.tsr), document.getElementById('tci-select').value);
+  const form = event.target;
+  applyRumConfig(clampRate(form.querySelector('#tsr-input').value, DEFAULTS.tsr), form.elements.tci.value || DEFAULTS.tci);
+}
+
+function customExpectation({ traceSampleRate: tsr, traceContextInjection: tci }) {
+  const rest = tci === 'all'
+    ? 'send "drop" headers, so the backend drops them whatever its own rate'
+    : 'send no headers, so the backend keeps some of them at its own rate from step 2';
+  return `<strong>What to look for:</strong> about ${tsr}% of sessions are traced, and every request in them says "keep". Requests in the other sessions ${rest}.`;
 }
 
 function setApmRate(value) {
@@ -154,7 +174,7 @@ function newRumSession() {
   // The next user interaction (any click, including "Send") starts a new
   // session — and with it a new, independent trace sampling decision.
   window.DD_RUM?.stopSession?.();
-  document.getElementById('session-id').textContent = 'ends — next click starts a new one';
+  document.getElementById('session-id').textContent = 'ended, your next click starts a new one';
 }
 
 /* ============================================================
@@ -178,7 +198,7 @@ backendReady.then(
 
 function setBackendStatus(text, state) {
   const pill = document.getElementById('backend-status-pill');
-  pill.textContent = text === 'ready' ? 'simulated backend ready' : text;
+  pill.textContent = text === 'ready' ? 'pretend backend ready' : text;
   pill.className = `consent-state-pill ${state}`;
   document.querySelectorAll('.send-btn').forEach((b) => { b.disabled = state !== 'granted'; });
 }
@@ -259,44 +279,50 @@ function esc(value) {
 }
 
 const OUTCOME_BADGE = {
-  'priority-1': '<span class="type-badge action">1</span>',
-  'priority-0': '<span class="type-badge error">0</span>',
-  none: '<span class="type-badge other">absent</span>',
+  'priority-1': '<span class="type-badge action">keep</span>',
+  'priority-0': '<span class="type-badge error">drop</span>',
+  none: '<span class="type-badge other">no headers</span>',
 };
 
-function rumCell(r) {
-  if (!r.rumSeen) return '<span class="muted">waiting…</span>';
-  if (!r.rumTraceId) return '<span class="muted">no _dd.trace_id</span>';
-  return isLinked(r)
-    ? `<span class="type-badge action" title="${esc(r.rumTraceId)}">linked</span>`
-    : `<span class="type-badge warn" title="${esc(r.rumTraceId)}">trace dropped</span>`;
+function browserCell(r) {
+  if (!r.decision) return '<span class="muted">sending…</span>';
+  const tp = r.receivedHeaders?.traceparent;
+  const p = r.receivedHeaders?.['x-datadog-sampling-priority'];
+  const sub = tp ? `priority ${esc(p)} · traceparent …-${esc(tp.split('-')[3])}` : 'no trace headers';
+  return `${OUTCOME_BADGE[headerOutcome(r)]}<span class="sub" title="${esc(tp || 'no traceparent')}">${sub}</span>`;
 }
 
 function backendCell(r) {
   if (r.error) return `<span class="type-badge error">${esc(r.error)}</span>`;
   if (!r.decision) return '<span class="muted">…</span>';
   const cls = r.decision === 'keep' ? 'action' : 'debug';
-  return `<span class="type-badge ${cls}">${r.decision}</span> <span class="muted" title="${esc(r.reason)}">by ${r.decidedBy === 'rum' ? 'RUM' : 'APM sampler'}</span>`;
+  const why = r.decidedBy === 'rum' ? 'as the browser asked' : 'its own sampler decided';
+  return `<span class="type-badge ${cls}">${r.decision === 'keep' ? 'kept' : 'dropped'}</span><span class="sub" title="${esc(r.reason)}">${why}</span>`;
+}
+
+// Combines the backend's decision with what RUM measured on its own
+// resource event, so "linked" is only claimed when the trace IDs match.
+function datadogCell(r) {
+  if (!r.decision) return '';
+  if (r.decision === 'drop') return '<span class="type-badge debug">nothing</span><span class="sub">no trace kept</span>';
+  if (!r.rumSeen) return '<span class="muted">waiting for RUM…</span>';
+  if (isLinked(r)) return `<span class="type-badge action">trace linked to RUM</span><span class="sub" title="${esc(r.rumTraceId)}">same trace ID on the RUM resource</span>`;
+  return '<span class="type-badge info">backend-only trace</span><span class="sub">no trace ID on the RUM resource</span>';
 }
 
 function renderTable() {
   const tbody = document.getElementById('rum-tbody');
   if (records.length === 0) {
-    tbody.innerHTML = '<tr id="rum-empty-row"><td colspan="7">Send a request to see what the backend received…</td></tr>';
+    tbody.innerHTML = '<tr id="rum-empty-row"><td colspan="5">Send a request to see its trip, row by row…</td></tr>';
     return;
   }
-  tbody.innerHTML = records.map((r) => {
-    const tp = r.receivedHeaders?.traceparent;
-    return `<tr>
-      <td>${r.time}</td>
-      <td>#${r.n}</td>
+  tbody.innerHTML = records.map((r) => `<tr>
+      <td title="${esc(r.time)}">#${r.n}</td>
       <td>${esc((r.sessionId || '—').slice(0, 8))}</td>
-      <td>${r.decision ? OUTCOME_BADGE[headerOutcome(r)] : ''}</td>
-      <td class="wrap" title="${esc(tp || 'absent')}">${tp ? esc(`…-${tp.split('-')[3]}`) : '<span class="muted">absent</span>'}</td>
+      <td>${browserCell(r)}</td>
       <td>${backendCell(r)}</td>
-      <td>${rumCell(r)}</td>
-    </tr>`;
-  }).join('');
+      <td>${datadogCell(r)}</td>
+    </tr>`).join('');
   const wrap = document.getElementById('rum-table-wrap');
   wrap.scrollTop = wrap.scrollHeight;
 }
@@ -316,6 +342,37 @@ function renderTallies() {
   set('t-unlinked', count((r) => r.decision === 'keep' && !isLinked(r)));
 }
 
+const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+// A plain-language reading of the tallies: the same numbers, said as what
+// happened to each group of requests.
+function renderSummary() {
+  const box = document.getElementById('summary-box');
+  const done = records.filter((r) => r.decision);
+  if (done.length === 0) {
+    box.innerHTML = 'Nothing sent yet. Click <strong>Send 10</strong> in step 3, and this box explains what happened to the requests.';
+    return;
+  }
+  const group = (o) => done.filter((r) => headerOutcome(r) === o);
+  const keep = group('priority-1');
+  const drop = group('priority-0');
+  const none = group('none');
+  const sessions = new Set(done.map((r) => r.sessionId || 'none'));
+  const tracedSessions = new Set(keep.map((r) => r.sessionId || 'none'));
+  const items = [];
+  if (keep.length) {
+    items.push(`<strong>${plural(keep.length, 'request')}</strong> left with <strong>"keep"</strong> headers. The backend followed them, so they're <strong>traces linked to RUM</strong> (${done.filter(isLinked).length} confirmed so far by RUM's own trace ID).`);
+  }
+  if (drop.length) {
+    items.push(`<strong>${plural(drop.length, 'request')}</strong> left with <strong>"drop"</strong> headers. The backend followed them and kept nothing, whatever its own rate.`);
+  }
+  if (none.length) {
+    const kept = none.filter((r) => r.decision === 'keep').length;
+    items.push(`<strong>${plural(none.length, 'request')}</strong> left with <strong>no trace headers</strong>, so the backend decided on its own. It kept ${kept} as <strong>backend-only traces</strong> (in APM, but not linked to RUM) and dropped ${none.length - kept}.`);
+  }
+  box.innerHTML = `So far: ${plural(done.length, 'request')} from ${plural(sessions.size, 'RUM session')}, ${tracedSessions.size} of which RUM traced.<ul>${items.map((i) => `<li>${i}</li>`).join('')}</ul>`;
+}
+
 function renderSessions() {
   const sessions = new Map();
   for (const r of records.filter((x) => x.decision)) {
@@ -330,10 +387,12 @@ function renderSessions() {
   }
   tbody.innerHTML = [...sessions].map(([id, rs]) => {
     const outcomes = [...new Set(rs.map(headerOutcome))];
+    const decision = outcomes.length > 1 ? outcomes.map((o) => OUTCOME_BADGE[o]).join(' ')
+      : { 'priority-1': `${OUTCOME_BADGE['priority-1']} traced`, 'priority-0': `${OUTCOME_BADGE['priority-0']} not traced`, none: `${OUTCOME_BADGE.none} not traced` }[outcomes[0]];
     return `<tr>
       <td><span class="session-id">${esc(id.slice(0, 8))}</span></td>
       <td>${rs.length}</td>
-      <td>${outcomes.map((o) => OUTCOME_BADGE[o]).join(' ')}</td>
+      <td>${decision}</td>
       <td>${rs.filter((r) => r.decision === 'keep').length}</td>
       <td>${rs.filter(isLinked).length}</td>
     </tr>`;
@@ -354,19 +413,26 @@ function renderConfigJson() {
 
 function renderAll() {
   renderTable();
+  renderSummary();
   renderTallies();
   renderSessions();
 }
 
 function renderConfigControls() {
   document.getElementById('tsr-input').value = liveConfig.traceSampleRate;
-  document.getElementById('tci-select').value = liveConfig.traceContextInjection;
+  const form = document.getElementById('custom-config-form');
+  form.elements.tci.value = liveConfig.traceContextInjection;
   document.getElementById('active-config').textContent =
-    `traceSampleRate: ${liveConfig.traceSampleRate} · traceContextInjection: '${liveConfig.traceContextInjection}'`;
+    `traceSampleRate: ${liveConfig.traceSampleRate} · '${liveConfig.traceContextInjection}'`;
+  let current = null;
   for (const [id, p] of Object.entries(PRESETS)) {
     const active = p.tsr === liveConfig.traceSampleRate && p.tci === liveConfig.traceContextInjection;
-    document.getElementById(`preset-${id}`).classList.toggle('active', active);
+    if (active) current = p;
+    document.getElementById(`preset-${id}`).setAttribute('aria-pressed', String(active));
   }
+  document.getElementById('expect-text').innerHTML = current ? current.expect : customExpectation(liveConfig);
+  // A custom config matches no card, so show the form that set it.
+  if (!current) document.getElementById('custom-config').open = true;
   const apm = document.getElementById('apm-rate-input');
   apm.value = liveConfig.apmRate;
   document.getElementById('apm-rate-value').textContent = `${liveConfig.apmRate}%`;

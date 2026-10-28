@@ -520,7 +520,7 @@ wa-progress-bar#progress-bar {
   background: var(--dd-surface);
 }
 table#rum-table { width: 100%; border-collapse: collapse; font-size: var(--dd-text-s); font-family: monospace; table-layout: fixed; margin: 0; }
-#rum-table thead th { position: sticky; top: 0; background: var(--dd-surface); padding: 5px 8px; text-align: left; font-weight: 700; border-bottom: 1px solid var(--dd-color-border); white-space: nowrap; font-family: monospace; }
+#rum-table thead th { position: sticky; top: 0; z-index: 1; background: var(--dd-surface); padding: 5px 8px; text-align: left; font-weight: 700; border-bottom: 1px solid var(--dd-color-border); white-space: nowrap; font-family: monospace; }
 #rum-table tbody tr:nth-child(even) { background: var(--dd-surface-sunken); }
 #rum-table td { padding: 5px 8px; vertical-align: top; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

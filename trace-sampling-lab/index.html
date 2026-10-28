@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Trace Sampling Lab · Datadog RUM Pizza Builder</title>
-<meta name="description" content="An interactive lab for Datadog RUM's traceSampleRate and traceContextInjection — see the tracing headers the RUM SDK actually injects, how a backend tracer reacts to them, and how many traces end up in Datadog.">
+<meta name="description" content="A hands-on lesson in Datadog RUM's traceSampleRate and traceContextInjection: send real requests, see the trace headers RUM attaches, watch a backend tracer react, and count the traces that end up in Datadog.">
 <meta name="author" content="Kyle Taylor">
 <meta name="robots" content="index, follow">
 
@@ -39,61 +39,140 @@
 </script>
 <style>
   /* ===== Trace Sampling lab — page-specific components only. Everything
-     reusable (sidebar, tabs, activity log, mode-picker, state pill, compare
-     table) lives in ../style.css / ../lab-shared.css. ===== */
+     reusable (sidebar, tabs, activity log, state pill, compare table) lives
+     in ../style.css / ../lab-shared.css. ===== */
   .muted { color: var(--dd-color-muted); }
-  .status-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; font-size: .85rem; }
+  .lead { font-size: 1.02rem; line-height: 1.6; max-width: var(--dd-measure); }
+  .step-heading { display: flex; align-items: baseline; gap: .6rem; margin: 2.25rem 0 .5rem; }
+  .step-heading .step-num {
+    flex: none; display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%;
+    background: var(--dd-color-primary-fill); color: var(--dd-color-on-primary); font-size: .85rem; font-weight: 700;
+  }
+  .step-heading h3 { margin: 0; }
+  .lab-container p { max-width: var(--dd-measure); }
+
+  .status-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; font-size: .85rem; margin-bottom: 1.25rem; }
   .status-row .consent-state-pill { margin-left: 0; }
 
-  #custom-config-form { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; font-size: .85rem; }
-  #custom-config-form input, #custom-config-form select {
-    font: inherit; padding: .35em .6em; border: 1px solid var(--dd-color-border);
+  /* The journey of one request, as four boxes. Same colors as the Flow tab's
+     nodes, so the two tabs read as one picture. */
+  .journey { display: grid; grid-template-columns: repeat(4, 1fr); gap: .75rem; margin: 1.25rem 0 .5rem; padding: 0; list-style: none; }
+  @media (max-width: 820px) { .journey { grid-template-columns: 1fr 1fr; } }
+  .journey li {
+    position: relative; padding: .7rem .85rem; border: 1px solid var(--dd-color-border); border-top: 4px solid var(--accent);
+    border-radius: var(--dd-radius); background: var(--dd-surface); font-size: .85rem; line-height: 1.45;
+  }
+  .journey li strong { display: block; margin-bottom: .2rem; color: var(--accent); }
+
+  /* Scenario cards — the three presets, each a big button that says in words
+     what it does, with the config it maps to underneath. */
+  .scenario-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; margin: 1rem 0; }
+  @media (max-width: 820px) { .scenario-grid { grid-template-columns: 1fr; } }
+  .scenario-card {
+    all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: .4rem;
+    padding: .9rem 1rem; border: 1px solid var(--dd-color-border); border-radius: var(--dd-radius);
+    background: var(--dd-surface); color: var(--wa-color-text-normal); box-shadow: var(--dd-shadow-s);
+    transition: border-color var(--dd-speed-fast) var(--dd-ease), box-shadow var(--dd-speed-fast) var(--dd-ease);
+  }
+  .scenario-card:hover { border-color: var(--dd-color-primary); }
+  .scenario-card:focus-visible { outline: 2px solid var(--dd-color-primary); outline-offset: 2px; }
+  .scenario-card[aria-pressed="true"] { border-color: var(--dd-color-primary); box-shadow: 0 0 0 2px var(--dd-color-primary); background: var(--dd-purple-fill); cursor: default; }
+  .scenario-card__title { display: flex; justify-content: space-between; align-items: center; gap: .5rem; font-size: 1rem; font-weight: 700; }
+  .scenario-card__title .type-badge { display: none; }
+  .scenario-card[aria-pressed="true"] .scenario-card__title .type-badge { display: inline-block; }
+  .scenario-card__body { font-size: .85rem; line-height: 1.45; }
+  .scenario-card__config { margin-top: auto; padding-top: .4rem; font-family: monospace; font-size: .75rem; color: var(--dd-color-muted); }
+
+  /* Custom values — label above control, hint below, aligned in a grid. */
+  .custom-config { margin: .5rem 0 0; }
+  .custom-config-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 1.25rem 1.5rem; padding: .25rem 0 .25rem; }
+  @media (max-width: 700px) { .custom-config-form { grid-template-columns: 1fr; } }
+  .field { display: flex; flex-direction: column; gap: .35rem; min-width: 0; border: 0; margin: 0; padding: 0; }
+  .field > label, .field > legend { font-weight: 600; font-size: .9rem; padding: 0; }
+  .field code { font-size: .78rem; }
+  .field-hint { font-size: .78rem; color: var(--dd-color-muted); line-height: 1.4; }
+  .field input[type="number"] {
+    font: inherit; width: 7rem; padding: .45em .65em; border: 1px solid var(--dd-color-border);
     border-radius: var(--dd-radius); background: var(--dd-surface); color: inherit;
   }
-  #custom-config-form label { display: inline-flex; align-items: center; gap: .4rem; }
-  #custom-config-form input { width: 5rem; }
-  #custom-config-form select { width: auto; }
-  #active-config { font-family: monospace; font-size: .8rem; }
+  .choice-group { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+  .choice {
+    display: flex; gap: .55rem; align-items: flex-start; padding: .6rem .75rem; cursor: pointer;
+    border: 1px solid var(--dd-color-border); border-radius: var(--dd-radius); background: var(--dd-surface); font-size: .82rem; line-height: 1.4;
+  }
+  .choice:has(input:checked) { border-color: var(--dd-color-primary); box-shadow: 0 0 0 1px var(--dd-color-primary); }
+  .choice input { margin: .2rem 0 0; accent-color: var(--dd-color-primary); }
+  .choice strong { display: block; font-family: monospace; }
+  .form-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: .8rem; }
 
-  .apm-control { display: flex; align-items: center; gap: .75rem; max-width: 32rem; font-size: .85rem; }
-  .apm-control input { flex: 1; accent-color: var(--dd-color-primary); }
-  #apm-rate-value { font-family: monospace; font-weight: 700; min-width: 3.5rem; }
+  .apm-control { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: .35rem 1rem; max-width: 30rem; margin: .75rem 0; }
+  .apm-control label { grid-column: 1 / -1; font-weight: 600; font-size: .9rem; }
+  .apm-control input { accent-color: var(--dd-color-primary); }
+  #apm-rate-value { font-family: monospace; font-weight: 700; font-size: 1rem; min-width: 3.5rem; text-align: right; }
 
-  .send-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+  .send-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: .75rem 0; }
+  .send-row .spacer { flex: 1; }
 
-  /* Tallies — three groups that read left to right in the order a request
-     travels: what the browser sent, what the backend did, what Datadog keeps. */
+  /* Results */
+  .summary-box {
+    padding: .9rem 1.1rem; border: 1px solid var(--dd-color-border); border-left: 4px solid var(--dd-color-primary);
+    border-radius: var(--dd-radius); background: var(--dd-surface); font-size: .92rem; line-height: 1.55; max-width: none;
+  }
+  .summary-box ul { margin: .4rem 0 0; padding-left: 1.2rem; }
+  .summary-box li { margin: .25rem 0; }
   .tally-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1rem 0; }
   @media (max-width: 760px) { .tally-grid { grid-template-columns: 1fr; } }
-  .tally-grid dl { margin: .25rem 0 0; display: grid; grid-template-columns: 1fr auto; gap: .3rem .75rem; font-size: .82rem; }
+  .tally-grid dl { margin: .25rem 0 0; display: grid; grid-template-columns: 1fr auto; gap: .35rem .75rem; font-size: .85rem; }
   .tally-grid dd { margin: 0; font-family: monospace; font-weight: 700; text-align: right; }
-  .tally-grid .tally-total { border-top: 1px dashed var(--dd-color-border); padding-top: .3rem; }
 
-  /* Seven columns in the docked network log. */
-  .col-num { width: 52px; }
-  .col-session { width: 84px; }
-  .col-priority { width: 84px; }
-  .col-tp { width: 92px; }
-  .col-backend { width: 34%; }
+  /* Docked log: five columns, the three outcome columns sharing the width. */
+  #rum-table { font-family: inherit; }
+  #rum-table td { vertical-align: middle; }
+  #rum-table .sub { display: block; font-family: monospace; font-size: .7rem; color: var(--dd-color-muted); margin-top: 1px; }
+  .col-num { width: 56px; }
+  .col-session { width: 96px; }
+  #rum-table td:nth-child(-n+2) { font-family: monospace; }
 
   /* ---- Flow tab ---- */
   .sampling-flow { display: flex; flex-direction: column; gap: 1rem; }
-  .flow-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: .75rem 1.25rem; align-items: start; }
-  .flow-control { display: flex; flex-direction: column; gap: .25rem; font-size: .8rem; }
-  .flow-control__label { font-family: monospace; font-weight: 700; display: flex; justify-content: space-between; gap: .5rem; }
-  .flow-control__hint { color: var(--dd-color-muted); font-size: .72rem; }
-  .flow-control input[type="range"] { accent-color: var(--dd-color-primary); }
+  .flow-legend { display: flex; flex-wrap: wrap; gap: .4rem 1.1rem; font-size: .8rem; margin: 0; padding: 0; list-style: none; }
+  .flow-legend li { display: inline-flex; align-items: center; gap: .4rem; }
+  .flow-legend .swatch { width: .8rem; height: .8rem; border-radius: 3px; background: var(--accent); }
+  .flow-legend .swatch.muted-route { background: none; border: 2px dashed var(--dd-color-muted); }
+  .flow-controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem 1.5rem; align-items: start;
+    padding: 1rem 1.1rem; border: 1px solid var(--dd-color-border); border-radius: var(--dd-radius); background: var(--dd-surface); }
+  @media (max-width: 900px) { .flow-controls { grid-template-columns: 1fr 1fr; } }
+  .flow-control { display: flex; flex-direction: column; gap: .3rem; font-size: .82rem; min-width: 0; }
+  .flow-control--wide { grid-column: 1 / -1; }
+  .flow-control__label { font-weight: 600; font-size: .88rem; display: flex; justify-content: space-between; gap: .5rem; }
+  .flow-control__label output { font-family: monospace; }
+  .flow-control__hint { color: var(--dd-color-muted); font-size: .75rem; line-height: 1.4; }
+  .flow-control input[type="range"] { accent-color: var(--dd-color-primary); width: 100%; }
   .flow-control input[type="number"] {
-    font: inherit; padding: .3em .5em; border: 1px solid var(--dd-color-border);
+    font: inherit; width: 8rem; padding: .4em .6em; border: 1px solid var(--dd-color-border);
     border-radius: var(--dd-radius); background: var(--dd-surface); color: inherit;
   }
-  .flow-control .mode-picker { margin: 0; }
-  .flow-reset { font-size: .72rem; padding: 0; height: auto; align-self: flex-start; }
+  .flow-control__row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  .segmented { display: inline-flex; border: 1px solid var(--dd-color-border); border-radius: var(--dd-radius); overflow: hidden; background: var(--dd-surface-sunken); }
+  .segmented button {
+    all: unset; box-sizing: border-box; cursor: pointer; padding: .5rem .9rem; font-size: .85rem; line-height: 1.3;
+    color: var(--wa-color-text-normal); display: flex; flex-direction: column; gap: .1rem;
+  }
+  .segmented button + button { border-left: 1px solid var(--dd-color-border); }
+  .segmented button code { font-size: .75rem; background: none; padding: 0; color: inherit; opacity: .8; }
+  .segmented button:hover { background: var(--dd-surface); }
+  .segmented button:focus-visible { outline: 2px solid var(--dd-color-primary); outline-offset: -2px; }
+  .segmented button[aria-pressed="true"] { background: var(--dd-color-primary-fill); color: var(--dd-color-on-primary); font-weight: 600; cursor: default; }
+  .flow-reset { all: unset; cursor: pointer; font-size: .8rem; color: var(--dd-color-primary); text-decoration: underline; }
 
   .flow-canvas {
-    height: 520px; border: 1px solid var(--dd-color-border); border-radius: var(--dd-radius);
+    height: 540px; border: 1px solid var(--dd-color-border); border-radius: var(--dd-radius);
     background: var(--dd-surface-sunken); overflow: hidden;
   }
+  /* A global `svg { max-width: 100% }` reset would size ReactFlow's edge
+     layer (a 0×0, overflow-visible svg) to nothing, and Chrome doesn't paint
+     a zero-width svg — so no edges. */
+  .flow-canvas svg { max-width: none; }
   .flow-canvas .react-flow { --xy-background-color: var(--dd-surface-sunken); --xy-edge-stroke: var(--dd-color-muted); }
 
   .flow-node {
@@ -105,33 +184,27 @@
     font-size: .8rem; line-height: 1.35;
     transition: opacity var(--dd-speed-fast) var(--dd-ease), box-shadow var(--dd-speed-fast) var(--dd-ease);
   }
-  .flow-node strong { font-size: .88rem; }
+  .flow-node strong { font-size: .9rem; }
   .flow-node[data-selected="true"] { box-shadow: 0 0 0 2px var(--accent); background: var(--tint); }
   .flow-node[data-muted="true"] { opacity: .35; border-style: dashed; }
   .flow-node:focus-visible { outline: 2px solid var(--dd-color-primary); outline-offset: 2px; }
-  .flow-node__eyebrow { font-family: monospace; font-size: .72rem; color: var(--accent); font-weight: 700; }
+  .flow-node__eyebrow { font-size: .72rem; color: var(--accent); font-weight: 700; }
   .flow-node__summary { color: var(--dd-color-muted); }
-  [data-kind="client"]  { --accent: var(--dd-cyan-on);   --tint: var(--dd-cyan-fill); }
   [data-kind="rum"]     { --accent: var(--dd-purple-on); --tint: var(--dd-purple-fill); }
   [data-kind="header"]  { --accent: var(--dd-indigo-on); --tint: var(--dd-indigo-fill); }
   [data-kind="backend"] { --accent: var(--dd-orange-on); --tint: var(--dd-orange-fill); }
   [data-kind="datadog"] { --accent: var(--dd-green-on);  --tint: var(--dd-green-fill); }
   [data-kind="drop"]    { --accent: var(--dd-red-on);    --tint: var(--dd-red-fill); }
 
-  .flow-edge__label {
-    position: absolute; pointer-events: none; font-family: monospace; font-size: .72rem; font-weight: 700;
-    padding: 1px 6px; border-radius: var(--dd-radius-pill); white-space: nowrap;
-    background: var(--dd-surface); border: 1px solid var(--dd-color-border); color: var(--wa-color-text-normal);
-  }
-  .flow-edge__label[data-muted="true"] { opacity: .4; }
-
   .flow-detail {
     --accent: var(--dd-gray-on);
-    padding: .75rem 1rem; border: 1px solid var(--dd-color-border); border-left: 4px solid var(--accent);
-    border-radius: var(--dd-radius); background: var(--dd-surface-sunken); font-size: .85rem;
+    padding: .85rem 1.1rem; border: 1px solid var(--dd-color-border); border-left: 4px solid var(--accent);
+    border-radius: var(--dd-radius); background: var(--dd-surface); font-size: .9rem; line-height: 1.55;
   }
-  .flow-detail h4 { margin: .2rem 0 .35rem; }
-  .flow-detail p { margin: 0; max-width: var(--dd-measure); }
+  .flow-detail h4 { margin: .2rem 0 .4rem; }
+  .flow-detail p { margin: 0 0 .5rem; max-width: var(--dd-measure); }
+  .flow-detail p:last-child { margin-bottom: 0; }
+  .flow-detail .tech { font-size: .8rem; color: var(--dd-color-muted); }
   .flow-compare tr[data-active="true"] td { font-weight: 600; }
   .flow-compare .type-badge { margin-left: .4rem; }
 </style>
@@ -154,7 +227,7 @@
     </div>
 
     <div class="sidebar-intro">
-      <p>Two RUM options decide which browser requests get a backend trace in Datadog: <code>traceSampleRate</code> and <code>traceContextInjection</code>. This lab fires real requests through the real RUM SDK, shows the headers it injected, and lets a simulated backend tracer react to them.</p>
+      <p>Which of your users' API calls end up as traces in Datadog, and which of those can you open from a RUM session? This lab answers that with real requests from your own browser.</p>
       <p><a href="../">← Back to Pizza Builder</a></p>
     </div>
 
@@ -162,55 +235,58 @@
       <p class="sidebar-nav-label">Training topics</p>
 
       <wa-details class="sidebar-section" appearance="plain" open>
-        <span slot="summary"><span class="sidebar-tag tag-view">Knobs</span><span class="sidebar-section-title">The two options</span></span>
+        <span slot="summary"><span class="sidebar-tag tag-view">Start</span><span class="sidebar-section-title">The two settings, in plain words</span></span>
         <div class="sidebar-section-body">
-          <p><code>traceSampleRate</code> (default <code>100</code>) is the share of traced requests that RUM marks as <strong>sampled</strong>, meaning keep the trace.</p>
-          <p><code>traceContextInjection</code> decides what happens to the rest:</p>
+          <p><strong><code>traceSampleRate</code></strong> answers <em>"should RUM trace this session?"</em> At <code>20</code>, about 1 in 5 sessions is traced. Their requests carry a <strong>keep</strong> decision. The default is <code>100</code>.</p>
+          <p><strong><code>traceContextInjection</code></strong> answers <em>"what about the sessions RUM didn't trace?"</em></p>
           <ul>
-            <li><code>'all'</code> — headers on every request, with <code>x-datadog-sampling-priority: 0</code> on unsampled ones. The browser decides <em>drop</em>.</li>
-            <li><code>'sampled'</code> (the v6 default) — unsampled requests get <strong>no headers</strong>, so the backend's own sampler decides.</li>
+            <li><code>'all'</code>: still send trace headers, marked <strong>drop</strong>. The backend obeys, so those requests are never traced.</li>
+            <li><code>'sampled'</code> (default): send <strong>no</strong> trace headers. The backend never hears from RUM, so it decides on its own.</li>
           </ul>
-          <p>Both only apply to URLs in <code>allowedTracingUrls</code>, and only inside a tracked session.</p>
         </div>
       </wa-details>
 
       <wa-details class="sidebar-section" appearance="plain">
-        <span slot="summary"><span class="sidebar-tag tag-sessions">Gotcha</span><span class="sidebar-section-title">Per session, not per request</span></span>
+        <span slot="summary"><span class="sidebar-tag tag-sessions">Gotcha</span><span class="sidebar-section-title">RUM decides once per session</span></span>
         <div class="sidebar-section-body">
-          <p>The SDK makes the trace decision with <code>isSampled(session.id, traceSampleRate)</code>, a hash of the <strong>session ID</strong>. At <code>traceSampleRate: 20</code>, one session sends priority 1 on <em>every</em> request or on <em>none</em>. It doesn't send a 20% mix.</p>
-          <p>The 20% shows up across sessions. Send a batch, click <strong>New RUM session</strong>, and repeat. The <em>Sessions</em> table shows one outcome per session.</p>
+          <p>You might expect <code>traceSampleRate: 20</code> to trace 2 of every 10 requests. It doesn't. RUM makes the decision from the <strong>session ID</strong>, so a session is either traced on every request or on none.</p>
+          <p>The 20% only shows up across many sessions. On the Requests tab, send a batch, click <strong>Start a new RUM session</strong>, and repeat. Each row of the <em>Sessions</em> table is one all-or-nothing decision.</p>
         </div>
       </wa-details>
 
       <wa-details class="sidebar-section" appearance="plain">
-        <span slot="summary"><span class="sidebar-tag tag-action">Network</span><span class="sidebar-section-title">Reading the headers</span></span>
+        <span slot="summary"><span class="sidebar-tag tag-action">Devtools</span><span class="sidebar-section-title">See the headers yourself</span></span>
         <div class="sidebar-section-body">
-          <p>Open devtools › <strong>Network</strong>, filter on <code>api/order</code>, and look at the request headers. With <code>propagatorTypes: ['datadog', 'tracecontext']</code> a traced request carries:</p>
+          <p>Open devtools › <strong>Network</strong>, filter on <code>api/order</code>, and click a request. A traced request carries two sets of headers that say the same thing:</p>
           <ul>
-            <li><code>x-datadog-trace-id</code>, <code>x-datadog-parent-id</code>, <code>x-datadog-origin: rum</code>, <code>x-datadog-sampling-priority</code></li>
-            <li><code>traceparent</code> ending <code>-01</code> or <code>-00</code>, and <code>tracestate: dd=s:1;o:rum</code> or <code>dd=s:0;o:rum</code></li>
+            <li>Datadog's: <code>x-datadog-trace-id</code>, <code>x-datadog-parent-id</code>, <code>x-datadog-origin: rum</code> and <code>x-datadog-sampling-priority</code> (<code>1</code> = keep, <code>0</code> = drop)</li>
+            <li>W3C's: <code>traceparent</code> ending <code>-01</code> (keep) or <code>-00</code> (drop), plus <code>tracestate</code></li>
           </ul>
-          <p>The docked table shows what the backend actually received. Its last column checks whether RUM's resource event carries the same <code>_dd.trace_id</code>.</p>
+          <p>Hover a row in the docked table to see the full <code>traceparent</code> the backend received.</p>
         </div>
       </wa-details>
 
       <wa-details class="sidebar-section" appearance="plain">
-        <span slot="summary"><span class="sidebar-tag tag-storage">Backend</span><span class="sidebar-section-title">The simulated tracer</span></span>
+        <span slot="summary"><span class="sidebar-tag tag-storage">Backend</span><span class="sidebar-section-title">About the pretend backend</span></span>
         <div class="sidebar-section-body">
-          <p>There's no real APM service. A service worker (<code>sw.js</code>) answers <code>./api/</code> requests and does what a Datadog tracer does with incoming context:</p>
+          <p>There's no real server. A service worker (<code>sw.js</code>) answers the <code>/api/order</code> calls and follows the same rule a Datadog tracer does:</p>
           <ul>
-            <li>an upstream decision arrived → honor it (keep on 1, drop on 0)</li>
-            <li>nothing arrived → start a new trace and sample it at <code>DD_TRACE_SAMPLE_RATE</code></li>
+            <li>If the request says keep or drop, <strong>follow it</strong>.</li>
+            <li>If it says nothing, <strong>start a new trace</strong> and keep it at the backend's own rate (<code>DD_TRACE_SAMPLE_RATE</code>).</li>
           </ul>
-          <p>Real tracers also have error and rare samplers that can keep some priority-0 traces, and the Agent can set rates itself. Those aren't simulated here.</p>
+          <p>Real tracers have extras that aren't modelled here: error and rare samplers that can rescue some dropped traces, and an Agent that can pick rates by itself.</p>
         </div>
       </wa-details>
 
       <wa-details class="sidebar-section" appearance="plain">
-        <span slot="summary"><span class="sidebar-tag tag-metric">Flow</span><span class="sidebar-section-title">How many traces land in Datadog</span></span>
+        <span slot="summary"><span class="sidebar-tag tag-metric">Words</span><span class="sidebar-section-title">Glossary</span></span>
         <div class="sidebar-section-body">
-          <p>The <strong>Flow</strong> tab models N requests across many sessions, with both injection routes side by side.</p>
-          <p>Traces <strong>linked to RUM</strong> depend only on <code>sessionSampleRate × traceSampleRate</code>. With <code>'sampled'</code>, the backend rate adds <strong>backend-only</strong> traces on top. With <code>'all'</code>, the browser drops them before the backend gets a say.</p>
+          <ul>
+            <li><strong>Trace headers</strong>: the extra HTTP headers RUM adds to an API call so the backend can continue the same trace.</li>
+            <li><strong>Sampling priority</strong>: the keep (<code>1</code>) or drop (<code>0</code>) decision carried in those headers.</li>
+            <li><strong>Linked trace</strong>: a backend trace that shares its ID with a RUM resource, so you can click from one to the other.</li>
+            <li><strong>Backend-only trace</strong>: a trace your backend started and kept on its own. It's in APM, but no RUM resource points to it.</li>
+          </ul>
         </div>
       </wa-details>
     </nav>
@@ -234,8 +310,8 @@
   <div class="training-main">
 
     <nav class="tab-nav" role="tablist">
-      <button class="tab-btn active" role="tab" aria-selected="true"  aria-controls="tab-requests" onclick="switchTab('requests')">📡 Requests</button>
-      <button class="tab-btn"        role="tab" aria-selected="false" aria-controls="tab-flow"     onclick="switchTab('flow')">🔀 Flow</button>
+      <button class="tab-btn active" role="tab" aria-selected="true"  aria-controls="tab-requests" onclick="switchTab('requests')">📡 Try it live</button>
+      <button class="tab-btn"        role="tab" aria-selected="false" aria-controls="tab-flow"     onclick="switchTab('flow')">🔀 See the big picture</button>
     </nav>
 
     <!-- Requests tab -->
@@ -244,89 +320,132 @@
 
         <wa-callout variant="danger" class="lab-callout" id="rum-missing-callout" style="display:none">
           <wa-icon slot="icon" name="triangle-exclamation"></wa-icon>
-          The RUM SDK didn't initialize, so no tracing headers will be injected. Requests still reach the simulated backend, which then samples everything itself. Usual causes: an ad blocker blocking <code>datadoghq-browser-agent.com</code>, or a missing <code>config.js</code> locally (<code>cp config.template.js config.js</code>).
+          The RUM SDK didn't start, so it can't add trace headers to anything. Requests still reach the pretend backend, which then decides everything on its own. The usual cause is an ad blocker blocking <code>datadoghq-browser-agent.com</code>, or, when running locally, a missing <code>config.js</code> (<code>cp config.template.js config.js</code>).
         </wa-callout>
 
         <div class="status-row">
           <span id="rum-status-pill" class="consent-state-pill pending">RUM loading…</span>
-          <span id="backend-status-pill" class="consent-state-pill pending">starting simulated backend…</span>
-          <span>RUM session <span class="session-id" id="session-id">—</span></span>
+          <span id="backend-status-pill" class="consent-state-pill pending">starting pretend backend…</span>
+          <span>Current RUM session <span class="session-id" id="session-id">—</span></span>
         </div>
 
-        <h3>1. RUM SDK config</h3>
-        <p>Both options are read once, at <code>DD_RUM.init()</code>, so changing them reloads the page. The three scenarios:</p>
-        <div class="mode-picker">
-          <button class="wa-neutral wa-outlined" id="preset-forced-keep" onclick="applyPreset('forced-keep')">Forced keep · 100 / 'all'</button>
-          <button class="wa-neutral wa-outlined" id="preset-controlled-drop" onclick="applyPreset('controlled-drop')">Controlled drop · 0 / 'all'</button>
-          <button class="wa-neutral wa-outlined" id="preset-backend-decision" onclick="applyPreset('backend-decision')">Backend decision · 20 / 'sampled'</button>
-        </div>
-        <form id="custom-config-form" onsubmit="applyCustomConfig(event)">
-          <label>traceSampleRate <input type="number" id="tsr-input" min="0" max="100" step="1"></label>
-          <label>traceContextInjection
-            <select id="tci-select">
-              <option value="all">'all'</option>
-              <option value="sampled">'sampled'</option>
-            </select>
-          </label>
-          <button type="submit" class="wa-brand">Apply &amp; reload</button>
-        </form>
-        <p class="muted">Active: <span id="active-config"></span></p>
+        <p class="lead">When your web app calls its own API, RUM can attach <strong>trace headers</strong> to the request. They do two jobs. They give the backend's trace an ID that RUM also records, so you can jump from a RUM resource straight to its trace. And they tell the backend whether to <strong>keep or drop</strong> that trace.</p>
+        <p>Every request in this lab makes the same four-stop trip:</p>
+        <ol class="journey">
+          <li data-kind="rum"><strong>1 · RUM, in the browser</strong>Decides whether this session is traced, using <code>traceSampleRate</code>.</li>
+          <li data-kind="header"><strong>2 · The request</strong>Leaves with <em>keep</em> headers, <em>drop</em> headers, or none, depending on <code>traceContextInjection</code>.</li>
+          <li data-kind="backend"><strong>3 · Your backend</strong>Follows the browser's decision. With no decision, it uses its own sample rate.</li>
+          <li data-kind="datadog"><strong>4 · Datadog</strong>Ends up with a trace linked to RUM, a backend-only trace, or nothing.</li>
+        </ol>
 
-        <h3>2. Simulated backend</h3>
-        <p>Used only when a request arrives with no sampling decision. Changes apply to the next request, with no reload.</p>
-        <label class="apm-control">
-          <code>DD_TRACE_SAMPLE_RATE</code>
+        <div class="step-heading"><span class="step-num">1</span><h3>Pick a scenario</h3></div>
+        <p>Each scenario is a different RUM setup. RUM reads these settings once, when it starts, so picking one reloads the page.</p>
+        <div class="scenario-grid" role="group" aria-label="Scenarios">
+          <button type="button" class="scenario-card" id="preset-forced-keep" aria-pressed="false" onclick="applyPreset('forced-keep')">
+            <span class="scenario-card__title">Keep everything <span class="type-badge action">current</span></span>
+            <span class="scenario-card__body">RUM traces every session and tells the backend to keep every trace. Each one links back to RUM.</span>
+            <span class="scenario-card__config">traceSampleRate: 100 · 'all'</span>
+          </button>
+          <button type="button" class="scenario-card" id="preset-controlled-drop" aria-pressed="false" onclick="applyPreset('controlled-drop')">
+            <span class="scenario-card__title">Browser says drop <span class="type-badge action">current</span></span>
+            <span class="scenario-card__body">RUM traces no sessions, but still sends headers saying "drop". The backend obeys, so nothing is kept.</span>
+            <span class="scenario-card__config">traceSampleRate: 0 · 'all'</span>
+          </button>
+          <button type="button" class="scenario-card" id="preset-backend-decision" aria-pressed="false" onclick="applyPreset('backend-decision')">
+            <span class="scenario-card__title">Backend decides the rest <span class="type-badge action">current</span></span>
+            <span class="scenario-card__body">RUM traces about 1 in 5 sessions. The others send no headers, so the backend chooses what to keep.</span>
+            <span class="scenario-card__config">traceSampleRate: 20 · 'sampled'</span>
+          </button>
+        </div>
+
+        <wa-callout variant="brand" class="lab-callout" id="expect-callout">
+          <wa-icon slot="icon" name="lightbulb"></wa-icon>
+          <span id="expect-text"></span>
+        </wa-callout>
+
+        <wa-details class="lab-aside custom-config" id="custom-config">
+          <span slot="summary">Try your own values</span>
+          <form class="custom-config-form" id="custom-config-form" onsubmit="applyCustomConfig(event)">
+            <div class="field">
+              <label for="tsr-input">Share of sessions RUM traces</label>
+              <input type="number" id="tsr-input" min="0" max="100" step="1" inputmode="numeric">
+              <span class="field-hint"><code>traceSampleRate</code>, 0 to 100</span>
+            </div>
+            <fieldset class="field">
+              <legend>For sessions RUM doesn't trace</legend>
+              <div class="choice-group">
+                <label class="choice"><input type="radio" name="tci" value="all"><span><strong>'all'</strong>Send headers that say "drop"</span></label>
+                <label class="choice"><input type="radio" name="tci" value="sampled"><span><strong>'sampled'</strong>Send no headers; the backend decides</span></label>
+              </div>
+              <span class="field-hint"><code>traceContextInjection</code></span>
+            </fieldset>
+            <div class="form-actions">
+              <button type="submit" class="wa-brand">Apply and reload</button>
+              <span class="muted">Running now: <code id="active-config"></code></span>
+            </div>
+          </form>
+        </wa-details>
+
+        <div class="step-heading"><span class="step-num">2</span><h3>Set the backend's own sample rate</h3></div>
+        <p>Your backend only falls back on this rate when a request arrives <strong>without</strong> a keep or drop decision from RUM. On a real service, it's <code>DD_TRACE_SAMPLE_RATE</code>. It takes effect on the next request, without a reload.</p>
+        <div class="apm-control">
+          <label for="apm-rate-input">Share of undecided requests the backend keeps</label>
           <input type="range" id="apm-rate-input" min="0" max="100" step="1" oninput="setApmRate(this.value)">
           <span id="apm-rate-value"></span>
-        </label>
+        </div>
 
-        <h3>3. Send requests</h3>
+        <div class="step-heading"><span class="step-num">3</span><h3>Send some requests</h3></div>
+        <p>Each click calls a pretend <code>/api/order</code> endpoint, for real, through the RUM SDK. Every request gets a row in the docked table at the bottom of the page. Because RUM decides once per session, start a new session between batches to see a fresh decision.</p>
         <div class="send-row">
           <button class="wa-brand send-btn" disabled onclick="sendRequests(1)">Send 1</button>
           <button class="wa-brand send-btn" disabled onclick="sendRequests(10)">Send 10</button>
           <button class="wa-brand send-btn" disabled onclick="sendRequests(50)">Send 50</button>
-          <button class="wa-neutral wa-outlined" onclick="newRumSession()" title="DD_RUM.stopSession() — the next click starts a new session with a new trace decision">New RUM session</button>
-          <button class="wa-neutral wa-plain" onclick="clearRequests()">Clear</button>
+          <button class="wa-neutral wa-outlined" onclick="newRumSession()" title="Calls DD_RUM.stopSession(). Your next click starts a new session, with its own trace decision.">Start a new RUM session</button>
+          <span class="spacer"></span>
+          <button class="wa-neutral wa-plain" onclick="clearRequests()">Clear results</button>
         </div>
+
+        <div class="step-heading"><span class="step-num">4</span><h3>What happened</h3></div>
+        <div class="summary-box" id="summary-box" aria-live="polite"></div>
 
         <div class="tally-grid">
           <wa-card class="storage-card" appearance="outlined">
-            <h4 slot="header">Browser sent</h4>
+            <h4 slot="header">The browser sent</h4>
             <dl>
               <dt>requests</dt><dd id="t-sent">0</dd>
-              <dt>priority 1</dt><dd id="t-p1">0</dd>
-              <dt>priority 0</dt><dd id="t-p0">0</dd>
-              <dt>no trace headers</dt><dd id="t-none">0</dd>
+              <dt>with "keep" headers</dt><dd id="t-p1">0</dd>
+              <dt>with "drop" headers</dt><dd id="t-p0">0</dd>
+              <dt>with no trace headers</dt><dd id="t-none">0</dd>
             </dl>
           </wa-card>
           <wa-card class="storage-card" appearance="outlined">
-            <h4 slot="header">Backend did</h4>
+            <h4 slot="header">The backend</h4>
             <dl>
-              <dt>kept · RUM decided</dt><dd id="t-keep-rum">0</dd>
-              <dt>kept · APM sampler decided</dt><dd id="t-keep-apm">0</dd>
+              <dt>kept, as RUM asked</dt><dd id="t-keep-rum">0</dd>
+              <dt>kept, its own choice</dt><dd id="t-keep-apm">0</dd>
               <dt>dropped</dt><dd id="t-drop">0</dd>
             </dl>
           </wa-card>
           <wa-card class="storage-card" appearance="outlined">
-            <h4 slot="header">Traces in Datadog</h4>
+            <h4 slot="header">Datadog ends up with</h4>
             <dl>
-              <dt>linked to a RUM resource</dt><dd id="t-linked">0</dd>
-              <dt>backend-only</dt><dd id="t-unlinked">0</dd>
+              <dt>traces linked to RUM</dt><dd id="t-linked">0</dd>
+              <dt>backend-only traces</dt><dd id="t-unlinked">0</dd>
             </dl>
           </wa-card>
         </div>
 
-        <h3>Sessions</h3>
-        <p>One row per RUM session. Each session has a single trace decision, so the priority column should only ever show one value per row.</p>
+        <h4>Sessions</h4>
+        <p>One row per RUM session. RUM decides once per session, so each row shows a single kind of header: every request in it says keep, or every one says drop, or none has headers.</p>
         <div class="compare-table-wrap">
           <table class="compare-table">
-            <thead><tr><th>Session</th><th>Requests</th><th>Priority sent</th><th>Kept</th><th>Linked</th></tr></thead>
+            <thead><tr><th>Session</th><th>Requests</th><th>RUM's decision</th><th>Traces kept</th><th>Linked to RUM</th></tr></thead>
             <tbody id="sessions-tbody"></tbody>
           </table>
         </div>
 
         <wa-details class="lab-aside">
-          <span slot="summary">What's on this page right now</span>
+          <span slot="summary">The exact config running on this page</span>
           <pre class="config-code"><code id="config-json"></code></pre>
         </wa-details>
       </div>
@@ -334,7 +453,6 @@
 
     <!-- Flow tab -->
     <div id="tab-flow" role="tabpanel" class="tab-panel" style="display:none">
-      <p>Where N requests end up, as expected values across many sessions. It starts from the Requests tab's config. Change the rates here to explore without reloading, and click a node for details.</p>
       <div id="flow-root"></div>
     </div><!-- /#tab-flow -->
 
@@ -342,31 +460,29 @@
     <div id="rum-log-wrap">
       <div class="log-resizer" id="log-resizer" title="Drag to resize"></div>
       <div id="rum-log-header">
-        <h3>What the backend received</h3>
+        <h3>Request by request</h3>
         <div class="log-controls">
           <button class="wa-neutral wa-outlined" id="clear-log-btn" onclick="clearRequests()">Clear</button>
           <button class="wa-neutral wa-outlined log-collapse-btn" id="log-collapse-btn" aria-expanded="true" aria-controls="rum-table-wrap" title="Hide activity log">&#9662;</button>
         </div>
       </div>
-      <p class="log-hint">Headers as read by the simulated backend, its decision, and whether RUM's resource event links to the kept trace. Same requests as devtools › Network.</p>
+      <p class="log-hint">Read each row left to right: what the browser attached, what the backend did with it, and what that leaves in Datadog.</p>
       <div id="rum-table-wrap">
         <table id="rum-table">
           <colgroup>
-            <col class="col-time"><col class="col-num"><col class="col-session"><col class="col-priority"><col class="col-tp"><col class="col-backend"><col>
+            <col class="col-num"><col class="col-session"><col><col><col>
           </colgroup>
           <thead>
             <tr>
-              <th>time</th>
-              <th>req</th>
+              <th>request</th>
               <th>session</th>
-              <th>priority</th>
-              <th>traceparent</th>
+              <th>browser sent</th>
               <th>backend</th>
-              <th>RUM resource</th>
+              <th>in Datadog</th>
             </tr>
           </thead>
           <tbody id="rum-tbody">
-            <tr id="rum-empty-row"><td colspan="7">Send a request to see what the backend received…</td></tr>
+            <tr id="rum-empty-row"><td colspan="5">Send a request to see its trip, row by row…</td></tr>
           </tbody>
         </table>
       </div>

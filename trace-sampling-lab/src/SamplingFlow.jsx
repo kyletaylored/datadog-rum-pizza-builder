@@ -7,9 +7,9 @@
 // model. The Requests tab is where the real SDK is measured.
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { BaseEdge, Background, Controls, EdgeLabelRenderer, Handle, MarkerType, Position, ReactFlow, getSmoothStepPath } from '@xyflow/react';
+import { Background, Controls, Handle, MarkerType, Position, ReactFlow } from '@xyflow/react';
 
-const COL = 260;
+const COL = 280;
 const ROW = 140;
 
 const fmt = (n) => Math.round(n).toLocaleString();
@@ -35,66 +35,74 @@ export function model({ requests, sessionRate, traceRate, apmRate, injection }) 
 }
 
 // `route` marks the nodes and edges that only exist under one injection mode.
+// Each node has a plain-language `detail` for the panel under the canvas and
+// a `tech` line with the exact mechanism, for readers who want it.
 function buildGraph(cfg, m) {
   const unsampled = m.unsampled;
   const nodes = [
-    { id: 'session', col: 0, row: 1.25, kind: 'rum', eyebrow: `sessionSampleRate ${cfg.sessionRate}%`, label: `${fmt(m.requests)} requests: session tracked?`,
-      summary: `${fmt(m.tracked)} tracked · ${fmt(m.untracked)} not`,
-      detail: 'Only fetch/XHR calls to URLs matching allowedTracingUrls are considered at all. For those, the tracer looks up the tracked RUM session first. With no tracked session it returns early: no headers, no trace ID on any resource event, whatever traceSampleRate or traceContextInjection say.' },
-    { id: 'decision', col: 1, row: 0.5, kind: 'rum', eyebrow: `traceSampleRate ${cfg.traceRate}%`, label: 'RUM trace decision',
-      summary: `${fmt(m.sampled)} sampled · ${fmt(unsampled)} not`,
-      detail: 'isSampled(session.id, traceSampleRate) — a Knuth-factor hash of the session ID, cached per rate. The decision is per session, not per request: within one session every request gets the same answer. Across many sessions it averages out to traceSampleRate.' },
-    { id: 'untracked', col: 1, row: 2.75, kind: 'header', eyebrow: 'Session not tracked', label: 'No trace headers',
+    { id: 'session', col: 0, row: 1.25, kind: 'rum', eyebrow: `RUM · sessionSampleRate ${cfg.sessionRate}%`, label: 'Is RUM tracking this session?',
+      summary: `${fmt(m.tracked)} yes · ${fmt(m.untracked)} no`,
+      detail: `Everything starts with a RUM session. If RUM isn't tracking the session at all, it can't trace anything in it, so its requests leave without trace headers. Here ${fmt(m.tracked)} of ${fmt(m.requests)} requests come from tracked sessions.`,
+      tech: 'Only fetch/XHR calls to URLs in allowedTracingUrls are considered. With no tracked session, the RUM tracer returns early: no headers, and no trace ID on the resource event.' },
+    { id: 'decision', col: 1, row: 0.5, kind: 'rum', eyebrow: `RUM · traceSampleRate ${cfg.traceRate}%`, label: 'Does RUM trace this session?',
+      summary: `${fmt(m.sampled)} yes · ${fmt(unsampled)} no`,
+      detail: `RUM picks about ${cfg.traceRate}% of tracked sessions to trace. The choice is made once per session, not per request: a traced session sends "keep" on every request, and an untraced one never does.`,
+      tech: 'isSampled(session.id, traceSampleRate): a Knuth-factor hash of the session ID, cached per rate.' },
+    { id: 'untracked', col: 1, row: 2.75, kind: 'header', eyebrow: 'Not tracked', label: 'Sent with no headers',
       summary: `${fmt(m.untracked)} requests`,
-      detail: 'These requests reach the backend exactly as if the RUM SDK were not there. Whatever the backend keeps from them starts a new trace with no RUM resource to link to.' },
-    { id: 'hdrKeep', col: 2, row: 0, kind: 'header', eyebrow: 'Both modes', label: 'priority 1 · traceparent …-01',
+      detail: 'These requests reach the backend exactly as if RUM weren\'t on the page. Whatever the backend keeps from them is a trace with no RUM resource to link to.' },
+    { id: 'hdrKeep', col: 2, row: 0, kind: 'header', eyebrow: 'Request · both options', label: 'Sent with "keep"',
       summary: `${fmt(m.sampled)} requests`,
-      detail: 'Sampled requests get headers in both modes: x-datadog-trace-id / parent-id / origin: rum / sampling-priority: 1, plus traceparent with flags 01 and tracestate dd=s:1;o:rum. The RUM resource event carries the same _dd.trace_id.' },
-    { id: 'hdrDrop', col: 2, row: 1, kind: 'header', route: 'all', eyebrow: "traceContextInjection: 'all'", label: 'priority 0 · traceparent …-00',
+      detail: 'Traced sessions send trace headers that say "keep" under either traceContextInjection option. RUM records the same trace ID on its resource event, which is what lets you jump from RUM to the trace.',
+      tech: 'x-datadog-sampling-priority: 1, traceparent ending -01, tracestate dd=s:1;o:rum.' },
+    { id: 'hdrDrop', col: 2, row: 1, kind: 'header', route: 'all', eyebrow: "Request · only with 'all'", label: 'Sent with "drop"',
       summary: `${fmt(unsampled)} requests`,
-      detail: "With 'all', unsampled requests still get the full header set, but with priority 0 and flags 00. RUM's resource event gets no _dd.trace_id for them, so even a trace the backend kept anyway would have nothing to link to." },
-    { id: 'noHdr', col: 2, row: 2, kind: 'header', route: 'sampled', eyebrow: "traceContextInjection: 'sampled'", label: 'No trace headers',
+      detail: "With 'all', the untraced sessions still send trace headers, but they say \"drop\". The browser has made the decision for the backend.",
+      tech: 'x-datadog-sampling-priority: 0, traceparent ending -00, tracestate dd=s:0;o:rum. The RUM resource event gets no _dd.trace_id.' },
+    { id: 'noHdr', col: 2, row: 2, kind: 'header', route: 'sampled', eyebrow: "Request · only with 'sampled'", label: 'Sent with no headers',
       summary: `${fmt(unsampled)} requests`,
-      detail: "With 'sampled' (the v6 default), unsampled requests get no tracing headers at all — so the decision moves to the backend, which samples them like any other request it receives." },
-    { id: 'honorKeep', col: 3, row: 0, kind: 'backend', eyebrow: 'Backend tracer', label: 'Honors upstream: keep',
+      detail: "With 'sampled' (the default), the untraced sessions send no trace headers at all. The backend gets no instruction, so it decides for itself." },
+    { id: 'honorKeep', col: 3, row: 0, kind: 'backend', eyebrow: 'Your backend', label: 'Follows the browser: keep',
       summary: `${fmt(m.sampled)} kept`,
-      detail: 'A tracer that receives a sampling decision propagates it rather than making its own — the whole distributed trace is kept.' },
-    { id: 'honorDrop', col: 3, row: 1, kind: 'backend', route: 'all', eyebrow: 'Backend tracer', label: 'Honors upstream: drop',
+      detail: 'A Datadog tracer that receives a decision passes it along instead of making its own, so the whole trace, browser to database, is kept.' },
+    { id: 'honorDrop', col: 3, row: 1, kind: 'backend', route: 'all', eyebrow: 'Your backend', label: 'Follows the browser: drop',
       summary: `${fmt(unsampled)} dropped`,
-      detail: 'Priority 0 propagates as well. The trace is dropped by head-based sampling; on a real tracer, the error and rare samplers can still keep a few.' },
-    { id: 'apm', col: 3, row: 2.5, kind: 'backend', eyebrow: `DD_TRACE_SAMPLE_RATE ${cfg.apmRate / 100}`, label: 'APM head sampler',
+      detail: 'The "drop" decision is followed just like "keep". The backend\'s own sample rate never applies to these requests.',
+      tech: 'On a real tracer, the error and rare samplers can still keep a few of these. They aren\'t modelled here.' },
+    { id: 'apm', col: 3, row: 2.5, kind: 'backend', eyebrow: `Your backend · DD_TRACE_SAMPLE_RATE ${cfg.apmRate}%`, label: 'Decides on its own',
       summary: `${fmt(m.toApm)} in → ${fmt(m.apmKeep)} kept`,
-      detail: 'No upstream decision, so this service is the root of a new trace and samples it itself. In this lab that is a flat rate; a real Agent can also compute rates itself (the default is a target of 10 traces per second).' },
-    { id: 'ddLinked', col: 4, row: 0, kind: 'datadog', eyebrow: 'Datadog', label: `${fmt(m.linked)} traces linked to RUM`,
-      summary: 'click through from the RUM resource',
-      detail: 'Only these traces connect a RUM resource to its backend trace. This number depends on sessionSampleRate × traceSampleRate alone — the backend rate never changes it.' },
-    { id: 'droppedP0', col: 4, row: 1, kind: 'drop', route: 'all', eyebrow: 'Not ingested', label: `${fmt(unsampled)} dropped by priority 0`,
+      detail: `With no decision from the browser, the backend starts a brand-new trace and keeps about ${cfg.apmRate}% of them.`,
+      tech: 'This lab uses one flat rate. By default a real Agent picks rates itself, aiming for about 10 traces per second.' },
+    { id: 'ddLinked', col: 4, row: 0, kind: 'datadog', eyebrow: 'In Datadog', label: `${fmt(m.linked)} traces linked to RUM`,
+      summary: 'open them from the RUM resource',
+      detail: 'These are the only traces you can reach from a RUM session. Their number depends on the two RUM rates alone: the backend\'s rate never changes it.' },
+    { id: 'droppedP0', col: 4, row: 1, kind: 'drop', route: 'all', eyebrow: 'Not kept', label: `${fmt(unsampled)} dropped, as the browser asked`,
       summary: 'decided in the browser',
-      detail: "In 'all' mode the browser decides for these requests too, and the decision is to drop. Backend sampling rates have no effect on them." },
-    { id: 'ddBackend', col: 4, row: 2.1, kind: 'datadog', eyebrow: 'Datadog', label: `${fmt(m.apmKeep)} backend-only traces`,
-      summary: 'no RUM resource to link to',
-      detail: 'Kept by the backend but started there, so they show up in APM without a RUM link.' },
-    { id: 'droppedApm', col: 4, row: 3.1, kind: 'drop', eyebrow: 'Not ingested', label: `${fmt(m.apmDrop)} dropped by APM sampler`,
-      summary: 'decided in the backend',
-      detail: 'Dropped by the backend\'s own head sampler.' },
+      detail: "In 'all' mode, the browser decides these requests too, and the answer is drop. No backend setting brings them back." },
+    { id: 'ddBackend', col: 4, row: 2.1, kind: 'datadog', eyebrow: 'In Datadog', label: `${fmt(m.apmKeep)} backend-only traces`,
+      summary: 'no link back to RUM',
+      detail: 'The backend kept these on its own. They show up in APM, but no RUM resource points to them.' },
+    { id: 'droppedApm', col: 4, row: 3.1, kind: 'drop', eyebrow: 'Not kept', label: `${fmt(m.apmDrop)} dropped by the backend`,
+      summary: 'decided by the backend\'s sampler',
+      detail: 'The backend\'s own sampler chose not to keep these.' },
   ];
 
+  // No labels on the edges: every node already states its count, and the
+  // stroke width shows the volume.
   const edges = [
-    { source: 'session', target: 'decision', count: m.tracked, label: 'tracked' },
-    { source: 'session', target: 'untracked', count: m.untracked, label: 'not tracked' },
-    // No labels on the three branches out of the decision: the gap between
-    // columns is too narrow for them, and each target node shows its count.
-    { source: 'decision', target: 'hdrKeep', count: m.sampled, bare: true },
-    { source: 'decision', target: 'hdrDrop', count: unsampled, route: 'all', bare: true },
-    { source: 'decision', target: 'noHdr', count: unsampled, route: 'sampled', bare: true },
+    { source: 'session', target: 'decision', count: m.tracked },
+    { source: 'session', target: 'untracked', count: m.untracked },
+    { source: 'decision', target: 'hdrKeep', count: m.sampled },
+    { source: 'decision', target: 'hdrDrop', count: unsampled, route: 'all' },
+    { source: 'decision', target: 'noHdr', count: unsampled, route: 'sampled' },
     { source: 'hdrKeep', target: 'honorKeep', count: m.sampled },
     { source: 'hdrDrop', target: 'honorDrop', count: unsampled, route: 'all' },
     { source: 'noHdr', target: 'apm', count: unsampled, route: 'sampled' },
     { source: 'untracked', target: 'apm', count: m.untracked },
     { source: 'honorKeep', target: 'ddLinked', count: m.sampled },
     { source: 'honorDrop', target: 'droppedP0', count: unsampled, route: 'all' },
-    { source: 'apm', target: 'ddBackend', count: m.apmKeep, label: 'keep' },
-    { source: 'apm', target: 'droppedApm', count: m.apmDrop, label: 'drop' },
+    { source: 'apm', target: 'ddBackend', count: m.apmKeep },
+    { source: 'apm', target: 'droppedApm', count: m.apmDrop },
   ];
   return { nodes, edges };
 }
@@ -128,30 +136,10 @@ function FlowNode({ data }) {
   );
 }
 
-// HTML labels via EdgeLabelRenderer rather than SVG text, so they get the
-// page's fonts and colors and can sit on a solid background.
-function FlowEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, markerEnd, label, data }) {
-  const [path, labelX, labelY] = getSmoothStepPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, borderRadius: 10 });
-  return (
-    <>
-      <BaseEdge id={id} path={path} style={style} markerEnd={markerEnd} />
-      {label && (
-        <EdgeLabelRenderer>
-          <div
-            className="flow-edge__label nodrag nopan"
-            data-muted={data.muted}
-            style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
-          >
-            {label}
-          </div>
-        </EdgeLabelRenderer>
-      )}
-    </>
-  );
-}
-
 const NODE_TYPES = { lab: FlowNode };
-const EDGE_TYPES = { lab: FlowEdge };
+// Edges into an outcome take its color, so the green and red endings read
+// from a distance.
+const EDGE_COLOR = { datadog: 'var(--dd-green-on)', drop: 'var(--dd-red-on)' };
 
 function useTheme() {
   const read = () => (document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
@@ -164,15 +152,23 @@ function useTheme() {
   return theme;
 }
 
-function RateSlider({ label, hint, value, onChange }) {
+function RateSlider({ label, code, value, onChange }) {
   return (
     <label className="flow-control">
       <span className="flow-control__label">{label} <output>{value}%</output></span>
       <input type="range" min="0" max="100" step="1" value={value} onChange={(e) => onChange(Number(e.target.value))} />
-      <span className="flow-control__hint">{hint}</span>
+      <span className="flow-control__hint"><code>{code}</code></span>
     </label>
   );
 }
+
+const LEGEND = [
+  ['rum', 'RUM, in the browser'],
+  ['header', 'What the request carries'],
+  ['backend', 'Your backend'],
+  ['datadog', 'Ends up in Datadog'],
+  ['drop', 'Not kept'],
+];
 
 export default function SamplingFlow({ initial }) {
   const theme = useTheme();
@@ -187,6 +183,7 @@ export default function SamplingFlow({ initial }) {
   const { nodes, edges } = useMemo(() => {
     const isMuted = (route) => !!route && route !== cfg.injection;
     const max = Math.max(1, cfg.requests);
+    const kindOf = Object.fromEntries(graph.nodes.map((n) => [n.id, n.kind]));
     return {
       nodes: graph.nodes.map((n) => ({
         id: n.id,
@@ -205,20 +202,20 @@ export default function SamplingFlow({ initial }) {
       })),
       edges: graph.edges.map((e, i) => {
         const muted = isMuted(e.route);
-        const live = !muted && e.count > 0;
+        const empty = e.count <= 0;
+        const color = (!muted && !empty && EDGE_COLOR[kindOf[e.target]]) || 'var(--dd-color-muted)';
         return {
           id: `e${i}`,
           source: e.source,
           target: e.target,
-          type: 'lab',
-          animated: live,
-          label: e.bare ? undefined : `${e.label ? `${e.label} · ` : ''}${fmt(e.count)}`,
-          data: { muted },
-          markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14 },
+          type: 'smoothstep',
+          pathOptions: { borderRadius: 10 },
+          markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color, markerUnits: 'userSpaceOnUse' },
           style: {
-            strokeWidth: 1.5 + 7 * (e.count / max),
-            strokeDasharray: muted ? '5 5' : undefined,
-            opacity: muted ? 0.3 : live ? 1 : 0.45,
+            stroke: color,
+            strokeWidth: empty ? 1.5 : 2 + 4 * (e.count / max),
+            strokeDasharray: muted || empty ? '6 5' : undefined,
+            opacity: muted ? 0.3 : empty ? 0.5 : 1,
           },
         };
       }),
@@ -230,28 +227,37 @@ export default function SamplingFlow({ initial }) {
 
   return (
     <section className="sampling-flow" aria-label="Trace sampling flow">
+      <p className="lead">The first tab shows a handful of real requests. This one zooms out. Imagine {fmt(cfg.requests)} requests spread over many users' sessions, and follow where they end up. Each box is a stop on the trip. The numbers are what you'd expect on average. Click any box to read what happens there.</p>
+      <ul className="flow-legend" aria-label="Legend">
+        {LEGEND.map(([kind, text]) => (
+          <li key={kind} data-kind={kind}><span className="swatch" />{text}</li>
+        ))}
+        <li><span className="swatch muted-route" />The path the other option would take</li>
+      </ul>
+
       <div className="flow-controls">
+        <div className="flow-control flow-control--wide">
+          <span className="flow-control__label">When RUM doesn't trace a session, what should its requests carry?</span>
+          <div className="flow-control__row">
+            <div className="segmented" role="group" aria-label="traceContextInjection">
+              {[['all', 'Headers that say "drop"'], ['sampled', 'No headers; let the backend decide']].map(([mode, text]) => (
+                <button key={mode} type="button" aria-pressed={cfg.injection === mode} onClick={() => set('injection')(mode)}>
+                  {text}<code>traceContextInjection: '{mode}'</code>
+                </button>
+              ))}
+            </div>
+            <button type="button" className="flow-reset" onClick={() => setCfg(initial)}>Reset to the live tab's settings</button>
+          </div>
+        </div>
         <label className="flow-control">
           <span className="flow-control__label">Requests</span>
           <input type="number" min="1" max="10000000" step="100" value={cfg.requests}
             onChange={(e) => set('requests')(Math.max(1, Number(e.target.value) || 1))} />
           <span className="flow-control__hint">across many sessions</span>
         </label>
-        <RateSlider label="sessionSampleRate" hint="RUM — sessions tracked" value={cfg.sessionRate} onChange={set('sessionRate')} />
-        <RateSlider label="traceSampleRate" hint="RUM — per session" value={cfg.traceRate} onChange={set('traceRate')} />
-        <RateSlider label="DD_TRACE_SAMPLE_RATE" hint="APM — head sampler" value={cfg.apmRate} onChange={set('apmRate')} />
-        <div className="flow-control">
-          <span className="flow-control__label">traceContextInjection</span>
-          <div className="mode-picker">
-            {['all', 'sampled'].map((mode) => (
-              <button key={mode} type="button" className={`wa-neutral wa-outlined${cfg.injection === mode ? ' active' : ''}`}
-                aria-pressed={cfg.injection === mode} onClick={() => set('injection')(mode)}>
-                '{mode}'
-              </button>
-            ))}
-          </div>
-          <button type="button" className="wa-neutral wa-plain flow-reset" onClick={() => setCfg(initial)}>Reset to the Requests tab's config</button>
-        </div>
+        <RateSlider label="Sessions RUM tracks" code="sessionSampleRate" value={cfg.sessionRate} onChange={set('sessionRate')} />
+        <RateSlider label="Sessions RUM traces" code="traceSampleRate" value={cfg.traceRate} onChange={set('traceRate')} />
+        <RateSlider label="Backend's own sample rate" code="DD_TRACE_SAMPLE_RATE" value={cfg.apmRate} onChange={set('apmRate')} />
       </div>
 
       <div className="flow-canvas">
@@ -259,7 +265,6 @@ export default function SamplingFlow({ initial }) {
           nodes={nodes}
           edges={edges}
           nodeTypes={NODE_TYPES}
-          edgeTypes={EDGE_TYPES}
           colorMode={theme}
           fitView
           fitViewOptions={{ padding: 0.08 }}
@@ -283,24 +288,31 @@ export default function SamplingFlow({ initial }) {
         <span className="flow-node__eyebrow">{selected.eyebrow}</span>
         <h4>{selected.label}</h4>
         <p>{selected.detail}</p>
+        {selected.tech && <p className="tech">Under the hood: {selected.tech}</p>}
+      </div>
+
+      <div className="summary-box">
+        <strong>The takeaway:</strong> with these settings, {fmt(m.total)} of {fmt(cfg.requests)} requests ({pct(m.total / Math.max(1, cfg.requests))}) become traces in Datadog.
+        {' '}{fmt(m.linked)} of them link back to RUM, and {fmt(m.apmKeep)} exist only on the backend.
+        {' '}Switching to <code>'{cfg.injection === 'all' ? 'sampled' : 'all'}'</code> would give {other.total === m.total ? 'the same total' : `${fmt(other.total)} instead`}. The traces linked to RUM stay at {fmt(m.linked)} either way: only the two RUM rates change that number.
       </div>
 
       <div className="compare-table-wrap">
         <table className="compare-table flow-compare">
           <thead>
             <tr>
-              <th>traceContextInjection</th>
+              <th>Option</th>
               <th>Traces in Datadog</th>
               <th>Linked to RUM</th>
               <th>Backend-only</th>
-              <th>Dropped by priority 0</th>
-              <th>Dropped by APM sampler</th>
+              <th>Dropped, as the browser asked</th>
+              <th>Dropped by the backend</th>
             </tr>
           </thead>
           <tbody>
             {modes.map(([mode, x]) => (
               <tr key={mode} data-active={mode === cfg.injection}>
-                <td><code>'{mode}'</code>{mode === cfg.injection && <span className="type-badge info">selected</span>}</td>
+                <td><code>'{mode}'</code>{mode === cfg.injection && <span className="type-badge info">showing</span>}</td>
                 <td><strong>{fmt(x.total)}</strong> <span className="muted">({pct(x.total / Math.max(1, x.requests))})</span></td>
                 <td>{fmt(x.linked)}</td>
                 <td>{fmt(x.apmKeep)}</td>

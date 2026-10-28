@@ -9,9 +9,9 @@ A companion to the [Pizza Builder](../) demo for a recurring question: with RUM 
 
 Both only apply to URLs in `allowedTracingUrls`, and only inside a tracked RUM session.
 
-![Requests tab after five sessions at traceSampleRate 20 / 'sampled'](../assets/trace-sampling-lab.webp)
+![The Try it live tab after five sessions at traceSampleRate 20 / 'sampled'](../assets/trace-sampling-lab.webp)
 
-![Flow tab modelling both traceContextInjection routes](../assets/trace-sampling-lab-flow.webp)
+![The See the big picture tab, modelling both traceContextInjection routes](../assets/trace-sampling-lab-flow.webp)
 
 ## How it works
 
@@ -35,11 +35,11 @@ What's **measured**: the headers the RUM SDK injected, and the `_dd.trace_id` (o
 
 ## Things this lab shows
 
-- **The decision is per session, not per request.** In SDK v6 the tracer calls `isSampled(session.id, traceSampleRate)`, a Knuth-factor hash of the session ID that is cached per rate. At `traceSampleRate: 20`, one session sends `x-datadog-sampling-priority: 1` on *every* request or on *none*. You only see ~20% across many sessions. Use **New RUM session** between batches, and the Sessions table shows one outcome per session.
+- **The decision is per session, not per request.** In SDK v6 the tracer calls `isSampled(session.id, traceSampleRate)`, a Knuth-factor hash of the session ID that is cached per rate. At `traceSampleRate: 20`, one session sends `x-datadog-sampling-priority: 1` on *every* request or on *none*. You only see ~20% across many sessions. Use **Start a new RUM session** between batches, and the Sessions table shows one outcome per session.
 - **`'all'` hands the backend a drop.** Unsampled requests still carry the full header set, with `x-datadog-sampling-priority: 0`, `traceparent …-00` and `tracestate dd=s:0;o:rum`. A tracer honors that and drops the trace, so the backend's own rate never applies. RUM's resource event carries no `_dd.trace_id` for these requests either.
 - **`'sampled'` hands the backend the decision.** Unsampled requests reach the backend with no trace headers at all. Its head sampler keeps some of them as **backend-only** traces, which have no RUM resource to link to.
 - **Linked traces depend only on the RUM side.** Across many sessions, traces linked to RUM = requests × `sessionSampleRate` × `traceSampleRate`. The backend rate changes how many *other* traces you get, never how many link back to RUM.
-- **Untracked sessions inject nothing.** If `sessionSampleRate` leaves a session untracked, its requests get no headers in either mode. The Flow tab models this (the live page tracks 100% of sessions).
+- **Untracked sessions inject nothing.** If `sessionSampleRate` leaves a session untracked, its requests get no headers in either mode. The *See the big picture* tab models this (the live page tracks 100% of sessions).
 
 ## Running it
 
@@ -56,7 +56,7 @@ The flow diagram is `src/SamplingFlow.jsx`, bundled to `dist/bundle.js` with Rea
 ## Caveats
 
 - **The backend is a model.** Real Datadog tracers also have error and rare samplers that can keep some priority-0 traces, and by default the Agent computes rates itself (a target of 10 traces per second per Agent) rather than using one flat `DD_TRACE_SAMPLE_RATE`. Ingestion controls and retention filters then apply on top. Check the trace pipeline docs before quoting numbers to a customer.
-- **Counts on the Flow tab are expected values** across many sessions. Any single session is all-or-nothing.
+- **Counts on the *See the big picture* tab are expected values** across many sessions. Any single session is all-or-nothing.
 - **An ad blocker that blocks `datadoghq-browser-agent.com`** stops the RUM SDK from loading, so no headers are injected and the backend samples everything itself. The page says so when that happens.
 
 ## References

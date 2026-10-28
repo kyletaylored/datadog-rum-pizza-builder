@@ -6,8 +6,8 @@
 // The counts are expected values computed from the rates — this is the
 // model. The Requests tab is where the real SDK is measured.
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { Background, Controls, Handle, MarkerType, Position, ReactFlow } from '@xyflow/react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { BaseEdge, Background, Controls, Handle, MarkerType, Panel, Position, ReactFlow, getStraightPath } from '@xyflow/react';
 
 const COL = 280;
 const ROW = 140;
@@ -34,21 +34,24 @@ export function model({ requests, sessionRate, traceRate, apmRate, injection }) 
   };
 }
 
+// Rows are lanes: keep → row 0, drop → row 1, backend decides → row 2,
+// so most edges run straight across.
+//
 // `route` marks the nodes and edges that only exist under one injection mode.
 // Each node has a plain-language `detail` for the panel under the canvas and
 // a `tech` line with the exact mechanism, for readers who want it.
 function buildGraph(cfg, m) {
   const unsampled = m.unsampled;
   const nodes = [
-    { id: 'session', col: 0, row: 1.25, kind: 'rum', eyebrow: `RUM · sessionSampleRate ${cfg.sessionRate}%`, label: 'Is RUM tracking this session?',
+    { id: 'session', col: 0, row: 2, kind: 'rum', eyebrow: `RUM · sessionSampleRate ${cfg.sessionRate}%`, label: 'Is RUM tracking this session?',
       summary: `${fmt(m.tracked)} yes · ${fmt(m.untracked)} no`,
       detail: `Everything starts with a RUM session. If RUM isn't tracking the session at all, it can't trace anything in it, so its requests leave without trace headers. Here ${fmt(m.tracked)} of ${fmt(m.requests)} requests come from tracked sessions.`,
       tech: 'Only fetch/XHR calls to URLs in allowedTracingUrls are considered. With no tracked session, the RUM tracer returns early: no headers, and no trace ID on the resource event.' },
-    { id: 'decision', col: 1, row: 0.5, kind: 'rum', eyebrow: `RUM · traceSampleRate ${cfg.traceRate}%`, label: 'Does RUM trace this session?',
+    { id: 'decision', col: 1, row: 1, kind: 'rum', eyebrow: `RUM · traceSampleRate ${cfg.traceRate}%`, label: 'Does RUM trace this session?',
       summary: `${fmt(m.sampled)} yes · ${fmt(unsampled)} no`,
       detail: `RUM picks about ${cfg.traceRate}% of tracked sessions to trace. The choice is made once per session, not per request: a traced session sends "keep" on every request, and an untraced one never does.`,
       tech: 'isSampled(session.id, traceSampleRate): a Knuth-factor hash of the session ID, cached per rate.' },
-    { id: 'untracked', col: 1, row: 2.75, kind: 'header', eyebrow: 'Not tracked', label: 'Sent with no headers',
+    { id: 'untracked', col: 1, row: 3, kind: 'header', eyebrow: 'Not tracked', label: 'Sent with no headers',
       summary: `${fmt(m.untracked)} requests`,
       detail: 'These requests reach the backend exactly as if RUM weren\'t on the page. Whatever the backend keeps from them is a trace with no RUM resource to link to.' },
     { id: 'hdrKeep', col: 2, row: 0, kind: 'header', eyebrow: 'Request · both options', label: 'Sent with "keep"',
@@ -69,7 +72,7 @@ function buildGraph(cfg, m) {
       summary: `${fmt(unsampled)} dropped`,
       detail: 'The "drop" decision is followed just like "keep". The backend\'s own sample rate never applies to these requests.',
       tech: 'On a real tracer, the error and rare samplers can still keep a few of these. They aren\'t modelled here.' },
-    { id: 'apm', col: 3, row: 2.5, kind: 'backend', eyebrow: `Your backend · DD_TRACE_SAMPLE_RATE ${cfg.apmRate}%`, label: 'Decides on its own',
+    { id: 'apm', col: 3, row: 2, kind: 'backend', eyebrow: `Your backend · DD_TRACE_SAMPLE_RATE ${cfg.apmRate}%`, label: 'Decides on its own',
       summary: `${fmt(m.toApm)} in → ${fmt(m.apmKeep)} kept`,
       detail: `With no decision from the browser, the backend starts a brand-new trace and keeps about ${cfg.apmRate}% of them.`,
       tech: 'This lab uses one flat rate. By default a real Agent picks rates itself, aiming for about 10 traces per second.' },
@@ -79,10 +82,10 @@ function buildGraph(cfg, m) {
     { id: 'droppedP0', col: 4, row: 1, kind: 'drop', route: 'all', eyebrow: 'Not kept', label: `${fmt(unsampled)} dropped, as the browser asked`,
       summary: 'decided in the browser',
       detail: "In 'all' mode, the browser decides these requests too, and the answer is drop. No backend setting brings them back." },
-    { id: 'ddBackend', col: 4, row: 2.1, kind: 'datadog', eyebrow: 'In Datadog', label: `${fmt(m.apmKeep)} backend-only traces`,
+    { id: 'ddBackend', col: 4, row: 2, kind: 'datadog', eyebrow: 'In Datadog', label: `${fmt(m.apmKeep)} backend-only traces`,
       summary: 'no link back to RUM',
       detail: 'The backend kept these on its own. They show up in APM, but no RUM resource points to them.' },
-    { id: 'droppedApm', col: 4, row: 3.1, kind: 'drop', eyebrow: 'Not kept', label: `${fmt(m.apmDrop)} dropped by the backend`,
+    { id: 'droppedApm', col: 4, row: 3, kind: 'drop', eyebrow: 'Not kept', label: `${fmt(m.apmDrop)} dropped by the backend`,
       summary: 'decided by the backend\'s sampler',
       detail: 'The backend\'s own sampler chose not to keep these.' },
   ];
@@ -107,6 +110,39 @@ function buildGraph(cfg, m) {
   return { nodes, edges };
 }
 
+// One request's trip, drawn at random from the same rates as the counts.
+function pickTrip(cfg) {
+  const roll = (pct) => Math.random() * 100 < pct;
+  const trip = ['session'];
+  if (!roll(cfg.sessionRate)) trip.push('untracked', 'apm');
+  else if (roll(cfg.traceRate)) trip.push('decision', 'hdrKeep', 'honorKeep', 'ddLinked');
+  else if (cfg.injection === 'all') trip.push('decision', 'hdrDrop', 'honorDrop', 'droppedP0');
+  else trip.push('decision', 'noHdr', 'apm');
+  if (trip.at(-1) === 'apm') trip.push(roll(cfg.apmRate) ? 'ddBackend' : 'droppedApm');
+  return trip;
+}
+
+// What each stop means for the one request being followed.
+const TRIP_STEP = {
+  session: 'starts in a RUM session',
+  decision: 'RUM is tracking the session',
+  untracked: 'RUM isn\'t tracking the session, so no headers',
+  hdrKeep: 'RUM traces the session: "keep" headers',
+  hdrDrop: 'RUM doesn\'t trace the session: "drop" headers',
+  noHdr: 'RUM doesn\'t trace the session: no headers',
+  honorKeep: 'the backend keeps it, as asked',
+  honorDrop: 'the backend drops it, as asked',
+  apm: 'no word from RUM, so the backend decides',
+  ddLinked: 'a trace linked to RUM',
+  droppedP0: 'nothing is kept',
+  ddBackend: 'the backend keeps it: a backend-only trace',
+  droppedApm: 'the backend drops it: nothing is kept',
+};
+
+const STEP_MS = 900;
+const DOT_SECONDS = 2.4;
+const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
 function FlowNode({ data }) {
   return (
     <>
@@ -119,6 +155,7 @@ function FlowNode({ data }) {
         data-kind={data.kind}
         data-selected={data.selected}
         data-muted={data.muted}
+        data-visited={data.visited}
         onClick={() => data.onSelect(data.id)}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -136,7 +173,32 @@ function FlowNode({ data }) {
   );
 }
 
+// A straight line with dots moving along it, more of them on busier edges,
+// plus the token for the request being followed when it's on this edge.
+// SMIL rather than CSS: animateMotion follows the edge's own path.
+function FlowEdge({ id, sourceX, sourceY, targetX, targetY, style, markerEnd, data }) {
+  const [path] = getStraightPath({ sourceX, sourceY, targetX, targetY });
+  const token = useRef(null);
+  useEffect(() => { if (data.token) token.current?.beginElement(); }, [data.token]);
+  return (
+    <>
+      <BaseEdge id={id} path={path} style={style} markerEnd={markerEnd} />
+      {Array.from({ length: data.dots }, (_, i) => (
+        <circle key={i} r="3" fill={data.color} className="flow-dot">
+          <animateMotion dur={`${DOT_SECONDS}s`} begin={`${(-i * DOT_SECONDS) / data.dots}s`} repeatCount="indefinite" path={path} />
+        </circle>
+      ))}
+      {data.token && (
+        <circle key={data.token} r="8" className="flow-token">
+          <animateMotion ref={token} dur={`${STEP_MS}ms`} begin="indefinite" fill="freeze" path={path} />
+        </circle>
+      )}
+    </>
+  );
+}
+
 const NODE_TYPES = { lab: FlowNode };
+const EDGE_TYPES = { lab: FlowEdge };
 // Edges into an outcome take its color, so the green and red endings read
 // from a distance.
 const EDGE_COLOR = { datadog: 'var(--dd-green-on)', drop: 'var(--dd-red-on)' };
@@ -174,6 +236,18 @@ export default function SamplingFlow({ initial }) {
   const theme = useTheme();
   const [cfg, setCfg] = useState(initial);
   const [selectedId, setSelectedId] = useState('decision');
+  // { key, stops, step }: the token is on the edge stops[step] → stops[step + 1].
+  const [trip, setTrip] = useState(null);
+  const tripCount = useRef(0);
+  const followOne = () => setTrip({ key: ++tripCount.current, stops: pickTrip(cfg), step: 0 });
+  useEffect(() => {
+    if (!trip || trip.step >= trip.stops.length - 1) return undefined;
+    const t = setTimeout(() => setTrip((x) => x && { ...x, step: x.step + 1 }), STEP_MS);
+    return () => clearTimeout(t);
+  }, [trip]);
+  // Once the request arrives, open the details for where it ended up.
+  const tripDone = !!trip && trip.step === trip.stops.length - 1;
+  useEffect(() => { if (tripDone) setSelectedId(trip.stops.at(-1)); }, [tripDone, trip?.key]);
   const set = (key) => (value) => setCfg((c) => ({ ...c, [key]: value }));
 
   const m = useMemo(() => model(cfg), [cfg]);
@@ -184,6 +258,9 @@ export default function SamplingFlow({ initial }) {
     const isMuted = (route) => !!route && route !== cfg.injection;
     const max = Math.max(1, cfg.requests);
     const kindOf = Object.fromEntries(graph.nodes.map((n) => [n.id, n.kind]));
+    const visited = new Set(trip ? trip.stops.slice(0, trip.step + 1) : []);
+    const tokenEdge = trip && !tripDone ? `${trip.stops[trip.step]}-${trip.stops[trip.step + 1]}` : null;
+    const motion = !reducedMotion();
     return {
       nodes: graph.nodes.map((n) => ({
         id: n.id,
@@ -197,20 +274,26 @@ export default function SamplingFlow({ initial }) {
           hasOut: graph.edges.some((e) => e.source === n.id),
           selected: n.id === selectedId,
           muted: isMuted(n.route),
+          visited: visited.has(n.id),
           onSelect: setSelectedId,
         },
       })),
-      edges: graph.edges.map((e, i) => {
+      edges: graph.edges.map((e) => {
         const muted = isMuted(e.route);
         const empty = e.count <= 0;
         const color = (!muted && !empty && EDGE_COLOR[kindOf[e.target]]) || 'var(--dd-color-muted)';
+        const id = `${e.source}-${e.target}`;
         return {
-          id: `e${i}`,
+          id,
           source: e.source,
           target: e.target,
-          type: 'smoothstep',
-          pathOptions: { borderRadius: 10 },
-          markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color, markerUnits: 'userSpaceOnUse' },
+          type: 'lab',
+          data: {
+            color,
+            dots: motion && !muted && !empty ? Math.max(1, Math.round(3 * (e.count / max))) : 0,
+            token: id === tokenEdge ? `${trip.key}-${trip.step}` : null,
+          },
+          markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14, color, markerUnits: 'userSpaceOnUse' },
           style: {
             stroke: color,
             strokeWidth: empty ? 1.5 : 2 + 4 * (e.count / max),
@@ -220,7 +303,7 @@ export default function SamplingFlow({ initial }) {
         };
       }),
     };
-  }, [graph, cfg.injection, cfg.requests, selectedId]);
+  }, [graph, cfg.injection, cfg.requests, selectedId, trip, tripDone]);
 
   const selected = graph.nodes.find((n) => n.id === selectedId) ?? graph.nodes[0];
   const modes = cfg.injection === 'all' ? [['all', m], ['sampled', other]] : [['all', other], ['sampled', m]];
@@ -265,6 +348,7 @@ export default function SamplingFlow({ initial }) {
           nodes={nodes}
           edges={edges}
           nodeTypes={NODE_TYPES}
+          edgeTypes={EDGE_TYPES}
           colorMode={theme}
           fitView
           fitViewOptions={{ padding: 0.08 }}
@@ -279,6 +363,14 @@ export default function SamplingFlow({ initial }) {
           zoomOnDoubleClick={false}
           proOptions={{ hideAttribution: true }}
         >
+          <Panel position="top-left" className="flow-trip">
+            <button type="button" className="wa-brand" onClick={followOne}>▶ Follow one request</button>
+            {trip && (
+              <ol className="flow-trip__steps" aria-live="polite">
+                {trip.stops.slice(0, trip.step + 1).map((id) => <li key={id}>{TRIP_STEP[id]}</li>)}
+              </ol>
+            )}
+          </Panel>
           <Background gap={22} size={1} />
           <Controls showInteractive={false} />
         </ReactFlow>

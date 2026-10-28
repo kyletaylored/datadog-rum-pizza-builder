@@ -296,7 +296,7 @@ function backendCell(r) {
   if (r.error) return `<span class="type-badge error">${esc(r.error)}</span>`;
   if (!r.decision) return '<span class="muted">…</span>';
   const cls = r.decision === 'keep' ? 'action' : 'debug';
-  const why = r.decidedBy === 'rum' ? 'as the browser asked' : 'its own sampler decided';
+  const why = r.decidedBy === 'rum' ? 'as the browser asked' : 'no decision from RUM, so its own rate';
   return `<span class="type-badge ${cls}">${r.decision === 'keep' ? 'kept' : 'dropped'}</span><span class="sub" title="${esc(r.reason)}">${why}</span>`;
 }
 

@@ -9,6 +9,10 @@ A companion to the [Pizza Builder](../) demo for a recurring question: with RUM 
 
 Both only apply to URLs in `allowedTracingUrls`, and only inside a tracked RUM session.
 
+![Requests tab after five sessions at traceSampleRate 20 / 'sampled'](../assets/trace-sampling-lab.webp)
+
+![Flow tab modelling both traceContextInjection routes](../assets/trace-sampling-lab-flow.webp)
+
 ## How it works
 
 ```

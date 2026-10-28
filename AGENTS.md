@@ -128,6 +128,16 @@ npm run preview   # check http://localhost:8765/<lab>/ as deployed
 
 In the browser, check that the shared CSS and JS load (no 404s on `../` paths), the theme toggle and sidebar resizer work, and RUM events show up (in the on-page table if the lab has one, or in devtools).
 
+### 9. Screenshot it in the PR
+
+A PR that adds an environment, or visibly changes one, includes screenshots so reviewers can see it without running it.
+
+- Capture them from `npm run dev` with a headless browser (Playwright works), after driving the page into a state that shows what it does: events in the table, a scenario run, each tab. Include one dark-mode shot.
+- Use a 1440px-wide viewport, and convert to WebP (`cwebp -q 85 in.png -o out.webp`) to keep each file around 100 KB.
+- Commit them as `assets/<lab>.webp`, `assets/<lab>-<view>.webp`, next to the existing `assets/pizza-builder*.webp`. Reference them from `<lab>/README.md` too (`../assets/<lab>.webp`).
+- `gh` can't upload image attachments, so embed them in the PR body by commit-pinned URL, which keeps working after the branch is deleted: `https://raw.githubusercontent.com/<owner>/<repo>/<commit-sha>/assets/<lab>.webp`.
+- Don't commit raw PNGs or scratch captures; keep those in a temp directory.
+
 ---
 
 ## General guidelines

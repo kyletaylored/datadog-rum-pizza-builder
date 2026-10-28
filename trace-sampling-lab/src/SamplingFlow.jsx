@@ -7,7 +7,7 @@
 // model. The Requests tab is where the real SDK is measured.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { BaseEdge, Background, Controls, Handle, MarkerType, Panel, Position, ReactFlow, getStraightPath } from '@xyflow/react';
+import { BaseEdge, Background, Controls, Handle, MarkerType, Panel, Position, ReactFlow, getBezierPath } from '@xyflow/react';
 
 const COL = 280;
 const ROW = 140;
@@ -35,7 +35,7 @@ export function model({ requests, sessionRate, traceRate, apmRate, injection }) 
 }
 
 // Rows are lanes: keep → row 0, drop → row 1, backend decides → row 2,
-// so most edges run straight across.
+// so most edges run level and only the branches curve.
 //
 // `route` marks the nodes and edges that only exist under one injection mode.
 // Each node has a plain-language `detail` for the panel under the canvas and
@@ -173,11 +173,11 @@ function FlowNode({ data }) {
   );
 }
 
-// A straight line with dots moving along it, more of them on busier edges,
+// A curve with dots moving along it, more of them on busier edges,
 // plus the token for the request being followed when it's on this edge.
 // SMIL rather than CSS: animateMotion follows the edge's own path.
-function FlowEdge({ id, sourceX, sourceY, targetX, targetY, style, markerEnd, data }) {
-  const [path] = getStraightPath({ sourceX, sourceY, targetX, targetY });
+function FlowEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style, markerEnd, data }) {
+  const [path] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition });
   const token = useRef(null);
   useEffect(() => { if (data.token) token.current?.beginElement(); }, [data.token]);
   return (

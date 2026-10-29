@@ -312,14 +312,26 @@ function renderTabsTable() {
     return;
   }
 
-  tbody.innerHTML = rows.map(t => `
-    <tr class="${t.tabId === LAB_TAB_ID ? 'tab-row-self' : ''}">
-      <td><code>${escapeHtml(t.tabId)}</code>${t.tabId === LAB_TAB_ID ? ' (this tab)' : ''}</td>
-      <td><code>${escapeHtml(t.persistence)}</code></td>
-      <td>${escapeHtml(t.consent)}</td>
-      <td><code>${escapeHtml(t.sessionId || '—')}</code></td>
-      <td>${Math.round((now - t.ts) / 1000)}s ago</td>
-    </tr>`).join('');
+  tbody.replaceChildren(...rows.map(t => {
+    const row = document.createElement('tr');
+    const isSelf = t.tabId === LAB_TAB_ID;
+    if (isSelf) row.className = 'tab-row-self';
+
+    [t.tabId, t.persistence, t.consent, t.sessionId || '—', `${Math.round((now - t.ts) / 1000)}s ago`].forEach((value, i) => {
+      const cell = document.createElement('td');
+      if (i === 0 || i === 1 || i === 3) {
+        const code = document.createElement('code');
+        code.textContent = String(value);
+        cell.append(code);
+      } else {
+        cell.textContent = String(value);
+      }
+      if (i === 0 && isSelf) cell.append(' (this tab)');
+      row.append(cell);
+    });
+
+    return row;
+  }));
 
   if (verdict) {
     const ids = [...new Set(rows.map(t => t.sessionId).filter(Boolean))];

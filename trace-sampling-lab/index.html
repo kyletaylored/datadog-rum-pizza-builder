@@ -62,15 +62,19 @@
      cards, callouts, tables and the docked log live in ../lab-shared.css. ===== */
 
   /* The four-stop trip, as one bordered strip with column dividers. Each stop
-     names its kind with the same accent the Flow tab's nodes use. */
+     gets the accent its kind has on the Simulation View's nodes (the
+     [data-kind] rules below), so the two tabs read as one picture. */
   .journey {
     display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
     margin: 0; padding: 0; list-style: none;
     border: 1px solid var(--ui-border); border-radius: var(--dd-radius-lg); overflow: hidden;
   }
-  .journey li { margin: 0; padding: 12px; display: flex; flex-direction: column; gap: 4px; border-right: 1px solid var(--ui-border); }
+  .journey li {
+    margin: 0; padding: 12px; display: flex; flex-direction: column; gap: 4px;
+    border-right: 1px solid var(--ui-border); border-top: 3px solid var(--accent);
+  }
   .journey li:last-child { border-right: 0; }
-  .journey .mono { font-size: var(--dd-text-xs); color: var(--ui-text-tertiary); }
+  .journey .mono { font-size: var(--dd-text-xs); font-weight: 600; color: var(--accent); }
   .journey strong { font-weight: 600; }
   .journey span:last-child { font-size: var(--dd-text-s); color: var(--ui-text-secondary); }
   @media (max-width: 820px) {
@@ -102,7 +106,10 @@
   .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; border: 0; margin: 0; padding: 0; }
   .field > label, .field > legend { font-weight: 600; padding: 0; }
   .field-hint { font-size: var(--dd-text-s); color: var(--ui-text-tertiary); }
-  .field .input { width: 7rem; }
+  /* A unit inside the input's box, so the number reads as a percentage. */
+  .input-suffix { position: relative; display: inline-flex; align-items: center; width: 7rem; }
+  .input-suffix .input { width: 100%; padding-right: 24px; }
+  .input-suffix > span { position: absolute; right: 8px; color: var(--ui-text-tertiary); pointer-events: none; }
   .choice-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .choice {
     display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; cursor: pointer;
@@ -209,7 +216,7 @@
     background: var(--ui-background); border: 1px solid var(--ui-border); border-radius: var(--dd-radius);
   }
   [data-kind="rum"]     { --accent: var(--ui-interaction-primary-contrast); }
-  [data-kind="header"]  { --accent: var(--ui-text-secondary); }
+  [data-kind="header"]  { --accent: var(--ui-ai-primary); }
   [data-kind="backend"] { --accent: var(--ui-status-warning-contrast); }
   [data-kind="datadog"] { --accent: var(--ui-status-success-contrast); }
   [data-kind="drop"]    { --accent: var(--ui-status-danger-contrast); }
@@ -247,10 +254,10 @@
     <div class="stack">
       <div class="eyebrow">Every request makes the same four-stop trip</div>
       <ol class="journey">
-        <li><span class="mono">01</span><strong>RUM, in the browser</strong><span>Decides whether this session is traced, using <code>traceSampleRate</code>.</span></li>
-        <li><span class="mono">02</span><strong>The request</strong><span>Leaves with <em>keep</em> headers, <em>drop</em> headers, or none, depending on <code>traceContextInjection</code>.</span></li>
-        <li><span class="mono">03</span><strong>Your backend</strong><span>Follows the browser's decision. With no decision, it uses its own sample rate.</span></li>
-        <li><span class="mono">04</span><strong>Datadog</strong><span>Ends up with a trace linked to RUM, a backend-only trace, or nothing.</span></li>
+        <li data-kind="rum"><span class="mono">01</span><strong>RUM, in the browser</strong><span>Decides whether this session is traced, using <code>traceSampleRate</code>.</span></li>
+        <li data-kind="header"><span class="mono">02</span><strong>The request</strong><span>Leaves with <em>keep</em> headers, <em>drop</em> headers, or none, depending on <code>traceContextInjection</code>.</span></li>
+        <li data-kind="backend"><span class="mono">03</span><strong>Your backend</strong><span>Follows the browser's decision. With no decision, it uses its own sample rate.</span></li>
+        <li data-kind="datadog"><span class="mono">04</span><strong>Datadog</strong><span>Ends up with a trace linked to RUM, a backend-only trace, or nothing.</span></li>
       </ol>
     </div>
 
@@ -268,7 +275,7 @@
           <span class="scenario-card__body">RUM traces no sessions, but still sends headers saying "drop". The backend obeys, so nothing is kept.</span>
           <span class="scenario-card__config">traceSampleRate: 0 · 'all'</span>
         </button>
-        <button type="button" class="scenario-card" id="preset-backend-decision" aria-pressed="false" onclick="applyPreset('backend-decision')">
+        <button type="button" class="scenario-card" id="preset-backend-decision" aria-pressed="true" onclick="applyPreset('backend-decision')">
           <span class="scenario-card__title">Backend decides the rest <span class="tag tag--primary">Current</span></span>
           <span class="scenario-card__body">RUM traces about 1 in 5 sessions. The others send no headers, so the backend chooses what to keep.</span>
           <span class="scenario-card__config">traceSampleRate: 20 · 'sampled'</span>
@@ -277,7 +284,7 @@
 
       <div class="callout callout--info" id="expect-callout">
         <span class="icon" data-icon="lightbulb"></span>
-        <div><span id="expect-text"></span></div>
+        <div><span id="expect-text"><strong>What to look for:</strong> about 1 session in 5 is traced, and in that session every request says "keep". In the other sessions requests leave with <em>no</em> headers, and the backend keeps some on its own, at the rate from step 2. Send 10, start a new RUM session, and repeat a few times to see both kinds.</span></div>
       </div>
 
       <details class="disclosure" id="custom-config">
@@ -286,20 +293,20 @@
           <form class="custom-config-form" id="custom-config-form" onsubmit="applyCustomConfig(event)">
             <div class="field">
               <label for="tsr-input">Share of sessions RUM traces</label>
-              <input class="input" type="number" id="tsr-input" min="0" max="100" step="1" inputmode="numeric">
+              <span class="input-suffix"><input class="input" type="number" id="tsr-input" min="0" max="100" step="1" value="20" inputmode="numeric"><span aria-hidden="true">%</span></span>
               <span class="field-hint"><code>traceSampleRate</code>, 0 to 100</span>
             </div>
             <fieldset class="field">
               <legend>For sessions RUM doesn't trace</legend>
               <div class="choice-group">
                 <label class="choice"><input type="radio" name="tci" value="all"><span><strong>'all'</strong>Send headers that say "drop"</span></label>
-                <label class="choice"><input type="radio" name="tci" value="sampled"><span><strong>'sampled'</strong>Send no headers; the backend decides</span></label>
+                <label class="choice"><input type="radio" name="tci" value="sampled" checked><span><strong>'sampled'</strong>Send no headers; the backend decides</span></label>
               </div>
               <span class="field-hint"><code>traceContextInjection</code></span>
             </fieldset>
             <div class="form-actions">
               <button type="submit" class="btn btn--primary">Apply and reload</button>
-              <span>Running now: <code id="active-config"></code></span>
+              <span>Running now: <code id="active-config">traceSampleRate: 20 · 'sampled'</code></span>
             </div>
           </form>
         </div>
@@ -312,8 +319,8 @@
         <p class="muted">Your backend only falls back on this rate when a request arrives <strong>without</strong> a keep or drop decision from RUM. On a real service, it's <code>DD_TRACE_SAMPLE_RATE</code>. It takes effect on the next request, without a reload.</p>
         <div class="rate-control">
           <label class="visually-hidden" for="apm-rate-input">Share of undecided requests the backend keeps</label>
-          <input type="range" id="apm-rate-input" min="0" max="100" step="1" oninput="setApmRate(this.value)">
-          <span id="apm-rate-value"></span>
+          <input type="range" id="apm-rate-input" min="0" max="100" step="1" value="50" oninput="setApmRate(this.value)">
+          <span id="apm-rate-value">50%</span>
         </div>
       </div>
       <div class="stack">

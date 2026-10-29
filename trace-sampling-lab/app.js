@@ -16,7 +16,7 @@
    container to fit the view, and a hidden panel is 0×0. Registered once the
    bundle (loaded after this file) has defined mountFlow.
    ============================================================ */
-document.addEventListener('DOMContentLoaded', function () {
+onBundleReady(function () {
   LabShell.onTab(function (tab) {
     if (tab === 'flow') window.traceLab.mountFlow?.(document.getElementById('flow-root'));
     if (tab === 'config') renderConfigJson();
@@ -440,12 +440,23 @@ function renderConfigControls() {
 window.traceLab = window.traceLab ?? {};
 window.traceLab.liveConfig = liveConfig;
 
-document.addEventListener('DOMContentLoaded', function () {
-  renderConfigControls();
-  renderConfigJson();
-  renderAll();
-  // The SDK loads async from the CDN; if it never arrives (an ad blocker is
-  // the usual cause) the callout says so (the status bar does too).
-  setTimeout(renderRumStatus, 1500);
+// This script sits at the end of <body>, so the controls exist already:
+// render them now rather than on DOMContentLoaded, which a script loaded
+// late (or deferred by a proxy) would miss, leaving the scenario cards and
+// the form empty. The markup also ships with the default scenario filled in.
+renderConfigControls();
+renderConfigJson();
+renderAll();
+// The SDK loads async from the CDN; if it never arrives (an ad blocker is
+// the usual cause) the callout says so (the status bar does too).
+setTimeout(renderRumStatus, 1500);
+
+// Only the flow tab needs the bundle (loaded after this file), so it alone
+// waits — unless the page is already past that point.
+function onBundleReady(fn) {
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+  else fn();
+}
+onBundleReady(function () {
   if (params.get('tab') === 'flow') LabShell.showTab('flow');
 });

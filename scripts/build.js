@@ -199,7 +199,7 @@ if (creds) {
   const cfg = evalConfig(readFileSync(site("config.js"), "utf8"), `${owner}.github.io`);
   const missing = ["applicationId", "clientToken", "site", "service", "version"].filter((k) => !cfg?.[k]);
   if (missing.length) fail(`missing or empty fields in DD_CONFIG: ${missing.join(", ")}`);
-  console.log(`config.js OK (credentials from ${creds.source}) — service: ${cfg.service}, version: ${cfg.version}`);
+  console.log(`config.js OK (credentials from ${creds.source}) — service prefix: ${cfg.service}, version: ${cfg.version}`);
 }
 
 for (const rel of entrypoints) {

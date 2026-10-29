@@ -83,7 +83,7 @@ Start from `consent-lab/index.html` (it uses the RUM/Logs SDKs) or `otel-rum-lab
   });
   ```
 
-  `service` and `version` have to match what source maps are uploaded under, or stack frames won't resolve. Every environment shares one RUM application and one service.
+  Every environment shares one RUM application, but each reports its own service: `config.js` holds the prefix (`rum-labs`) and `lab-shared.js` appends the `labs.json` id before `app.js` runs, so `cfg.service` is already `rum-labs-<id>` (`rum-labs-home` for the root). Filter sessions by lab with `service:rum-labs-<id>`, or all of them with `service:rum-labs-*`. Pass `cfg.service` through unchanged: `service` and `version` have to match what source maps are uploaded under (`scripts/upload-sourcemaps.js` uses the same rule), or stack frames won't resolve.
 - Feed the docked log from `beforeSend` with `LabLog.add(…)`. Filter static-asset resources out of the table (stylesheets, fonts and icon masks would bury the events the lab is about), but still `return true` so everything reaches Datadog. `pizza-builder-lab/app.js` has the pattern.
 
 ### 4. Optional: npm dependencies

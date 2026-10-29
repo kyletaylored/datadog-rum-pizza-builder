@@ -31,7 +31,8 @@ export function serve(dir, port) {
   const server = createServer((req, res) => {
     const urlPath = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
     let file = path.join(base, urlPath);
-    if (!file.startsWith(base)) {
+    // Separator-bounded, so a sibling like <base>-other/ can't pass as inside <base>.
+    if (file !== base && !file.startsWith(base + path.sep)) {
       res.writeHead(403).end();
       return;
     }

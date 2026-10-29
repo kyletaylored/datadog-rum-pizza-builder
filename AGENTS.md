@@ -54,6 +54,7 @@ Labs are **discovered, not registered with the build**. Any top-level directory 
 Start from `consent-lab/index.html` (it uses the RUM/Logs SDKs) or `otel-rum-lab/index.html` (it uses an npm bundle and no Datadog SDK). Keep the same skeleton:
 
 - **`<head>`**, in this order:
+  - `<title>`, the description, `<meta name="lab-repo">`, and the canonical / Open Graph / Twitter block copied from another lab, with your title, description and `assets/og/<lab>.jpg` (see §9)
   - the Datadog RUM / Logs CDN snippets, if the lab uses them
   - `<script src="../config.js"></script>`
   - `../druids-tokens.css` → `../tokens-dark-hc.css` → `../tokens.css` → `../lab-shared.css`
@@ -139,6 +140,7 @@ A PR that adds an environment, or visibly changes one, includes screenshots so r
 - Commit them as `assets/<lab>.webp`, `assets/<lab>-<view>.webp`, next to the existing screenshots. Reference them from `<lab>/README.md` too (`../assets/<lab>.webp`).
 - `gh` can't upload image attachments, so embed them in the PR body by commit-pinned URL, which keeps working after the branch is deleted: `https://raw.githubusercontent.com/<owner>/<repo>/<commit-sha>/assets/<lab>.webp`.
 - Don't commit raw PNGs or scratch captures; keep those in a temp directory.
+- Add a link-unfurl image for the page's `og:image`: capture at 1440×756, scale to 1200×630 and save as JPEG (`sips -s format jpeg -s formatOptions 82 -z 630 1200 in.png --out assets/og/<lab>.jpg`). Use JPEG, not WebP: some unfurlers (LinkedIn among them) don't render WebP.
 
 ---
 

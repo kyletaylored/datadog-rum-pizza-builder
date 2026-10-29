@@ -284,7 +284,15 @@ body.is-resizing-y { cursor: row-resize; user-select: none; }
 .guide-topic { display: flex; flex-direction: column; gap: 10px; color: var(--ui-text-secondary); text-wrap: pretty; }
 .guide-topic strong { color: var(--ui-text); }
 .guide-topic pre { color: var(--ui-text); }
-.guide-topic .compare-table { font-size: var(--dd-text-s); }
+/* The guide is 260–620px wide, so nothing in a topic scrolls sideways: code
+   blocks wrap (long lines break, indentation is kept) and tables squeeze
+   into the card, breaking long identifiers instead of overflowing. */
+.guide-topic pre { white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: hidden; }
+.guide-topic code { overflow-wrap: anywhere; }
+.guide-topic .compare-table-wrap { overflow-x: hidden; }
+.guide-topic .compare-table { font-size: var(--dd-text-s); table-layout: fixed; }
+.guide-topic .compare-table th { white-space: normal; height: auto; padding-block: 6px; }
+.guide-topic .compare-table th, .guide-topic .compare-table td { padding-inline: 8px; overflow-wrap: anywhere; }
 .guide-card-nav { display: flex; justify-content: space-between; gap: 8px; }
 
 .progress { height: 3px; border-radius: 2px; background: var(--ui-border); overflow: hidden; }

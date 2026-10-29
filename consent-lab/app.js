@@ -314,7 +314,7 @@ function renderTabsTable() {
 
   tbody.innerHTML = rows.map(t => `
     <tr class="${t.tabId === LAB_TAB_ID ? 'tab-row-self' : ''}">
-      <td><code>${t.tabId}</code>${t.tabId === LAB_TAB_ID ? ' (this tab)' : ''}</td>
+      <td><code>${escapeHtml(t.tabId)}</code>${t.tabId === LAB_TAB_ID ? ' (this tab)' : ''}</td>
       <td><code>${escapeHtml(t.persistence)}</code></td>
       <td>${escapeHtml(t.consent)}</td>
       <td><code>${escapeHtml(t.sessionId || '—')}</code></td>

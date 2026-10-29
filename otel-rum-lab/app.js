@@ -1,52 +1,13 @@
 /**
- * app.js — page UI for the OTel lab: theme, tabs, the pizza wizard, the
- * live event table, and the export/proxy config form. Loaded BEFORE
- * dist/bundle.js (see index.html) so window.otelLab.logEvent already
- * exists by the time the OTel pipeline starts emitting events.
+ * app.js — page UI for the OTel lab: the pizza wizard, the live event feed,
+ * and the export/proxy config form. Loaded BEFORE dist/bundle.js (see
+ * index.html) so window.otelLab.logEvent already exists by the time the OTel
+ * pipeline starts emitting events. The shell (tabs, guide, docked log,
+ * status bar) is ../lab-shared.js.
  *
- * Mirrors the patterns already established by ../app.js and
- * ../consent-lab/app.js (theme toggle, tab switching, activity-log
- * rendering) so this lab reads as the same site, not a one-off page.
+ * Mirrors ../pizza-builder-lab/app.js's wizard so this lab reads as the
+ * same site, not a one-off page.
  */
-
-/* ============================================================
-   Theme toggle — same pattern as ../app.js
-   ============================================================ */
-function applyTheme(theme) {
-  const root = document.documentElement;
-  root.setAttribute('data-theme', theme);
-  root.classList.toggle('wa-dark', theme === 'dark');
-  root.classList.toggle('wa-light', theme === 'light');
-  localStorage.setItem('theme', theme);
-}
-
-function toggleTheme(sw) {
-  applyTheme(sw.checked ? 'dark' : 'light');
-}
-
-(function () {
-  const toggle = document.getElementById('theme-toggle');
-  if (!toggle) return;
-  const sync = () => { toggle.checked = document.documentElement.dataset.theme === 'dark'; };
-  sync();
-  if (toggle.localName.startsWith('wa-')) {
-    customElements.whenDefined(toggle.localName).then(() => toggle.updateComplete).then(sync);
-  }
-})();
-
-/* ============================================================
-   Tabs — Wizard / Config
-   ============================================================ */
-function switchTab(tab) {
-  const panels = { wizard: 'tab-wizard', config: 'tab-config' };
-  document.querySelectorAll('.tab-btn').forEach((btn) => {
-    const isActive = btn.getAttribute('aria-controls') === panels[tab];
-    btn.classList.toggle('active', isActive);
-    btn.setAttribute('aria-selected', isActive);
-  });
-  Object.values(panels).forEach((id) => { document.getElementById(id).style.display = 'none'; });
-  document.getElementById(panels[tab]).style.display = '';
-}
 
 /* ============================================================
    Wizard — same shape as ../app.js's goTo/select/stepMeta
@@ -63,22 +24,34 @@ const TOTAL_STEPS = stepMeta.length - 1;
 const selections = {};
 
 const OPTIONS = {
-  1: [['🥨', 'Thin & Crispy', 'Light and snappy'], ['🫓', 'Hand-Tossed', 'Classic and chewy'], ['🍞', 'Deep Dish', 'Thick and doughy'], ['🌾', 'Gluten-Free', 'Light rice crust']],
-  2: [['🍅', 'Classic Tomato', 'Rich marinara'], ['🧄', 'White Garlic', 'Creamy alfredo'], ['🔥', 'BBQ', 'Smoky and sweet'], ['🌿', 'Pesto', 'Fresh basil blend']],
-  3: [['🧀', 'Mozzarella', 'The OG melt'], ['🫕', 'Four Cheese', 'Mozz, provolone, parmesan, romano'], ['🌱', 'Vegan', 'Cashew-based'], ['🚫', 'No Cheese', 'Sauce only']],
-  4: [['🍖', 'Pepperoni', 'A classic'], ['🍄', 'Mushrooms', 'Earthy and savory'], ['🫑', 'Bell Peppers', 'Crisp and sweet'], ['🌶️', 'Jalapeños', 'Bring the heat']],
-  5: [['🤏', 'Personal (6 in)', '4 slices'], ['✋', 'Medium (12 in)', '8 slices'], ['🙌', 'Large (16 in)', '10 slices'], ['🎉', 'XL Party (20 in)', '12 slices']],
+  1: [['Thin & Crispy', 'Light and snappy'], ['Hand-Tossed', 'Classic and chewy'], ['Deep Dish', 'Thick and doughy'], ['Gluten-Free', 'Light rice crust']],
+  2: [['Classic Tomato', 'Rich marinara'], ['White Garlic', 'Creamy alfredo'], ['BBQ', 'Smoky and sweet'], ['Pesto', 'Fresh basil blend']],
+  3: [['Mozzarella', 'The OG melt'], ['Four Cheese', 'Mozz, provolone, parmesan, romano'], ['Vegan', 'Cashew-based'], ['No Cheese', 'Sauce only']],
+  4: [['Pepperoni', 'A classic'], ['Mushrooms', 'Earthy and savory'], ['Bell Peppers', 'Crisp and sweet'], ['Jalapeños', 'Bring the heat']],
+  5: [['Personal (6 in)', '6" · 4 slices'], ['Medium (12 in)', '12" · 8 slices'], ['Large (16 in)', '16" · 10 slices'], ['XL Party (20 in)', '20" · 12 slices']],
 };
 
+// Radio cards, same markup as the pizza builder's static ones.
 for (const [step, opts] of Object.entries(OPTIONS)) {
   const wrap = document.getElementById(`opts-${step}`);
-  for (const [emoji, label, desc] of opts) {
-    const card = document.createElement('div');
+  for (const [label, desc] of opts) {
+    const card = document.createElement('button');
+    card.type = 'button';
     card.className = 'option-card';
-    card.innerHTML = `<span class="emoji">${emoji}</span><div class="label">${label}</div><div class="desc">${desc}</div>`;
+    card.setAttribute('role', 'radio');
+    card.setAttribute('aria-checked', 'false');
+    card.innerHTML = `<span class="radio"></span><span class="option-text"><span class="label">${LabShell.esc(label)}</span><span class="desc">${LabShell.esc(desc)}</span></span>`;
     card.onclick = () => select(Number(step), card, label);
     wrap.appendChild(card);
   }
+}
+
+function renderTracker(step) {
+  document.querySelectorAll('#progress-wrap .tracker-step').forEach((el) => {
+    const n = Number(el.dataset.step);
+    el.classList.toggle('is-done', n < step);
+    el.classList.toggle('is-current', n === step);
+  });
 }
 
 function goTo(step) {
@@ -86,26 +59,28 @@ function goTo(step) {
   const wrap = document.getElementById('progress-wrap');
   if (step === 0) {
     document.getElementById('screen-start').classList.add('active');
-    wrap.style.display = 'none';
+    wrap.hidden = true;
     history.replaceState(null, '', window.location.pathname + window.location.search);
   } else if (step === 'results') {
     document.getElementById('screen-results').classList.add('active');
-    wrap.style.display = 'none';
+    wrap.hidden = true;
     location.hash = 'results';
     renderResults();
   } else {
     document.getElementById(`screen-${step}`).classList.add('active');
-    wrap.style.display = 'block';
-    document.getElementById('progress-bar').value = (step / TOTAL_STEPS) * 100;
-    document.getElementById('step-label').textContent = `Step ${step} of ${TOTAL_STEPS}`;
-    document.getElementById('step-name').textContent = stepMeta[step].label;
+    wrap.hidden = false;
+    renderTracker(step);
     location.hash = stepMeta[step].hash;
   }
 }
 
 function select(step, el, value) {
-  document.querySelectorAll(`#opts-${step} .option-card`).forEach((c) => c.classList.remove('selected'));
+  document.querySelectorAll(`#opts-${step} .option-card`).forEach((c) => {
+    c.classList.remove('selected');
+    c.setAttribute('aria-checked', 'false');
+  });
   el.classList.add('selected');
+  el.setAttribute('aria-checked', 'true');
   selections[step] = { label: stepMeta[step].label, value };
   document.getElementById(`btn-${step}`).disabled = false;
 }
@@ -113,16 +88,24 @@ function select(step, el, value) {
 function renderResults() {
   const list = document.getElementById('result-list');
   list.innerHTML = Object.values(selections)
-    .map((s) => `<li><span class="step-label">${s.label}</span><span class="step-value">${s.value}</span></li>`)
+    .map((s) => `<li><span class="step-label">${s.label}</span><span class="step-value">${LabShell.esc(s.value)}</span></li>`)
     .join('');
   const pizzaOrder = Object.fromEntries(Object.values(selections).map((s) => [s.label.toLowerCase(), s.value]));
+  // The attribute names submitOrder() stamps on the record (src/main.js).
+  document.getElementById('order-payload').textContent = `logger.emit(${JSON.stringify({
+    eventName: 'pizza_order_submitted',
+    attributes: Object.fromEntries(Object.entries(pizzaOrder).map(([k, v]) => [`pizza_order.${k}`, v])),
+  }, null, 2)})`;
   window.otelLab?.submitOrder?.(pizzaOrder);
 }
 
 function restart() {
   window.otelLab?.restart?.();
   Object.keys(selections).forEach((k) => delete selections[k]);
-  document.querySelectorAll('.option-card.selected').forEach((c) => c.classList.remove('selected'));
+  document.querySelectorAll('.option-card.selected').forEach((c) => {
+    c.classList.remove('selected');
+    c.setAttribute('aria-checked', 'false');
+  });
   for (let i = 1; i <= TOTAL_STEPS; i++) document.getElementById(`btn-${i}`).disabled = true;
   goTo(0);
 }
@@ -135,12 +118,12 @@ function fakeBackendCall() {
 }
 
 /* ============================================================
-   Live event table — same shape as ../app.js's logRumEvent/rerenderTable,
-   adapted from RUM events to OTel LogRecords.
+   Live event feed — same shape as the pizza builder's logRumEvent, adapted
+   from RUM events to OTel LogRecords and fed to the shared docked log.
    ============================================================ */
 const BUCKET_BY_EVENT = {
-  'browser.navigation': 'view',
-  'browser.user_action.click': 'action',
+  'browser.navigation': 'navigation',
+  'browser.user_action.click': 'user_action',
   'browser.resource_timing': 'resource',
   'browser.web_vital': 'vital',
   exception: 'error',
@@ -151,12 +134,10 @@ function bucketFor(eventName) {
   return BUCKET_BY_EVENT[eventName] || 'custom';
 }
 
-// ResourceTimingInstrumentation fires for every asset the page loads —
-// Web Awesome's autoloader alone pulls ~55 chunks — which buries the
-// handful of events this lab is actually about. Same fix ../app.js uses
-// for its own resource events: only surface real network calls (the
-// "Fake backend call" button), not static asset loads. Still sent to
-// Datadog if export is on; this only governs the on-page table.
+// ResourceTimingInstrumentation is already limited to fetch/xhr in
+// src/main.js; this is the same guard on the table side, so only real
+// network calls (the "Fake backend call" button) get a row, never static
+// asset loads. Same rule the pizza builder uses for its resource events.
 function isLoggableResourceTiming(attrs) {
   const initiator = attrs['browser.resource_timing.initiator_type'];
   return initiator === 'fetch' || initiator === 'xmlhttprequest';
@@ -198,60 +179,16 @@ function getColValues(eventName, attrs) {
   }
 }
 
-const activeFilters = new Set(['view', 'action', 'resource', 'vital', 'error', 'custom']);
-const logEvents = [];
-
-function toggleFilter(type) {
-  if (activeFilters.has(type)) activeFilters.delete(type);
-  else activeFilters.add(type);
-  document.querySelectorAll('.filter-btn').forEach((b) => {
-    b.classList.toggle('active', activeFilters.has(b.dataset.filter));
-  });
-  rerenderTable();
-}
-
-function rerenderTable() {
-  const tbody = document.getElementById('rum-tbody');
-  const visible = logEvents.filter((e) => activeFilters.has(e.bucket));
-  if (visible.length === 0) {
-    tbody.innerHTML = '<tr id="rum-empty-row"><td colspan="4">No events match current filters.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = visible.map((e) => {
-    const [a, b] = e.cols;
-    const aEsc = String(a).replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const bEsc = String(b).replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return `<tr>
-      <td>${e.time}</td>
-      <td><span class="type-badge ${e.bucket}">${e.bucket}</span></td>
-      <td class="wrap" title="${aEsc}">${aEsc}</td>
-      <td class="wrap" title="${bEsc}">${bEsc}</td>
-    </tr>`;
-  }).join('');
-}
-
 window.otelLab = window.otelLab ?? {};
 window.otelLab.logEvent = function logEvent(logRecord) {
   const eventName = logRecord.eventName || 'log';
   const attrs = logRecord.attributes || {};
   if (eventName === 'browser.resource_timing' && !isLoggableResourceTiming(attrs)) return;
 
-  const emptyRow = document.getElementById('rum-empty-row');
-  if (emptyRow) emptyRow.remove();
-
-  const bucket = bucketFor(eventName);
   const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  logEvents.push({ bucket, time, cols: getColValues(eventName, attrs) });
-  rerenderTable();
-
-  const wrap = document.getElementById('rum-table-wrap');
-  wrap.scrollTop = wrap.scrollHeight;
+  const [a, b] = getColValues(eventName, attrs);
+  LabLog.add({ c1: time, type: bucketFor(eventName), c3: a, c4: b, title: eventName });
 };
-
-function clearLog() {
-  logEvents.length = 0;
-  document.getElementById('rum-tbody').innerHTML = '<tr id="rum-empty-row"><td colspan="4">Waiting for events…</td></tr>';
-}
 
 /* ============================================================
    Export config — your own local proxy only. Two other modes used to
@@ -287,19 +224,30 @@ function renderExportStatus() {
 
   if (proxy) {
     pill.textContent = `via your proxy → ${proxy}`;
-    pill.className = 'consent-state-pill granted';
+    pill.className = 'pill pill--success';
   } else {
     pill.textContent = 'static mode — nothing leaves the browser';
-    pill.className = 'consent-state-pill pending';
+    pill.className = 'pill';
   }
+  LabStatus.set('export', `Export to Datadog: ${proxy ? 'on' : 'off'}`, proxy ? 'success' : 'other');
   input.value = proxy;
   consoleToggle.checked = !consoleOff;
 
   // Restore the Config tab after the reload these buttons trigger, so the
   // status change above is the first thing visible instead of the wizard.
   if (new URLSearchParams(location.search).get('tab') === 'config') {
-    switchTab('config');
+    LabShell.showTab('config');
   }
+}
+
+// The pipeline as src/main.js built it (window.otelLab.config), not a
+// restatement of what it's supposed to be.
+function renderConfig() {
+  const cfg = window.otelLab?.config;
+  LabShell.renderJson(document.getElementById('config-json'), cfg
+    ? { applicationId: cfg.applicationId, processors: cfg.processors, otlpEndpoint: cfg.otlpEndpoint, instrumentations: cfg.instrumentations }
+    : { status: 'the OTel bundle did not load' });
+  LabShell.renderJson(document.getElementById('config-resource-json'), cfg ? cfg.resource : {});
 }
 
 function applyExportSettings(event) {
@@ -318,4 +266,11 @@ function disconnectExport() {
   applyExportSettings({ preventDefault() {} });
 }
 
-document.addEventListener('DOMContentLoaded', renderExportStatus);
+// The bundle has run by DOMContentLoaded (it's a classic script after this
+// one), so whether the pipeline exists is known by then.
+document.addEventListener('DOMContentLoaded', function () {
+  const ready = !!window.otelLab?.submitOrder;
+  LabStatus.set('otel', ready ? 'OTel SDK ready' : 'OTel SDK not loaded', ready ? 'success' : 'danger');
+  renderExportStatus();
+  renderConfig();
+});

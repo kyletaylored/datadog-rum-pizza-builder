@@ -23,6 +23,7 @@ const TYPES = {
   ".png": "image/png",
   ".webp": "image/webp",
   ".ico": "image/x-icon",
+  ".woff2": "font/woff2",
 };
 
 export function serve(dir, port) {

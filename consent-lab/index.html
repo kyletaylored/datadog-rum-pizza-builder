@@ -1,24 +1,15 @@
 <!DOCTYPE html>
-<html lang="en" class="wa-brand-purple wa-cloak">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cookie Consent &amp; Session Storage Lab · Datadog RUM Pizza Builder</title>
+<title>Consent &amp; Storage Lab · RUM Labs</title>
 <meta name="description" content="An interactive lab for testing Datadog RUM's sessionPersistence and tracking-consent APIs against strict EU cookie-consent requirements — cookie vs. local-storage vs. memory, multi-tab session stability, and cookie-free error tracking.">
 <meta name="author" content="Kyle Taylor">
 <meta name="robots" content="index, follow">
+<meta name="lab-repo" content="%%GITHUB_REPO%%">
 
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><text y='32' font-size='32'>🍪</text></svg>">
-<!-- Web Awesome 3.13.0 — version pinned deliberately (never @latest): the
-     project is a young rebrand of Shoelace, so bumps get re-verified by hand.
-     Loaded from CDN only, never bundled, so the deploy workflow's terser /
-     source-map step still only has app.js to think about.
-     Note the `dist-cdn` path, not `dist`: the `dist` build is the npm one and
-     ships bare module specifiers ("lit", "@shoelace-style/...") that a browser
-     cannot resolve without an import map, so every component silently fails to
-     register. `dist-cdn` is the same code with relative imports. -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@3.13.0/dist-cdn/styles/webawesome.css">
-<script type="module" src="https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@3.13.0/dist-cdn/webawesome.loader.js"></script>
+<link rel="icon" type="image/svg+xml" href="https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/cookie.svg">
 <script>
   (function(h,o,u,n,d) {
     h=h[d]=h[d]||{q:[],onReady:function(c){h.q.push(c)}}
@@ -34,395 +25,264 @@
   })(window,document,'script','https://www.datadoghq-browser-agent.com/us1/v6/datadog-logs.js','DD_LOGS')
 </script>
 <script src="../config.js"></script>
+<link rel="stylesheet" href="../druids-tokens.css">
+<link rel="stylesheet" href="../tokens-dark-hc.css">
 <link rel="stylesheet" href="../tokens.css">
-<link rel="stylesheet" href="../style.css">
 <link rel="stylesheet" href="../lab-shared.css">
 <script>
-  // Resolve and apply the theme before first paint to avoid a flash.
-  // One source of truth drives two mechanisms:
-  //   data-theme="light|dark"  — our own CSS (tokens.css, JSON syntax colors)
-  //   class="wa-light|wa-dark" — Web Awesome's theming
-  // Kept inline and duplicated per page on purpose: it has to run before the
-  // first paint, which rules out the deferred lab-shared.js.
+  // Resolve and apply the theme before first paint — see ../index.html for why
+  // this stays inline and duplicated per page rather than moved to a shared file.
   (function () {
     var saved = localStorage.getItem('theme');
-    var dark = saved ? saved === 'dark'
-                     : window.matchMedia('(prefers-color-scheme: dark)').matches;
-    var theme = dark ? 'dark' : 'light';
-    document.documentElement.setAttribute('data-theme', theme);
-    document.documentElement.classList.add('wa-' + theme);
+    var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var root = document.documentElement;
+    root.setAttribute('data-theme', dark ? 'dark' : 'light');
+    if (dark) root.classList.add('theme-dark', 'theme-dark-hc');
   })();
 </script>
 <style>
-  /* ===== Consent Lab — page-specific components only.
-     Everything reusable (resizer, tag palette, storage cards, mode picker,
-     compare table, state pill, activity log badges, etc.) now lives in
-     ../lab-shared.css so future labs can pull it in too. ===== */
+  /* ===== Consent & Storage lab — page-specific rules only. Shell, buttons,
+     cards, callouts, tables and the docked log live in ../lab-shared.css. ===== */
   .consent-banner {
-    display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: space-between;
-    padding: 1rem 1.25rem; margin-bottom: 1.5rem; border-radius: .5rem;
-    background: var(--dd-surface-sunken);
-    border: 1px solid var(--dd-color-border);
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+    padding: 12px var(--spacing-md); border: 1px solid var(--ui-border); border-radius: var(--dd-radius-lg);
+    background: var(--ui-background-secondary);
   }
-  .consent-banner p { margin: 0; flex: 1 1 260px; }
-  .consent-banner .btn-row { display: flex; gap: .5rem; flex-wrap: wrap; }
-  .consent-banner button { margin: 0; white-space: nowrap; }
+  .consent-banner > .icon { color: var(--ui-icon); }
+  .consent-banner p { flex: 1 1 260px; }
 
-  #tabs-table td, #tabs-table th { font-size: .82rem; }
+  .mode-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+  /* Live storage inspector cards */
+  .storage-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+  @media (max-width: 700px) { .storage-grid { grid-template-columns: 1fr; } }
+  .storage-card { border: 1px solid var(--ui-border); border-radius: var(--dd-radius-lg); overflow: hidden; }
+  .storage-card h4 {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px; border-bottom: 1px solid var(--ui-border);
+    font-family: var(--dd-font-mono); font-size: var(--dd-text-s); font-weight: 600;
+  }
+  .storage-card h4 span { font-family: var(--dd-font); font-weight: 400; color: var(--ui-text-tertiary); }
+  .storage-card ul { list-style: none; margin: 0; padding: 8px 12px; min-height: 56px; font-family: var(--dd-font-mono); font-size: var(--dd-text-s); }
+  .storage-card li { padding: 4px 0; margin: 0; border-bottom: 1px dashed var(--ui-border); word-break: break-all; }
+  .storage-card li:last-child { border-bottom: 0; }
+  .storage-card .empty { font-family: var(--dd-font); color: var(--ui-text-tertiary); }
+  .storage-card .dd-key { color: var(--ui-status-danger-contrast); font-weight: 700; }
+
+  .tab-row-self td { font-weight: 600; }
+
+  /* Error-source coverage matrix */
+  table.et-matrix th:first-child { width: 72px; }
+  .et-how { font-family: var(--dd-font-mono); font-size: var(--dd-text-xs); color: var(--ui-text-tertiary); }
+  .et-how code { background: none; padding: 0; color: var(--ui-text-secondary); }
+  /* A field the SDK did not populate — the reason a row stays a log line
+     instead of becoming an issue, so it should read as absent, not as zero. */
+  .et-absent { color: var(--ui-status-danger-contrast); font-weight: 600; }
+  /* A requirement the source structurally can't meet — distinct from "not
+     measured yet" (—) and from "measured and failed" (log only). */
+  .et-na { color: var(--ui-text-tertiary); font-style: italic; }
+  .et-drift { display: inline-flex; margin-left: 6px; color: var(--ui-status-warning-contrast); cursor: help; }
+  .et-verdict {
+    padding: 8px 12px; border: 1px solid var(--ui-border); border-radius: var(--dd-radius);
+    background: var(--ui-background-secondary); max-width: var(--dd-measure);
+  }
 </style>
 </head>
 <body>
 
-<div class="training-layout">
+<div id="lab-content">
 
-  <!-- ===== LEFT SIDEBAR ===== -->
-  <aside class="training-sidebar">
+  <!-- Storage inspector -->
+  <section class="tab-panel" id="tab-storage" data-tab="storage" data-tab-label="Storage inspector">
 
-    <div class="sidebar-header">
-      <div class="sidebar-brand">
-        <span class="sidebar-logo">🍪</span>
-        <div>
-          <div class="sidebar-title">Consent &amp; Storage Lab</div>
-          <div class="sidebar-subtitle">Datadog RUM Training</div>
-        </div>
+    <div class="consent-banner">
+      <span class="icon" data-icon="lock"></span>
+      <p>This page can create a technical session store to monitor performance and errors. How should it behave?</p>
+      <span id="consent-pill" class="pill pill--warning consent-state-pill">pending</span>
+      <div class="btn-row">
+        <button type="button" class="btn btn--primary" onclick="labSetConsent('accept-cookie')">Accept, use a cookie</button>
+        <button type="button" class="btn" onclick="labSetConsent('accept-storage')">Accept, cookie-free only</button>
+        <button type="button" class="btn" onclick="labSetConsent('decline')">Decline everything</button>
       </div>
     </div>
 
-    <div class="sidebar-intro">
-      <p>An EU customer's legal team has ruled that <strong>no cookie may be created without prior consent</strong> — even the first-party RUM session cookie. This lab tests Datadog RUM's cookie-free options against that requirement, live in your browser.</p>
-      <p><a href="../">← Back to Pizza Builder</a></p>
+    <div class="stack">
+      <div class="mode-row">
+        <span class="mono">sessionPersistence</span>
+        <div class="joined" role="group" aria-label="sessionPersistence">
+          <button type="button" id="mode-btn-cookie" aria-pressed="false" onclick="reloadWithPersistence('cookie')">cookie</button>
+          <button type="button" id="mode-btn-local-storage" aria-pressed="false" onclick="reloadWithPersistence('local-storage')">local-storage</button>
+          <button type="button" id="mode-btn-memory" aria-pressed="false" onclick="reloadWithPersistence('memory')">memory</button>
+        </div>
+        <span class="muted">Applies to both SDKs. They share one session store.</span>
+        <button type="button" class="btn btn--link" onclick="resetLabState()" title="Clear Datadog cookies &amp; localStorage left over from earlier tests, then reload"><span class="icon icon--14" data-icon="eraser"></span>Reset lab state</button>
+      </div>
+      <p class="muted">Switching modes doesn't delete a cookie created by an earlier test in this browser — cookies just expire on their own. If the inspector below shows a cookie you didn't expect, use <strong>Reset lab state</strong> to clear it before comparing modes.</p>
     </div>
 
-    <nav class="sidebar-nav">
-      <p class="sidebar-nav-label">Training topics</p>
+    <div class="section-head">
+      <h3 class="section-title">Live storage inspector</h3>
+      <p>Reflects exactly what this tab has written to the browser right now. Refreshes every second, and immediately after any action above.</p>
+    </div>
 
-      <wa-details class="sidebar-section" appearance="plain" open>
-        <span slot="summary"><span class="sidebar-tag tag-consent">Consent</span><span class="sidebar-section-title">The compliance problem</span></span>
-        <div class="sidebar-section-body">
-          <p>A common pattern: RUM's session cookie (<code>_dd_s</code>) is created the moment the page loads, before any consent banner is answered. Session Replay is correctly gated behind consent — but the cookie itself isn't, and some EU jurisdictions' ePrivacy enforcement treats <em>any</em> non-essential cookie, including a "technical" monitoring cookie, as requiring consent.</p>
-          <p>The ask: keep full error visibility — <strong>100% error capture</strong> — while creating <strong>zero client-side storage</strong> until a user opts in.</p>
-        </div>
-      </wa-details>
-
-      <wa-details class="sidebar-section" appearance="plain">
-        <span slot="summary"><span class="sidebar-tag tag-storage">Storage</span><span class="sidebar-section-title">sessionPersistence: cookie vs local-storage vs memory</span></span>
-        <div class="sidebar-section-body">
-          <p>RUM's <code>sessionPersistence</code> init option controls where the SDK keeps its session state:</p>
-          <pre>DD_RUM.init({
-  ...
-  sessionPersistence: 'local-storage', // or 'cookie' | 'memory'
-})</pre>
-          <div class="compare-table-wrap">
-            <table class="compare-table">
-              <thead><tr><th>Mode</th><th>Cookie?</th><th>Refresh-safe?</th><th>Multi-tab safe?</th></tr></thead>
-              <tbody>
-                <tr><td><code>cookie</code></td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
-                <tr><td><code>local-storage</code></td><td><strong>No</strong></td><td>Yes</td><td>Yes</td></tr>
-                <tr><td><code>memory</code></td><td><strong>No</strong></td><td><strong>No</strong></td><td><strong>No</strong></td></tr>
-              </tbody>
-            </table>
-          </div>
-          <p style="font-size:.82rem">"Refresh-safe" and "multi-tab safe" mean the session ID stays the same instead of minting a new one — <code>cookie</code> uses <code>_dd_s</code>, the others use no cookie at all.</p>
-          <p>Try all three in the <strong>Storage Inspector</strong> tab, then use the <strong>Multi-tab test</strong> tab to see why <code>memory</code> risks inflating session counts for a multi-tab workflow, while <code>local-storage</code> doesn't.</p>
-          <p>If both RUM and Logs SDKs are on the same page, Datadog requires them to use the <strong>same</strong> <code>sessionPersistence</code> value.</p>
-        </div>
-      </wa-details>
-
-      <wa-details class="sidebar-section" appearance="plain">
-        <span slot="summary"><span class="sidebar-tag tag-consent">Gate</span><span class="sidebar-section-title">Gating with setTrackingConsent</span></span>
-        <div class="sidebar-section-body">
-          <p>The tracking-consent API lets you initialize the SDK once — so it's ready to go — without it writing or sending anything until the user answers:</p>
-          <pre>DD_RUM.init({ ..., trackingConsent: 'pending' })
-// later, from your CMP / banner:
-DD_RUM.setTrackingConsent('granted')      // starts writing storage + sending data
-DD_RUM.setTrackingConsent('not-granted')  // stays fully inert, no storage</pre>
-          <p>Consent isn't remembered by the SDK across page loads — your app re-applies the user's saved choice (from your own CMP) on every load.</p>
-          <p>The banner at the top of the <strong>Storage Inspector</strong> tab drives this live: watch the storage cards stay empty until you click Accept.</p>
-        </div>
-      </wa-details>
-
-      <wa-details class="sidebar-section" appearance="plain">
-        <span slot="summary"><span class="sidebar-tag tag-tabs">Tabs</span><span class="sidebar-section-title">Multi-tab &amp; refresh session stability</span></span>
-        <div class="sidebar-section-body">
-          <p>A travel-booking-style flow commonly opens several tabs and refreshes mid-session. That's exactly where <code>memory</code> persistence falls apart: it lives in that one JS heap, so a new tab — or a refresh — has no way to see the old session ID and simply starts a new one.</p>
-          <p>The <strong>Multi-tab test</strong> tab uses a <code>BroadcastChannel</code> to compare the live RUM session ID across every open tab of this page, so you can see the effect directly instead of taking it on faith.</p>
-        </div>
-      </wa-details>
-
-      <wa-details class="sidebar-section" appearance="plain">
-        <span slot="summary"><span class="sidebar-tag tag-error">Errors</span><span class="sidebar-section-title">The always-on error-tracking backup plan</span></span>
-        <div class="sidebar-section-body">
-          <p>If the business also wants <strong>100% error capture even pre-consent</strong> — event-based capture with no session or storage dependency — RUM itself isn't the right tool for that slice, since it's intentionally gated by consent end-to-end.</p>
-          <p>The pattern: run the <strong>Logs Browser SDK</strong> as an always-on error pipe, and gate only RUM. Note <code>sessionPersistence</code> is the <em>same value in both calls</em> — the two SDKs share one session store, and disagreeing silently stops RUM from sending anything:</p>
-          <pre>DD_LOGS.init({
-  ...
-  sessionPersistence: 'local-storage', // cookie-free
-  trackingConsent: 'granted',          // always on
-  forwardErrorsToLogs: true,
-})
-
-DD_RUM.init({
-  ...
-  sessionPersistence: 'local-storage', // MUST match the above
-  trackingConsent: 'pending',          // gated until the user accepts
-})</pre>
-          <p>Try it in the <strong>Error capture</strong> tab — throwing an error is captured by the Logs pipe regardless of the RUM consent state shown at the top of the page.</p>
-        </div>
-      </wa-details>
-
-      <wa-details class="sidebar-section" appearance="plain">
-        <span slot="summary"><span class="sidebar-tag tag-error">Errors</span><span class="sidebar-section-title">What Error Tracking needs to actually work</span></span>
-        <div class="sidebar-section-body">
-          <p>The requirement is <strong>100% error capture</strong>, cookie-free, before any consent is given. Two things to get right.</p>
-          <p>First, browser errors reach Error Tracking through <strong>two separate front doors</strong>. <a href="https://docs.datadoghq.com/error_tracking/frontend/browser/" target="_blank" rel="noopener">Frontend Error Tracking</a> is fed by the <strong>RUM</strong> SDK — consent-gated, so unavailable pre-consent. <a href="https://docs.datadoghq.com/error_tracking/frontend/logs/" target="_blank" rel="noopener">Error Tracking for Logs</a> is fed by the <strong>Logs</strong> SDK and is the one that works pre-consent, enabled separately for the org.</p>
-          <p>Second, sending an error log is not the same as creating an issue. The Logs door needs a <code>service</code>, an error-level <code>status</code>, and <strong>either</strong> <code>error.kind</code> <strong>or</strong> a valid <code>error.stack</code> — either of those two alone is enough:</p>
-          <pre>// becomes an issue — the Error supplies kind + message + stack
-try { risky() } catch (err) {
-  DD_LOGS.logger.error('Checkout failed', { step }, err)
-}
-
-// also becomes an issue — kind alone is enough, no Error needed
-DD_LOGS.logger.error('Checkout failed', {
-  error: { kind: 'CheckoutFailed' },
-})
-
-// stays a log line forever — no kind, no stack
-DD_LOGS.logger.error('Checkout failed')
-console.error('Checkout failed')</pre>
-          <p>Hand <code>logger.error</code> a string where the Error belongs and the SDK writes <q>No stack, consider using an instance of Error</q> into the stack field — a diagnostic in a field nobody reads.</p>
-          <p>Don't set <code>error.kind</code> when you already have an <code>Error</code>: a context-supplied kind overrides the derived one and degrades grouping. Use it only where there's no <code>Error</code> to derive from.</p>
-          <p>Uncaught exceptions, unhandled promise rejections and failed network requests are picked up automatically by <code>forwardErrorsToLogs: true</code>, with usable stacks, and need no instrumentation at all.</p>
-          <p>The <strong>Error capture</strong> tab fires each source and reports what each SDK actually built for it, per front door, so the coverage claim is measured rather than assumed.</p>
-        </div>
-      </wa-details>
-
-      <wa-details class="sidebar-section" appearance="plain">
-        <span slot="summary"><span class="sidebar-tag tag-sessions">Sessions</span><span class="sidebar-section-title">Avoiding inflated session counts</span></span>
-        <div class="sidebar-section-body">
-          <p><code>sessionPersistence: 'memory'</code> is cookie-free, but it keeps the session in a JS variable — so every tab and every refresh starts a brand-new session. On a travel-booking site, where multiple tabs and reloads are normal, that inflates session counts against a number the customer actually reports on.</p>
-          <p><code>local-storage</code> is the mode that solves this: cookie-free like <code>memory</code>, but it survives refreshes and is shared across tabs, so a multi-tab booking flow stays one session.</p>
-          <p>Note you can't mix — both SDKs share one session store, so <code>sessionPersistence</code> is a page-wide choice. Put both on <code>local-storage</code> and gate only RUM with <code>trackingConsent</code>:</p>
-          <div class="compare-table-wrap">
-            <table class="compare-table">
-              <thead><tr><th>Pipe</th><th>Runs</th><th>Storage</th></tr></thead>
-              <tbody>
-                <tr><td>Logs + Error Tracking</td><td>Always</td><td rowspan="2" style="vertical-align:middle"><code>local-storage</code></td></tr>
-                <tr><td>RUM + Replay</td><td>Post-consent</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <p>No cookie at any point, honest session counts, and no pre-consent coverage gap. Read the <strong>Legal</strong> note below before presenting it as a full fix, though — a strict regulator may treat any client-side storage as requiring consent, and if this DPO does, <code>memory</code> for both SDKs is the only cookie-free option left and the inflation becomes unavoidable.</p>
-        </div>
-      </wa-details>
-
-      <wa-details class="sidebar-section" appearance="plain">
-        <span slot="summary"><span class="sidebar-tag tag-consent">Legal</span><span class="sidebar-section-title">⚠️ Not a compliance guarantee</span></span>
-        <div class="sidebar-section-body">
-          <wa-callout variant="danger" class="lab-callout">
-            <strong>This is an engineering lab, not legal advice.</strong>
-          </wa-callout>
-          <p>Switching from a cookie to <code>local-storage</code> removes an HTTP cookie — but the EU ePrivacy Directive (Art. 5(3)) governs "storing information, or gaining access to information already stored, in the terminal equipment of a subscriber or user," which several national regulators (including some Nordic DPAs) read as covering <em>any</em> client-side storage mechanism, not literally just cookies named "cookie."</p>
-          <p>In other words: a strict regulator may still require consent before writing to <code>localStorage</code>. Confirm the specific jurisdiction's interpretation with the customer's legal/DPO before presenting <code>sessionPersistence: 'local-storage'</code> as a full fix rather than a mitigation.</p>
-        </div>
-      </wa-details>
-    </nav>
-
-    <footer class="sidebar-footer">
-      <div class="sidebar-footer-links">
-        Built by <a href="https://github.com/kyletaylored" target="_blank" rel="noopener">Kyle Taylor</a> &middot;
-        <a href="https://github.com/kyletaylored/datadog-rum-pizza-builder" target="_blank" rel="noopener">GitHub</a>
+    <div class="storage-grid">
+      <div class="storage-card">
+        <h4>document.cookie <span id="cookie-count"></span></h4>
+        <ul id="cookie-list"></ul>
       </div>
-      <label class="theme-toggle" aria-label="Toggle light/dark mode">
-        <span class="theme-icon">☀️</span>
-        <wa-switch id="theme-toggle" onchange="toggleTheme(this)"></wa-switch>
-        <span class="theme-icon">🌙</span>
-      </label>
-    </footer>
-
-    <div class="sidebar-resizer" id="sidebar-resizer" title="Drag to resize"></div>
-  </aside><!-- /.training-sidebar -->
-
-  <!-- ===== MAIN CONTENT ===== -->
-  <div class="training-main">
-
-    <nav class="tab-nav" role="tablist">
-      <button class="tab-btn active" role="tab" aria-selected="true"  aria-controls="tab-storage" onclick="switchLabTab('storage')">🗄️ Storage Inspector</button>
-      <button class="tab-btn"        role="tab" aria-selected="false" aria-controls="tab-tabs"    onclick="switchLabTab('tabs')">🪟 Multi-tab test</button>
-      <button class="tab-btn"        role="tab" aria-selected="false" aria-controls="tab-errors"  onclick="switchLabTab('errors')">🚨 Error capture</button>
-      <button class="tab-btn"        role="tab" aria-selected="false" aria-controls="tab-config"  onclick="switchLabTab('config')">⚙️ Config</button>
-    </nav>
-
-    <!-- Storage Inspector tab -->
-    <div id="tab-storage" role="tabpanel" class="tab-panel">
-      <div class="lab-container">
-
-        <div class="consent-banner">
-          <p>🍪 This page can create a technical session store to monitor performance and errors. How should it behave?
-            <span id="consent-pill" class="consent-state-pill pending">pending</span>
-          </p>
-          <div class="btn-row">
-            <button class="wa-brand" onclick="labSetConsent('accept-cookie')">Accept — use a cookie</button>
-            <button class="wa-neutral" onclick="labSetConsent('accept-storage')">Accept — cookie-free only</button>
-            <button class="wa-neutral wa-outlined" onclick="labSetConsent('decline')">Decline everything</button>
-          </div>
-        </div>
-
-        <h3>Live storage inspector</h3>
-        <p>Reflects exactly what this tab has written to the browser right now. Refreshes every second, and immediately after any action below.</p>
-
-        <div class="mode-picker">
-          <span>Try RUM with:</span>
-          <button id="mode-btn-cookie"        onclick="reloadWithPersistence('cookie')">cookie</button>
-          <button id="mode-btn-local-storage" onclick="reloadWithPersistence('local-storage')">local-storage</button>
-          <button id="mode-btn-memory"        onclick="reloadWithPersistence('memory')">memory</button>
-          <button class="wa-neutral wa-outlined reset-state-btn" onclick="resetLabState()" title="Clear Datadog cookies &amp; localStorage left over from earlier tests, then reload">🧹 Reset lab state</button>
-        </div>
-        <p style="font-size:.78rem; color:var(--dd-color-muted)">Switching modes doesn't delete a cookie created by an earlier test in this browser — cookies just expire on their own. If the inspector below shows a cookie you didn't expect, use <strong>Reset lab state</strong> to clear it before comparing modes.</p>
-
-        <div class="storage-grid">
-          <wa-card class="storage-card" appearance="outlined">
-            <h4 slot="header">Cookies <span id="cookie-count"></span></h4>
-            <ul id="cookie-list"></ul>
-          </wa-card>
-          <wa-card class="storage-card" appearance="outlined">
-            <h4 slot="header">localStorage <span id="ls-count"></span></h4>
-            <ul id="ls-list"></ul>
-          </wa-card>
-        </div>
-
-        <p>Current RUM session ID (via <code>DD_RUM.getInternalContext()</code>): <span id="session-id-display" class="session-id">—</span></p>
-        <p>Active <code>sessionPersistence</code> mode: <strong id="active-mode-display">cookie</strong></p>
+      <div class="storage-card">
+        <h4>localStorage <span id="ls-count"></span></h4>
+        <ul id="ls-list"></ul>
       </div>
-    </div><!-- /#tab-storage -->
+    </div>
 
-    <!-- Multi-tab test tab -->
-    <div id="tab-tabs" role="tabpanel" class="tab-panel" style="display:none">
-      <div class="lab-container">
-        <h3>Multi-tab &amp; refresh session stability</h3>
-        <p>Open this page in a second tab (same persistence mode) and watch whether it reports the <em>same</em> session ID as this tab, or a new one. Then try reloading one tab and see if its own session ID changes.</p>
-        <div class="btn-row" style="margin-bottom:1rem">
-          <button class="wa-brand" onclick="window.open(window.location.href, '_blank')">Open a second tab</button>
-          <button class="wa-neutral" onclick="window.location.reload()">Reload this tab</button>
-        </div>
-        <table id="tabs-table">
-          <thead><tr><th>Tab</th><th>Persistence</th><th>Consent</th><th>Session ID</th><th>Last seen</th></tr></thead>
-          <tbody id="tabs-tbody"><tr><td colspan="5">Waiting for tab reports…</td></tr></tbody>
-        </table>
-        <p id="tabs-verdict"></p>
-      </div>
-    </div><!-- /#tab-tabs -->
+    <div class="stack">
+      <p>Current RUM session ID (via <code>DD_RUM.getInternalContext()</code>): <code id="session-id-display">—</code></p>
+      <p>Active <code>sessionPersistence</code> mode: <strong id="active-mode-display">cookie</strong></p>
+    </div>
+  </section>
 
-    <!-- Error capture tab -->
-    <div id="tab-errors" role="tabpanel" class="tab-panel" style="display:none">
-      <div class="lab-container">
-        <h3>Always-on error capture, independent of consent</h3>
-        <p>The Logs SDK on this page is initialized independently of the consent banner on the Storage Inspector tab: it runs from first paint with <code>trackingConsent: 'granted'</code> and <code>forwardErrorsToLogs: true</code>, whatever RUM's consent state is. That's the always-on backup plan — 100% error capture before anyone clicks anything.</p>
-        <wa-callout variant="warning" class="lab-callout">
-          <strong>Whether it's cookie-free is not up to the Logs SDK.</strong> Both SDKs on a
-          page share one session manager and one <code>_dd_s</code> store, so Logs uses
-          whatever <code>sessionPersistence</code> RUM uses — this page passes the mode you
-          picked to both. Check the <strong>Storage Inspector</strong> in <code>cookie</code>
-          mode and you'll see a single <code>_dd_s</code> carrying <code>logs=1&amp;rum=1</code>.
-          Going cookie-free is therefore a whole-page decision, not something you can do for
-          the error pipe alone.
-        </wa-callout>
-        <div class="btn-row" style="margin-bottom:1rem">
-          <button class="wa-danger" onclick="labThrowError()">Throw a JS error</button>
-        </div>
-        <p>RUM consent right now: <span id="consent-pill-2" class="consent-state-pill pending">pending</span> — notice that the error still shows up tagged <span class="type-badge logs">logs</span> in the activity log below even when RUM is declined. If consent is granted, it'll also show up tagged <span class="type-badge rum">rum</span>.</p>
+  <!-- Multi-tab test -->
+  <section class="tab-panel" id="tab-tabs" data-tab="tabs" data-tab-label="Multi-tab test">
+    <div class="section-head">
+      <h3 class="section-title">Multi-tab &amp; refresh session stability</h3>
+      <p>Open this page in a second tab (same persistence mode) and watch whether it reports the <em>same</em> session ID as this tab, or a new one. Then try reloading one tab and see if its own session ID changes.</p>
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn btn--primary" onclick="window.open(window.location.href, '_blank')"><span class="icon icon--14" data-icon="app-window"></span>Open a second tab</button>
+      <button type="button" class="btn" onclick="window.location.reload()"><span class="icon icon--14" data-icon="refresh-cw"></span>Reload this tab</button>
+    </div>
+    <div class="compare-table-wrap">
+      <table class="compare-table" id="tabs-table">
+        <thead><tr><th>Tab</th><th>Persistence</th><th>Consent</th><th>RUM session ID</th><th>Last seen</th></tr></thead>
+        <tbody id="tabs-tbody"><tr><td colspan="5">Waiting for tab reports…</td></tr></tbody>
+      </table>
+    </div>
+    <p id="tabs-verdict"></p>
+  </section>
 
-        <hr>
+  <!-- Error capture -->
+  <section class="tab-panel" id="tab-errors" data-tab="errors" data-tab-label="Error capture">
+    <div class="section-head">
+      <h3 class="section-title">Always-on error capture, independent of consent</h3>
+      <p>The Logs SDK on this page is initialized independently of the consent banner on the Storage inspector tab: it runs from first paint with <code>trackingConsent: 'granted'</code> and <code>forwardErrorsToLogs: true</code>, whatever RUM's consent state is. That's the always-on backup plan — 100% error capture before anyone clicks anything.</p>
+    </div>
+    <div class="callout callout--warning">
+      <span class="icon" data-icon="triangle-alert"></span>
+      <div><span><strong>Whether it's cookie-free is not up to the Logs SDK.</strong> Both SDKs on a
+      page share one session manager and one <code>_dd_s</code> store, so Logs uses
+      whatever <code>sessionPersistence</code> RUM uses — this page passes the mode you
+      picked to both. Check the <strong>Storage inspector</strong> in <code>cookie</code>
+      mode and you'll see a single <code>_dd_s</code> carrying <code>logs=1&amp;rum=1</code>.
+      Going cookie-free is therefore a whole-page decision, not something you can do for
+      the error pipe alone.</span></div>
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn btn--danger" onclick="labThrowError()"><span class="icon icon--14" data-icon="bug"></span>Throw a JS error</button>
+    </div>
+    <p>RUM consent right now: <span id="consent-pill-2" class="pill pill--warning consent-state-pill">pending</span> — notice that the error still shows up tagged <span class="type-badge logs">logs</span> in the activity log below even when RUM is declined. If consent is granted, it'll also show up tagged <span class="type-badge rum">rum</span>.</p>
+    <p class="muted">Switching tabs generates a RUM <span class="type-badge view">view</span>. The buttons in the activity log's header emit an <span class="type-badge action">action</span>, an <span class="type-badge error">error</span>, a <span class="type-badge info">log</span> and a <span class="type-badge resource">resource</span> on demand. <span class="type-badge logs">logs</span> rows always work; <span class="type-badge rum">rum</span> rows need consent.</p>
 
-        <h3>Is every error source actually covered? Error-source coverage</h3>
-        <p>An error log leaving the Browser Logs SDK does <strong>not</strong> necessarily become an Error Tracking issue. Browser errors have two separate front doors into Error Tracking, and they have different requirements:</p>
+    <hr>
 
-        <div class="compare-table-wrap">
-          <table class="compare-table">
-            <thead><tr><th>Front door</th><th>Fed by</th><th>Requirements</th><th>Available pre-consent?</th></tr></thead>
-            <tbody>
-              <tr>
-                <td><a href="https://docs.datadoghq.com/error_tracking/frontend/browser/" target="_blank" rel="noopener">Frontend Error Tracking</a></td>
-                <td><strong>RUM</strong> Browser SDK</td>
-                <td>Error source is <code>custom</code>, <code>source</code>, <code>report</code> or <code>console</code>, and it carries a stack trace</td>
-                <td><strong>No</strong> — RUM is consent-gated end to end</td>
-              </tr>
-              <tr>
-                <td><a href="https://docs.datadoghq.com/error_tracking/frontend/logs/" target="_blank" rel="noopener">Error Tracking for Logs</a></td>
-                <td><strong>Logs</strong> Browser SDK (v4.36.0+, <code>forwardErrorsToLogs: true</code>)</td>
-                <td>A <code>service</code>, an error-level <code>status</code>, and <strong>either</strong> <code>error.kind</code> <strong>or</strong> a valid <code>error.stack</code></td>
-                <td><strong>Yes</strong> — cookie-free, and enabled separately for the org</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+    <div class="section-head">
+      <h3 class="section-title">Is every error source actually covered? Error-source coverage</h3>
+      <p>An error log leaving the Browser Logs SDK does <strong>not</strong> necessarily become an Error Tracking issue. Browser errors have two separate front doors into Error Tracking, and they have different requirements:</p>
+    </div>
 
-        <p>So "we can see the error in the Logs Explorer" and "we have an Error Tracking issue" are two different claims, and the second is the one that actually determines whether error-tracking coverage is real. Three attributes decide it:</p>
-        <ul>
-          <li><code>service</code> — the SDK attaches this from <code>init()</code>, so it's the one requirement you can't forget.</li>
-          <li>An error-level <code>status</code> — <code>error</code>, <code>critical</code>, <code>alert</code> or <code>emergency</code>. A log with a perfect stack still won't become an issue at <code>info</code> or <code>warn</code>.</li>
-          <li><strong>Either</strong> <code>error.kind</code> <strong>or</strong> a valid <code>error.stack</code>. Either alone is enough — which is the useful part, because it means a report site with no <code>Error</code> to hand isn't stuck. <code>error.message</code> is optional but improves grouping.</li>
-        </ul>
-        <p>A valid stack means <strong>at least two lines with at least one meaningful frame</strong> — a function name and a file with a position. Passing a real <code>Error</code> gets you kind, message and stack in one go; the matrix rows below that fail are the ones where none of the three arrived.</p>
+    <div class="compare-table-wrap">
+      <table class="compare-table">
+        <thead><tr><th>Front door</th><th>Fed by</th><th>Requirements</th><th>Available pre-consent?</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><a href="https://docs.datadoghq.com/error_tracking/frontend/browser/" target="_blank" rel="noopener">Frontend Error Tracking</a></td>
+            <td><strong>RUM</strong> Browser SDK</td>
+            <td>Error source is <code>custom</code>, <code>source</code>, <code>report</code> or <code>console</code>, and it carries a stack trace</td>
+            <td><strong>No</strong> — RUM is consent-gated end to end</td>
+          </tr>
+          <tr>
+            <td><a href="https://docs.datadoghq.com/error_tracking/frontend/logs/" target="_blank" rel="noopener">Error Tracking for Logs</a></td>
+            <td><strong>Logs</strong> Browser SDK (v4.36.0+, <code>forwardErrorsToLogs: true</code>)</td>
+            <td>A <code>service</code>, an error-level <code>status</code>, and <strong>either</strong> <code>error.kind</code> <strong>or</strong> a valid <code>error.stack</code></td>
+            <td><strong>Yes</strong> — cookie-free, and enabled separately for the org</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
-        <p>When there genuinely is no <code>Error</code> object — a failed validation, a rejected API response — set the attributes yourself and the log still becomes an issue:</p>
-        <pre>DD_LOGS.logger.error('Checkout rejected', {
+    <p>So "we can see the error in the Logs Explorer" and "we have an Error Tracking issue" are two different claims, and the second is the one that actually determines whether error-tracking coverage is real. Three attributes decide it:</p>
+    <ul>
+      <li><code>service</code> — the SDK attaches this from <code>init()</code>, so it's the one requirement you can't forget.</li>
+      <li>An error-level <code>status</code> — <code>error</code>, <code>critical</code>, <code>alert</code> or <code>emergency</code>. A log with a perfect stack still won't become an issue at <code>info</code> or <code>warn</code>.</li>
+      <li><strong>Either</strong> <code>error.kind</code> <strong>or</strong> a valid <code>error.stack</code>. Either alone is enough — which is the useful part, because it means a report site with no <code>Error</code> to hand isn't stuck. <code>error.message</code> is optional but improves grouping.</li>
+    </ul>
+    <p>A valid stack means <strong>at least two lines with at least one meaningful frame</strong> — a function name and a file with a position. Passing a real <code>Error</code> gets you kind, message and stack in one go; the matrix rows below that fail are the ones where none of the three arrived.</p>
+
+    <p>When there genuinely is no <code>Error</code> object — a failed validation, a rejected API response — set the attributes yourself and the log still becomes an issue:</p>
+    <pre>DD_LOGS.logger.error('Checkout rejected', {
   error: { kind: 'CheckoutRejected' },   // enough on its own — no stack needed
   orderId,
 })</pre>
-        <wa-callout variant="warning" class="lab-callout">
-          <strong>Don't set <code>error.kind</code> when you already have an <code>Error</code>.</strong>
-          A kind supplied in the context object <em>overrides</em> the one derived from the
-          Error — verified here: a context kind beat a real <code>TypeError</code> while the
-          real stack survived. That swaps an accurate type name for a hardcoded one and
-          degrades issue grouping. Pass the <code>Error</code> and let the SDK fill all three in.
-        </wa-callout>
+    <div class="callout callout--warning">
+      <span class="icon" data-icon="triangle-alert"></span>
+      <div><span><strong>Don't set <code>error.kind</code> when you already have an <code>Error</code>.</strong>
+      A kind supplied in the context object <em>overrides</em> the one derived from the
+      Error — verified here: a context kind beat a real <code>TypeError</code> while the
+      real stack survived. That swaps an accurate type name for a hardcoded one and
+      degrades issue grouping. Pass the <code>Error</code> and let the SDK fill all three in.</span></div>
+    </div>
 
-        <p>Fire each source below and read the measured payload — every row shows all three attributes, so a failing row tells you exactly which one was missing. The <em>for Logs</em> column is what works today, pre-consent; the <em>Frontend</em> column stays empty until you grant consent on the Storage Inspector tab, which is the coverage gap the Logs pipe exists to fill.</p>
+    <p>Fire each source below and read the measured payload — every row shows all three attributes, so a failing row tells you exactly which one was missing. The <em>for Logs</em> column is what works today, pre-consent; the <em>Frontend</em> column stays empty until you grant consent on the Storage inspector tab, which is the coverage gap the Logs pipe exists to fill.</p>
 
-        <div class="btn-row" style="margin:1rem 0">
-          <button class="wa-brand" onclick="etTriggerAll()">Run all sources</button>
-          <button class="wa-neutral wa-outlined" onclick="etReset()">Reset results</button>
-        </div>
+    <div class="btn-row">
+      <button type="button" class="btn btn--primary" onclick="etTriggerAll()"><span class="icon icon--14" data-icon="play"></span>Run all sources</button>
+      <button type="button" class="btn" onclick="etReset()"><span class="icon icon--14" data-icon="rotate-ccw"></span>Reset results</button>
+    </div>
 
-        <div class="compare-table-wrap">
-          <table class="compare-table et-matrix">
-            <thead>
-              <tr>
-                <th></th>
-                <th>Error source &amp; measured payload</th>
-                <th>ET for Logs</th>
-                <th>ET Frontend (RUM)</th>
-              </tr>
-            </thead>
-            <tbody id="et-tbody"></tbody>
-          </table>
-        </div>
-        <p id="et-verdict" class="et-verdict"></p>
+    <div class="compare-table-wrap">
+      <table class="compare-table et-matrix">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Error source &amp; measured payload</th>
+            <th>Error Tracking for Logs</th>
+            <th>Frontend Error Tracking</th>
+          </tr>
+        </thead>
+        <tbody id="et-tbody"></tbody>
+      </table>
+    </div>
+    <p id="et-verdict" class="et-verdict"></p>
 
-        <wa-callout variant="warning" class="lab-callout">
-          <strong>What this lab can and can't prove.</strong> Every value above is read
-          out of each SDK's <code>beforeSend</code> callback, so it's a faithful measurement
-          of the payload leaving the browser — not a confirmation that Datadog created an
-          issue. Issue creation also depends on Error Tracking for Logs being enabled for
-          the org. Read the columns as "this payload does or doesn't meet the documented
-          requirements", then confirm in the Error Tracking explorer.
-        </wa-callout>
+    <div class="callout callout--warning">
+      <span class="icon" data-icon="triangle-alert"></span>
+      <div><span><strong>What this lab can and can't prove.</strong> Every value above is read
+      out of each SDK's <code>beforeSend</code> callback, so it's a faithful measurement
+      of the payload leaving the browser — not a confirmation that Datadog created an
+      issue. Issue creation also depends on Error Tracking for Logs being enabled for
+      the org. Read the columns as "this payload does or doesn't meet the documented
+      requirements", then confirm in the Error Tracking explorer.</span></div>
+    </div>
 
-        <wa-callout variant="danger" class="lab-callout">
-          <strong>The near-misses are what a codebase without strict error-tracking hygiene is full of.</strong>
-          <code>console.error("some string")</code>, <code>logger.error("some message")</code>
-          and passing a string where the <code>Error</code> belongs all produce a healthy-looking
-          <code>status:error</code> log with neither a kind nor a usable stack — so none of them
-          ever become an issue. Plenty of logging call sites accept a plain string like this, so
-          the pattern tends to be everywhere once you look for it. Two mechanical fixes: pass the
-          real <code>Error</code> as the third argument where you have one
-          (<code>logger.error(msg, ctx, err)</code>), and set <code>error.kind</code> yourself
-          where you don't.
-        </wa-callout>
+    <div class="callout callout--danger">
+      <span class="icon" data-icon="circle-alert"></span>
+      <div><span><strong>The near-misses are what a codebase without strict error-tracking hygiene is full of.</strong>
+      <code>console.error("some string")</code>, <code>logger.error("some message")</code>
+      and passing a string where the <code>Error</code> belongs all produce a healthy-looking
+      <code>status:error</code> log with neither a kind nor a usable stack — so none of them
+      ever become an issue. Plenty of logging call sites accept a plain string like this, so
+      the pattern tends to be everywhere once you look for it. Two mechanical fixes: pass the
+      real <code>Error</code> as the third argument where you have one
+      (<code>logger.error(msg, ctx, err)</code>), and set <code>error.kind</code> yourself
+      where you don't.</span></div>
+    </div>
 
-        <wa-details class="lab-aside" summary="Recommended shape for a strict-consent deployment" open>
-        <wa-callout variant="danger" class="lab-callout">
-          <strong>The obvious architecture doesn't work, and it fails silently.</strong>
+    <details class="disclosure" open>
+      <summary>Recommended shape for a strict-consent deployment</summary>
+      <div class="disclosure-body">
+        <div class="callout callout--danger">
+          <span class="icon" data-icon="circle-alert"></span>
+          <div><span><strong>The obvious architecture doesn't work, and it fails silently.</strong>
           "Cookie-free Logs for errors, cookie-based RUM after consent" is the natural
           reading of the requirement — but configure the two SDKs with different
           <code>sessionPersistence</code> values and RUM never establishes a session and
@@ -430,8 +290,8 @@ console.error('Checkout failed')</pre>
           with RUM on <code>cookie</code> and Logs pinned to <code>local-storage</code>,
           RUM's <code>beforeSend</code> was never invoked once and
           <code>getInternalContext()</code> returned <code>undefined</code>. Worth verifying
-          on the customer's SDK version before designing around it.
-        </wa-callout>
+          on the customer's SDK version before designing around it.</span></div>
+        </div>
 
         <p>Because the storage choice is page-wide, the working shape puts <strong>both SDKs on <code>local-storage</code></strong> and gates only RUM behind consent:</p>
         <div class="compare-table-wrap">
@@ -462,110 +322,204 @@ console.error('Checkout failed')</pre>
 
         <p>Once consent is granted both pipes report the same error, which is expected — it's why the matrix shows the two doors separately rather than as a single verdict.</p>
 
-        <p>The one open question is legal, not technical, and it's the same caveat as the <strong>Legal</strong> topic in the sidebar: <code>local-storage</code> removes the HTTP cookie, but ePrivacy Art. 5(3) governs "storing information … in the terminal equipment", which several regulators read as covering any client-side storage. If this customer's DPO takes that strict reading, the only remaining cookie-free option is <code>memory</code> for both SDKs — and at that point the session-inflation problem is unavoidable and should be priced into the conversation rather than engineered around.</p>
-        </wa-details>
+        <p>The one open question is legal, not technical, and it's the same caveat as the <strong>Legal</strong> topic in the guide: <code>local-storage</code> removes the HTTP cookie, but ePrivacy Art. 5(3) governs "storing information … in the terminal equipment", which several regulators read as covering any client-side storage. If this customer's DPO takes that strict reading, the only remaining cookie-free option is <code>memory</code> for both SDKs — and at that point the session-inflation problem is unavoidable and should be priced into the conversation rather than engineered around.</p>
       </div>
-    </div><!-- /#tab-errors -->
+    </details>
+  </section>
 
-    <!-- Config tab -->
-    <div id="tab-config" role="tabpanel" class="tab-panel" style="display:none">
-      <div class="lab-container">
-        <h3>Active SDK configuration</h3>
-        <p>Reflects the actual <code>DD_RUM.init()</code> and <code>DD_LOGS.init()</code> calls made by this page for your current choices.</p>
-        <h4>RUM (consent-gated)</h4>
-        <pre class="config-code"><code id="config-rum-json"></code></pre>
-        <h4>Logs (always-on error pipe)</h4>
-        <pre class="config-code"><code id="config-logs-json"></code></pre>
+  <!-- Config -->
+  <section class="tab-panel" id="tab-config" data-tab="config" data-tab-label="Config">
+    <div class="section-head">
+      <h3 class="section-title">Active configuration</h3>
+      <p>The options each SDK reports it was initialized with (<code>getInitConfiguration()</code>) for your current choices. <code>trackingConsent</code> is the value at init: the banner changes RUM's consent afterwards with <code>setTrackingConsent()</code>, which the status bar shows.</p>
+    </div>
+    <div class="code-grid">
+      <div class="code-panel"><div class="eyebrow">RUM · consent-gated</div><pre><code id="config-rum-json"></code></pre></div>
+      <div class="code-panel"><div class="eyebrow">Logs · always-on error pipe</div><pre><code id="config-logs-json"></code></pre></div>
+    </div>
 
-        <h3>Capturing error attributes</h3>
-        <p>Config alone doesn't get you Error Tracking issues — the call site decides. A log needs a <code>service</code>, an error-level <code>status</code>, and <strong>either</strong> <code>error.kind</code> <strong>or</strong> a valid <code>error.stack</code>. These are the exact calls this page makes; the <strong>Error capture</strong> tab measures what each one produces.</p>
+    <div class="section-head">
+      <h3 class="section-title">Capturing error attributes</h3>
+      <p>Config alone doesn't get you Error Tracking issues — the call site decides. A log needs a <code>service</code>, an error-level <code>status</code>, and <strong>either</strong> <code>error.kind</code> <strong>or</strong> a valid <code>error.stack</code>. These are the exact calls this page makes; the <strong>Error capture</strong> tab measures what each one produces.</p>
+    </div>
 
-        <h4>Automatic — no instrumentation</h4>
-        <p><code>forwardErrorsToLogs: true</code> covers uncaught exceptions, unhandled promise rejections and failed requests. All three arrive with a usable stack.</p>
-        <pre class="config-code"><code>// nothing to write — these are captured for you
+    <div class="stack">
+      <h4>Automatic — no instrumentation</h4>
+      <p class="muted"><code>forwardErrorsToLogs: true</code> covers uncaught exceptions, unhandled promise rejections and failed requests. All three arrive with a usable stack.</p>
+      <pre><code>// nothing to write — these are captured for you
 throw new Error('Checkout exploded')
 Promise.reject(new Error('Payment provider timed out'))
 fetch('https://api.example.com/pay')   // network failure</code></pre>
+    </div>
 
-        <h4>Handled errors — pass the Error as the third argument</h4>
-        <p>This is the one teams miss. The third argument is what populates <code>error.kind</code>, <code>error.message</code> and <code>error.stack</code>; without it the log still reads <code>status:error</code> and still never becomes an issue.</p>
-        <pre class="config-code"><code>try {
+    <div class="stack">
+      <h4>Handled errors — pass the Error as the third argument</h4>
+      <p class="muted">This is the one teams miss. The third argument is what populates <code>error.kind</code>, <code>error.message</code> and <code>error.stack</code>; without it the log still reads <code>status:error</code> and still never becomes an issue.</p>
+      <pre><code>try {
   submitOrder(order)
 } catch (err) {
   DD_LOGS.logger.error('Order submission failed', { orderId: order.id }, err)
   //                    message                   context             Error ◄── required
 }</code></pre>
+    </div>
 
-        <h4>No Error to pass — set <code>error.kind</code> yourself</h4>
-        <p>For a rejected API response or a failed validation there may be no <code>Error</code> object. <code>error.kind</code> alone satisfies Error Tracking — no stack needed — and becomes the issue title, so use a real type name.</p>
-        <pre class="config-code"><code>DD_LOGS.logger.error('Checkout rejected by provider', {
+    <div class="stack">
+      <h4>No Error to pass — set <code>error.kind</code> yourself</h4>
+      <p class="muted">For a rejected API response or a failed validation there may be no <code>Error</code> object. <code>error.kind</code> alone satisfies Error Tracking — no stack needed — and becomes the issue title, so use a real type name.</p>
+      <pre><code>DD_LOGS.logger.error('Checkout rejected by provider', {
   error: { kind: 'CheckoutRejected' },   // enough on its own
   orderId: order.id,
   providerCode: res.code,
 })</code></pre>
+    </div>
 
-        <h4>What not to do</h4>
-        <p>A <code>kind</code> in the context object <em>overrides</em> the one derived from a real <code>Error</code>, replacing an accurate type name with a hardcoded one and degrading issue grouping. Pass the <code>Error</code> and let the SDK fill all three fields in.</p>
-        <pre class="config-code"><code>// ✗ clobbers the real kind — this log groups as 'AppError', not 'TypeError'
+    <div class="stack">
+      <h4>What not to do</h4>
+      <p class="muted">A <code>kind</code> in the context object <em>overrides</em> the one derived from a real <code>Error</code>, replacing an accurate type name with a hardcoded one and degrading issue grouping. Pass the <code>Error</code> and let the SDK fill all three fields in.</p>
+      <pre><code>// ✗ clobbers the real kind — this log groups as 'AppError', not 'TypeError'
 DD_LOGS.logger.error(msg, { error: { kind: 'AppError' } }, err)
 
 // ✗ no kind, no stack — a log line forever
 DD_LOGS.logger.error('Something went wrong')
 console.error('Something went wrong')</code></pre>
-
-        <h4>RUM's own path, for comparison</h4>
-        <p>Post-consent, <code>addError</code> reports the same <code>Error</code> into Frontend Error Tracking. The <strong>Generate error</strong> button in the activity log below calls both pipes at once.</p>
-        <pre class="config-code"><code>DD_RUM.addError(err, { orderId: order.id })</code></pre>
-      </div>
-    </div><!-- /#tab-config -->
-
-    <!-- Persistent activity log — visible under every tab, fed by both SDKs -->
-    <div id="rum-log-wrap">
-      <div id="rum-log-header">
-        <h3>Datadog activity log</h3>
-        <div class="log-controls">
-          <button class="filter-btn rum active"  onclick="toggleActivityFilter('rum')">rum</button>
-          <button class="filter-btn logs active" onclick="toggleActivityFilter('logs')">logs</button>
-          <button class="wa-neutral wa-outlined" id="clear-log-btn" onclick="clearActivityLog()">Clear</button>
-          <button class="wa-neutral wa-outlined log-collapse-btn" id="log-collapse-btn" aria-expanded="true" aria-controls="rum-table-wrap" title="Hide activity log">&#9662;</button>
-        </div>
-      </div>
-      <div class="btn-row" style="margin:0 0 .75rem; flex-wrap:wrap">
-        <button class="wa-neutral" onclick="labFireAction()">🔥 Fire RUM action</button>
-        <button class="wa-neutral" onclick="labGenerateError()">💥 Generate error</button>
-        <button class="wa-neutral" onclick="labLogInfo()">📝 Emit Logs info</button>
-        <button class="wa-neutral" onclick="labFetchResource()">📦 Fetch a resource</button>
-      </div>
-      <p class="log-hint">
-        Switching tabs generates a RUM <span class="type-badge view">view</span>. The buttons emit an
-        <span class="type-badge action">action</span>, an <span class="type-badge error">error</span>, a
-        <span class="type-badge info">log</span> and a <span class="type-badge resource">resource</span> on demand.
-        <span class="type-badge logs">logs</span> rows always work; <span class="type-badge rum">rum</span> rows
-        need consent — see the <strong>Error capture</strong> tab.
-      </p>
-      <div id="rum-table-wrap">
-        <table id="rum-table">
-          <colgroup>
-            <col class="col-time"><col class="col-src"><col class="col-type"><col class="col-a"><col class="col-b">
-          </colgroup>
-          <thead id="rum-thead">
-            <tr>
-              <th>time</th>
-              <th>source</th>
-              <th>type</th>
-              <th>path / name</th>
-              <th>hash / payload</th>
-            </tr>
-          </thead>
-          <tbody id="rum-tbody"><tr id="rum-empty-row"><td colspan="5">Waiting for events…</td></tr></tbody>
-        </table>
-      </div>
     </div>
 
-  </div><!-- /.training-main -->
+    <div class="stack">
+      <h4>RUM's own path, for comparison</h4>
+      <p class="muted">Post-consent, <code>addError</code> reports the same <code>Error</code> into Frontend Error Tracking. The <strong>Generate error</strong> button in the activity log's header calls both pipes at once.</p>
+      <pre><code>DD_RUM.addError(err, { orderId: order.id })</code></pre>
+    </div>
+  </section>
 
-</div><!-- /.training-layout -->
+</div>
 
+<div id="lab-guide" hidden>
+  <div class="guide-intro">
+    <p>An EU customer's legal team has ruled that <strong>no cookie may be created without prior consent</strong> — even the first-party RUM session cookie. This lab tests Datadog RUM's cookie-free options against that requirement, live in your browser.</p>
+  </div>
+
+  <article class="guide-topic" data-tag="Consent" data-title="The compliance problem">
+    <p>A common pattern: RUM's session cookie (<code>_dd_s</code>) is created the moment the page loads, before any consent banner is answered. Session Replay is correctly gated behind consent — but the cookie itself isn't, and some EU jurisdictions' ePrivacy enforcement treats <em>any</em> non-essential cookie, including a "technical" monitoring cookie, as requiring consent.</p>
+    <p>The ask: keep full error visibility — <strong>100% error capture</strong> — while creating <strong>zero client-side storage</strong> until a user opts in.</p>
+  </article>
+
+  <article class="guide-topic" data-tag="Storage" data-title="sessionPersistence: cookie vs local-storage vs memory">
+    <p>RUM's <code>sessionPersistence</code> init option controls where the SDK keeps its session state:</p>
+    <pre>DD_RUM.init({
+  ...
+  sessionPersistence: 'local-storage', // or 'cookie' | 'memory'
+})</pre>
+    <div class="compare-table-wrap">
+      <table class="compare-table">
+        <thead><tr><th>Mode</th><th>Cookie?</th><th>Refresh-safe?</th><th>Multi-tab safe?</th></tr></thead>
+        <tbody>
+          <tr><td><code>cookie</code></td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+          <tr><td><code>local-storage</code></td><td><strong>No</strong></td><td>Yes</td><td>Yes</td></tr>
+          <tr><td><code>memory</code></td><td><strong>No</strong></td><td><strong>No</strong></td><td><strong>No</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>"Refresh-safe" and "multi-tab safe" mean the session ID stays the same instead of minting a new one — <code>cookie</code> uses <code>_dd_s</code>, the others use no cookie at all.</p>
+    <p>Try all three in the <strong>Storage inspector</strong> tab, then use the <strong>Multi-tab test</strong> tab to see why <code>memory</code> risks inflating session counts for a multi-tab workflow, while <code>local-storage</code> doesn't.</p>
+    <p>If both RUM and Logs SDKs are on the same page, Datadog requires them to use the <strong>same</strong> <code>sessionPersistence</code> value.</p>
+  </article>
+
+  <article class="guide-topic" data-tag="Gate" data-title="Gating with setTrackingConsent">
+    <p>The tracking-consent API lets you initialize the SDK once — so it's ready to go — without it writing or sending anything until the user answers:</p>
+    <pre>DD_RUM.init({ ..., trackingConsent: 'pending' })
+// later, from your CMP / banner:
+DD_RUM.setTrackingConsent('granted')      // starts writing storage + sending data
+DD_RUM.setTrackingConsent('not-granted')  // stays fully inert, no storage</pre>
+    <p>Consent isn't remembered by the SDK across page loads — your app re-applies the user's saved choice (from your own CMP) on every load.</p>
+    <p>The banner at the top of the <strong>Storage inspector</strong> tab drives this live: watch the storage cards stay empty until you click Accept.</p>
+  </article>
+
+  <article class="guide-topic" data-tag="Tabs" data-title="Multi-tab &amp; refresh session stability">
+    <p>A travel-booking-style flow commonly opens several tabs and refreshes mid-session. That's exactly where <code>memory</code> persistence falls apart: it lives in that one JS heap, so a new tab — or a refresh — has no way to see the old session ID and simply starts a new one.</p>
+    <p>The <strong>Multi-tab test</strong> tab uses a <code>BroadcastChannel</code> to compare the live RUM session ID across every open tab of this page, so you can see the effect directly instead of taking it on faith.</p>
+  </article>
+
+  <article class="guide-topic" data-tag="Errors" data-title="The always-on error-tracking backup plan">
+    <p>If the business also wants <strong>100% error capture even pre-consent</strong> — event-based capture with no session or storage dependency — RUM itself isn't the right tool for that slice, since it's intentionally gated by consent end-to-end.</p>
+    <p>The pattern: run the <strong>Logs Browser SDK</strong> as an always-on error pipe, and gate only RUM. Note <code>sessionPersistence</code> is the <em>same value in both calls</em> — the two SDKs share one session store, and disagreeing silently stops RUM from sending anything:</p>
+    <pre>DD_LOGS.init({
+  ...
+  sessionPersistence: 'local-storage', // cookie-free
+  trackingConsent: 'granted',          // always on
+  forwardErrorsToLogs: true,
+})
+
+DD_RUM.init({
+  ...
+  sessionPersistence: 'local-storage', // MUST match the above
+  trackingConsent: 'pending',          // gated until the user accepts
+})</pre>
+    <p>Try it in the <strong>Error capture</strong> tab — throwing an error is captured by the Logs pipe regardless of the RUM consent state shown in the status bar.</p>
+  </article>
+
+  <article class="guide-topic" data-tag="Errors" data-title="What Error Tracking needs to actually work">
+    <p>The requirement is <strong>100% error capture</strong>, cookie-free, before any consent is given. Two things to get right.</p>
+    <p>First, browser errors reach Error Tracking through <strong>two separate front doors</strong>. <a href="https://docs.datadoghq.com/error_tracking/frontend/browser/" target="_blank" rel="noopener">Frontend Error Tracking</a> is fed by the <strong>RUM</strong> SDK — consent-gated, so unavailable pre-consent. <a href="https://docs.datadoghq.com/error_tracking/frontend/logs/" target="_blank" rel="noopener">Error Tracking for Logs</a> is fed by the <strong>Logs</strong> SDK and is the one that works pre-consent, enabled separately for the org.</p>
+    <p>Second, sending an error log is not the same as creating an issue. The Logs door needs a <code>service</code>, an error-level <code>status</code>, and <strong>either</strong> <code>error.kind</code> <strong>or</strong> a valid <code>error.stack</code> — either of those two alone is enough:</p>
+    <pre>// becomes an issue — the Error supplies kind + message + stack
+try { risky() } catch (err) {
+  DD_LOGS.logger.error('Checkout failed', { step }, err)
+}
+
+// also becomes an issue — kind alone is enough, no Error needed
+DD_LOGS.logger.error('Checkout failed', {
+  error: { kind: 'CheckoutFailed' },
+})
+
+// stays a log line forever — no kind, no stack
+DD_LOGS.logger.error('Checkout failed')
+console.error('Checkout failed')</pre>
+    <p>Hand <code>logger.error</code> a string where the Error belongs and the SDK writes <q>No stack, consider using an instance of Error</q> into the stack field — a diagnostic in a field nobody reads.</p>
+    <p>Don't set <code>error.kind</code> when you already have an <code>Error</code>: a context-supplied kind overrides the derived one and degrades grouping. Use it only where there's no <code>Error</code> to derive from.</p>
+    <p>Uncaught exceptions, unhandled promise rejections and failed network requests are picked up automatically by <code>forwardErrorsToLogs: true</code>, with usable stacks, and need no instrumentation at all.</p>
+    <p>The <strong>Error capture</strong> tab fires each source and reports what each SDK actually built for it, per front door, so the coverage claim is measured rather than assumed.</p>
+  </article>
+
+  <article class="guide-topic" data-tag="Sessions" data-title="Avoiding inflated session counts">
+    <p><code>sessionPersistence: 'memory'</code> is cookie-free, but it keeps the session in a JS variable — so every tab and every refresh starts a brand-new session. On a travel-booking site, where multiple tabs and reloads are normal, that inflates session counts against a number the customer actually reports on.</p>
+    <p><code>local-storage</code> is the mode that solves this: cookie-free like <code>memory</code>, but it survives refreshes and is shared across tabs, so a multi-tab booking flow stays one session.</p>
+    <p>Note you can't mix — both SDKs share one session store, so <code>sessionPersistence</code> is a page-wide choice. Put both on <code>local-storage</code> and gate only RUM with <code>trackingConsent</code>:</p>
+    <div class="compare-table-wrap">
+      <table class="compare-table">
+        <thead><tr><th>Pipe</th><th>Runs</th><th>Storage</th></tr></thead>
+        <tbody>
+          <tr><td>Logs + Error Tracking</td><td>Always</td><td rowspan="2" style="vertical-align:middle"><code>local-storage</code></td></tr>
+          <tr><td>RUM + Replay</td><td>Post-consent</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>No cookie at any point, honest session counts, and no pre-consent coverage gap. Read the <strong>Legal</strong> note before presenting it as a full fix, though — a strict regulator may treat any client-side storage as requiring consent, and if this DPO does, <code>memory</code> for both SDKs is the only cookie-free option left and the inflation becomes unavoidable.</p>
+  </article>
+
+  <article class="guide-topic" data-tag="Legal" data-title="Not a compliance guarantee">
+    <div class="callout callout--danger">
+      <span class="icon" data-icon="circle-alert"></span>
+      <div><span><strong>This is an engineering lab, not legal advice.</strong></span></div>
+    </div>
+    <p>Switching from a cookie to <code>local-storage</code> removes an HTTP cookie — but the EU ePrivacy Directive (Art. 5(3)) governs "storing information, or gaining access to information already stored, in the terminal equipment of a subscriber or user," which several national regulators (including some Nordic DPAs) read as covering <em>any</em> client-side storage mechanism, not literally just cookies named "cookie."</p>
+    <p>In other words: a strict regulator may still require consent before writing to <code>localStorage</code>. Confirm the specific jurisdiction's interpretation with the customer's legal/DPO before presenting <code>sessionPersistence: 'local-storage'</code> as a full fix rather than a mitigation.</p>
+  </article>
+</div>
+
+<script>
+  window.LAB_PAGE = {
+    id: 'consent',
+    log: {
+      title: 'Datadog activity log',
+      columns: ['time', 'source', 'type', 'message'],
+      filters: ['rum', 'logs'],
+    },
+    status: [
+      { id: 'consent', label: 'RUM consent: pending', state: 'warning' },
+      { id: 'logs', probe: 'logs', ready: 'Logs always on' },
+    ],
+  };
+</script>
 <script src="../lab-shared.js"></script>
 <script src="app.js"></script>
 </body>

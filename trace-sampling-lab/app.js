@@ -1,6 +1,7 @@
 /**
- * app.js — page UI for the Trace Sampling lab: theme, tabs, RUM init, the
- * request runner, the live network table, and the per-session tallies.
+ * app.js — page UI for the Trace Sampling lab: RUM init, the request runner,
+ * the docked request log, and the per-session tallies. The shell (tabs,
+ * guide, log, status bar) is ../lab-shared.js.
  * Loaded BEFORE dist/bundle.js (see index.html), which only renders the
  * ReactFlow diagram on the Flow tab and reads window.traceLab from here.
  *
@@ -11,45 +12,16 @@
  */
 
 /* ============================================================
-   Theme toggle — same pattern as ../app.js
+   Tabs — the flow diagram mounts on first show: ReactFlow measures its
+   container to fit the view, and a hidden panel is 0×0. Registered once the
+   bundle (loaded after this file) has defined mountFlow.
    ============================================================ */
-function applyTheme(theme) {
-  const root = document.documentElement;
-  root.setAttribute('data-theme', theme);
-  root.classList.toggle('wa-dark', theme === 'dark');
-  root.classList.toggle('wa-light', theme === 'light');
-  localStorage.setItem('theme', theme);
-}
-
-function toggleTheme(sw) {
-  applyTheme(sw.checked ? 'dark' : 'light');
-}
-
-(function () {
-  const toggle = document.getElementById('theme-toggle');
-  if (!toggle) return;
-  const sync = () => { toggle.checked = document.documentElement.dataset.theme === 'dark'; };
-  sync();
-  if (toggle.localName.startsWith('wa-')) {
-    customElements.whenDefined(toggle.localName).then(() => toggle.updateComplete).then(sync);
-  }
-})();
-
-/* ============================================================
-   Tabs — Requests / Flow. The flow diagram mounts on first show: ReactFlow
-   measures its container to fit the view, and a display:none panel is 0×0.
-   ============================================================ */
-function switchTab(tab) {
-  const panels = { requests: 'tab-requests', flow: 'tab-flow' };
-  document.querySelectorAll('.tab-btn').forEach((btn) => {
-    const isActive = btn.getAttribute('aria-controls') === panels[tab];
-    btn.classList.toggle('active', isActive);
-    btn.setAttribute('aria-selected', isActive);
+document.addEventListener('DOMContentLoaded', function () {
+  LabShell.onTab(function (tab) {
+    if (tab === 'flow') window.traceLab.mountFlow?.(document.getElementById('flow-root'));
+    if (tab === 'config') renderConfigJson();
   });
-  Object.values(panels).forEach((id) => { document.getElementById(id).style.display = 'none'; });
-  document.getElementById(panels[tab]).style.display = '';
-  if (tab === 'flow') window.traceLab.mountFlow?.(document.getElementById('flow-root'));
-}
+});
 
 /* ============================================================
    Config under test
@@ -144,9 +116,8 @@ window.DD_RUM && window.DD_RUM.onReady(function () {
     traceSampleRate: liveConfig.traceSampleRate,
     traceContextInjection: liveConfig.traceContextInjection,
     beforeSend: function (event) {
-      // Only this lab's API calls matter here; static assets (the Web Awesome
-      // autoloader alone pulls ~55 chunks) and everything else still go to
-      // Datadog untouched.
+      // Only this lab's API calls matter here; static assets and everything
+      // else still go to Datadog untouched.
       if (event.type === 'resource' && (event.resource?.url || '').startsWith(API_BASE)) {
         recordRumResource(event);
       }
@@ -154,27 +125,49 @@ window.DD_RUM && window.DD_RUM.onReady(function () {
     },
   });
   renderRumStatus();
+  renderConfigJson();
 });
 
 function rumSessionId() {
   return window.DD_RUM?.getInternalContext?.()?.session_id || null;
 }
 
+// The status bar's RUM item and session ID come from the shell; this only
+// explains a missing SDK, since nothing else on the page would.
 function renderRumStatus() {
-  const pill = document.getElementById('rum-status-pill');
-  const callout = document.getElementById('rum-missing-callout');
   const ready = !!window.DD_RUM?.getInitConfiguration?.();
-  pill.textContent = ready ? 'RUM initialized' : 'RUM not initialized';
-  pill.className = `consent-state-pill ${ready ? 'granted' : 'not-granted'}`;
-  callout.style.display = ready ? 'none' : '';
-  document.getElementById('session-id').textContent = rumSessionId()?.slice(0, 8) || '—';
+  document.getElementById('rum-missing-callout').hidden = ready;
+  renderTraced();
 }
 
 function newRumSession() {
   // The next user interaction (any click, including "Send") starts a new
   // session — and with it a new, independent trace sampling decision.
   window.DD_RUM?.stopSession?.();
-  document.getElementById('session-id').textContent = 'ended, your next click starts a new one';
+  sessionEnded = true;
+  renderTraced();
+}
+
+// Whether the current session is traced, read off the headers its latest
+// request actually carried rather than predicted from the rate.
+let sessionEnded = false;
+function renderTraced() {
+  const pill = document.getElementById('session-traced');
+  const sid = rumSessionId();
+  const last = sid && !sessionEnded ? records.filter((r) => r.decision && r.sessionId === sid).at(-1) : null;
+  if (sessionEnded) {
+    pill.className = 'pill';
+    pill.textContent = 'Session ended. Your next click starts a new one';
+  } else if (!last) {
+    pill.className = 'pill';
+    pill.textContent = 'Send a request to see whether this session is traced';
+  } else if (headerOutcome(last) === 'priority-1') {
+    pill.className = 'pill pill--success';
+    pill.textContent = 'This session is traced';
+  } else {
+    pill.className = 'pill';
+    pill.textContent = 'This session is not traced';
+  }
 }
 
 /* ============================================================
@@ -192,15 +185,13 @@ const backendReady = (async function () {
 })();
 
 backendReady.then(
-  () => setBackendStatus('ready', 'granted'),
-  (err) => setBackendStatus(err.message, 'not-granted'),
+  () => setBackendStatus('Pretend backend ready', 'success'),
+  (err) => setBackendStatus(`Pretend backend failed: ${err.message}`, 'danger'),
 );
 
 function setBackendStatus(text, state) {
-  const pill = document.getElementById('backend-status-pill');
-  pill.textContent = text === 'ready' ? 'pretend backend ready' : text;
-  pill.className = `consent-state-pill ${state}`;
-  document.querySelectorAll('.send-btn').forEach((b) => { b.disabled = state !== 'granted'; });
+  LabStatus.set('backend', text, state);
+  document.querySelectorAll('.send-btn').forEach((b) => { b.disabled = state !== 'success'; });
 }
 
 /* ============================================================
@@ -227,6 +218,7 @@ async function sendOne() {
 
 async function sendRequests(count) {
   await backendReady;
+  sessionEnded = false;
   for (let i = 0; i < count; i += 10) {
     await Promise.all(Array.from({ length: Math.min(10, count - i) }, sendOne));
   }
@@ -263,6 +255,7 @@ function clearRequests() {
   byReq.clear();
   renderAll();
 }
+LabLog.onClear(clearRequests);
 
 /* ============================================================
    Rendering
@@ -278,68 +271,71 @@ function esc(value) {
   return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// The badge type for what the browser sent — also the log's filter types.
+const OUTCOME_TYPE = { 'priority-1': 'keep', 'priority-0': 'drop', none: 'none' };
 const OUTCOME_BADGE = {
-  'priority-1': '<span class="type-badge action">keep</span>',
-  'priority-0': '<span class="type-badge error">drop</span>',
-  none: '<span class="type-badge other">no headers</span>',
+  'priority-1': '<span class="type-badge keep">keep</span>',
+  'priority-0': '<span class="type-badge drop">drop</span>',
+  none: '<span class="type-badge none">no headers</span>',
 };
 
-function browserCell(r) {
-  if (!r.decision) return '<span class="muted">sending…</span>';
+function browserSub(r) {
   const tp = r.receivedHeaders?.traceparent;
   const p = r.receivedHeaders?.['x-datadog-sampling-priority'];
-  const sub = tp ? `priority ${esc(p)} · traceparent …-${esc(tp.split('-')[3])}` : 'no trace headers';
-  return `${OUTCOME_BADGE[headerOutcome(r)]}<span class="sub" title="${esc(tp || 'no traceparent')}">${sub}</span>`;
+  return tp ? `priority ${p} · traceparent …-${tp.split('-')[3]}` : 'no trace headers';
 }
 
 function backendCell(r) {
   if (r.error) return `<span class="type-badge error">${esc(r.error)}</span>`;
-  if (!r.decision) return '<span class="muted">…</span>';
-  const cls = r.decision === 'keep' ? 'action' : 'debug';
+  if (!r.decision) return '<span class="subtle">…</span>';
+  const cls = r.decision === 'keep' ? 'kept' : 'dropped';
   const why = r.decidedBy === 'rum' ? 'as the browser asked' : 'no decision from RUM, so its own rate';
-  return `<span class="type-badge ${cls}">${r.decision === 'keep' ? 'kept' : 'dropped'}</span><span class="sub" title="${esc(r.reason)}">${why}</span>`;
+  return `<span class="type-badge ${cls}">${r.decision === 'keep' ? 'kept' : 'dropped'}</span><span class="sub">${why}</span>`;
 }
 
 // Combines the backend's decision with what RUM measured on its own
 // resource event, so "linked" is only claimed when the trace IDs match.
 function datadogCell(r) {
   if (!r.decision) return '';
-  if (r.decision === 'drop') return '<span class="type-badge debug">nothing</span><span class="sub">no trace kept</span>';
-  if (!r.rumSeen) return '<span class="muted">waiting for RUM…</span>';
-  if (isLinked(r)) return `<span class="type-badge action">trace linked to RUM</span><span class="sub" title="${esc(r.rumTraceId)}">same trace ID on the RUM resource</span>`;
-  return '<span class="type-badge info">backend-only trace</span><span class="sub">no trace ID on the RUM resource</span>';
+  if (r.decision === 'drop') return '<span class="type-badge nothing">nothing</span><span class="sub">no trace kept</span>';
+  if (!r.rumSeen) return '<span class="subtle">waiting for RUM…</span>';
+  if (isLinked(r)) return '<span class="type-badge linked">trace linked to RUM</span><span class="sub">same trace ID on the RUM resource</span>';
+  return '<span class="type-badge backend-only">backend-only trace</span><span class="sub">no trace ID on the RUM resource</span>';
 }
 
 function renderTable() {
-  const tbody = document.getElementById('rum-tbody');
-  if (records.length === 0) {
-    tbody.innerHTML = '<tr id="rum-empty-row"><td colspan="5">Send a request to see its trip, row by row…</td></tr>';
-    return;
-  }
-  tbody.innerHTML = records.map((r) => `<tr>
-      <td title="${esc(r.time)}">#${r.n}</td>
-      <td>${esc((r.sessionId || '—').slice(0, 8))}</td>
-      <td>${browserCell(r)}</td>
-      <td>${backendCell(r)}</td>
-      <td>${datadogCell(r)}</td>
-    </tr>`).join('');
-  const wrap = document.getElementById('rum-table-wrap');
-  wrap.scrollTop = wrap.scrollHeight;
+  LabLog.setRows(records.map((r) => {
+    const sent = r.decision ? OUTCOME_TYPE[headerOutcome(r)] : 'pending';
+    return {
+      key: `req-${r.n}`,
+      c1: `#${r.n} · ${(r.sessionId || '—').slice(0, 8)}`,
+      type: sent,
+      label: r.decision ? sent : 'sending…',
+      sub: r.decision ? browserSub(r) : '',
+      c3: { html: backendCell(r) },
+      c4: { html: datadogCell(r) },
+      title: `${r.time} · ${r.receivedHeaders?.traceparent || 'no traceparent'}`,
+    };
+  }));
 }
 
 function renderTallies() {
   const done = records.filter((r) => r.decision);
   const count = (fn) => done.filter(fn).length;
   const set = (id, v) => { document.getElementById(id).textContent = v; };
+  const kept = (by) => count((r) => r.decision === 'keep' && r.decidedBy === by);
   set('t-sent', done.length);
-  set('t-p1', count((r) => headerOutcome(r) === 'priority-1'));
-  set('t-p0', count((r) => headerOutcome(r) === 'priority-0'));
-  set('t-none', count((r) => headerOutcome(r) === 'none'));
-  set('t-keep-rum', count((r) => r.decision === 'keep' && r.decidedBy === 'rum'));
-  set('t-keep-apm', count((r) => r.decision === 'keep' && r.decidedBy === 'backend'));
-  set('t-drop', count((r) => r.decision === 'drop'));
+  set('t-sent-sub', done.length
+    ? `${count((r) => headerOutcome(r) === 'priority-1')} keep · ${count((r) => headerOutcome(r) === 'priority-0')} drop · ${count((r) => headerOutcome(r) === 'none')} no headers`
+    : '—');
   set('t-linked', count(isLinked));
+  set('t-linked-sub', done.length ? `kept as the browser asked: ${kept('rum')}` : '—');
   set('t-unlinked', count((r) => r.decision === 'keep' && !isLinked(r)));
+  set('t-unlinked-sub', done.length ? `kept at the backend's own rate: ${kept('backend')}` : '—');
+  set('t-drop', count((r) => r.decision === 'drop'));
+  set('t-drop-sub', done.length
+    ? `as the browser asked: ${count((r) => r.decision === 'drop' && r.decidedBy === 'rum')} · by the backend: ${count((r) => r.decision === 'drop' && r.decidedBy === 'backend')}`
+    : '—');
 }
 
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -382,7 +378,7 @@ function renderSessions() {
   }
   const tbody = document.getElementById('sessions-tbody');
   if (sessions.size === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" class="muted">No requests yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="subtle">No requests yet.</td></tr>';
     return;
   }
   tbody.innerHTML = [...sessions].map(([id, rs]) => {
@@ -390,7 +386,7 @@ function renderSessions() {
     const decision = outcomes.length > 1 ? outcomes.map((o) => OUTCOME_BADGE[o]).join(' ')
       : { 'priority-1': `${OUTCOME_BADGE['priority-1']} traced`, 'priority-0': `${OUTCOME_BADGE['priority-0']} not traced`, none: `${OUTCOME_BADGE.none} not traced` }[outcomes[0]];
     return `<tr>
-      <td><span class="session-id">${esc(id.slice(0, 8))}</span></td>
+      <td><code>${esc(id.slice(0, 8))}</code></td>
       <td>${rs.length}</td>
       <td>${decision}</td>
       <td>${rs.filter((r) => r.decision === 'keep').length}</td>
@@ -399,16 +395,15 @@ function renderSessions() {
   }).join('');
 }
 
+// RUM's half is read back from the SDK. allowedTracingUrls' `match` is a
+// function here, so it's described by what it does instead of printed.
 function renderConfigJson() {
-  document.getElementById('config-json').textContent = JSON.stringify({
-    rum: {
-      sessionSampleRate: 100,
-      allowedTracingUrls: [{ match: `${API_BASE}*`, propagatorTypes: ['datadog', 'tracecontext'] }],
-      traceSampleRate: liveConfig.traceSampleRate,
-      traceContextInjection: liveConfig.traceContextInjection,
-    },
-    simulatedBackend: { DD_TRACE_SAMPLE_RATE: liveConfig.apmRate / 100 },
-  }, null, 2);
+  const rum = LabShell.sdkInitConfig('DD_RUM');
+  if (rum?.allowedTracingUrls) {
+    rum.allowedTracingUrls = rum.allowedTracingUrls.map((u) => ({ ...u, match: `url.startsWith('${API_BASE}')` }));
+  }
+  LabShell.renderJson(document.getElementById('config-json'), rum || { status: 'RUM has not initialized yet' });
+  LabShell.renderJson(document.getElementById('config-backend-json'), { DD_TRACE_SAMPLE_RATE: liveConfig.apmRate / 100 });
 }
 
 function renderAll() {
@@ -416,6 +411,7 @@ function renderAll() {
   renderSummary();
   renderTallies();
   renderSessions();
+  renderTraced();
 }
 
 function renderConfigControls() {
@@ -449,7 +445,7 @@ document.addEventListener('DOMContentLoaded', function () {
   renderConfigJson();
   renderAll();
   // The SDK loads async from the CDN; if it never arrives (an ad blocker is
-  // the usual cause) the status pill and callout say so.
+  // the usual cause) the callout says so (the status bar does too).
   setTimeout(renderRumStatus, 1500);
-  if (params.get('tab') === 'flow') switchTab('flow');
+  if (params.get('tab') === 'flow') LabShell.showTab('flow');
 });

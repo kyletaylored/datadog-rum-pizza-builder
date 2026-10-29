@@ -1,64 +1,45 @@
 <!DOCTYPE html>
-<html lang="en" class="wa-brand-purple wa-cloak">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Datadog RUM Pizza Builder</title>
-<meta name="description" content="An interactive pizza order wizard demo for exploring Datadog Real User Monitoring — showing fragment-based view tracking, funnel analysis, and custom RUM actions.">
+<title>RUM Labs · Datadog Real User Monitoring training</title>
+<meta name="description" content="Hands-on labs for Datadog Real User Monitoring. Each one runs the real SDK in your browser and shows the events it sends as they happen.">
 <meta name="author" content="Kyle Taylor">
 <meta name="robots" content="index, follow">
+<meta name="lab-repo" content="%%GITHUB_REPO%%">
 <link rel="canonical" href="%%PAGES_URL%%/">
 
 <!-- Open Graph -->
 <meta property="og:type" content="website">
-<meta property="og:title" content="Datadog RUM Pizza Builder">
-<meta property="og:description" content="An interactive pizza order wizard demo for exploring Datadog Real User Monitoring — fragment-based views, funnel charts, and custom action metrics.">
+<meta property="og:title" content="Datadog RUM Labs">
+<meta property="og:description" content="Hands-on labs for Datadog Real User Monitoring. Each one runs the real SDK in your browser and shows the events it sends as they happen.">
 <meta property="og:url" content="%%PAGES_URL%%/">
-<meta property="og:site_name" content="Datadog RUM Pizza Builder">
+<meta property="og:site_name" content="Datadog RUM Labs">
 <meta property="og:image" content="%%PAGES_URL%%/assets/pizza-builder-header.webp">
 
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Datadog RUM Pizza Builder">
-<meta name="twitter:description" content="An interactive pizza order wizard demo for exploring Datadog Real User Monitoring — fragment-based views, funnel charts, and custom action metrics.">
+<meta name="twitter:title" content="Datadog RUM Labs">
+<meta name="twitter:description" content="Hands-on labs for Datadog Real User Monitoring. Each one runs the real SDK in your browser and shows the events it sends as they happen.">
 <meta name="twitter:image" content="%%PAGES_URL%%/assets/pizza-builder-header.webp">
 
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><text y='32' font-size='32'>🍕</text></svg>">
-<!-- Web Awesome 3.13.0 — version pinned deliberately (never @latest): the
-     project is a young rebrand of Shoelace, so bumps get re-verified by hand.
-     Loaded from CDN only, never bundled, so the deploy workflow's terser /
-     source-map step still only has app.js to think about.
-     Note the `dist-cdn` path, not `dist`: the `dist` build is the npm one and
-     ships bare module specifiers ("lit", "@shoelace-style/...") that a browser
-     cannot resolve without an import map, so every component silently fails to
-     register. `dist-cdn` is the same code with relative imports. -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@3.13.0/dist-cdn/styles/webawesome.css">
-<script type="module" src="https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@3.13.0/dist-cdn/webawesome.loader.js"></script>
-<!-- Runs before the RUM/Logs SDK loaders — must stay here.
-     The SDK snapshots cookies at module evaluation time, so clearing must
-     happen before these <script> tags inject the async SDK scripts. -->
+<link rel="icon" type="image/svg+xml" href="https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/layout-grid.svg">
+<!-- The pizza builder used to live here, at /. It moved to
+     pizza-builder-lab/, so forward what used to reach it before anything else
+     loads:
+       - old wizard links (/#crust … /#results), hash kept
+       - the scheduled Browser Synthetic test, which runs the wizard from /
+         and drives an SLO: its user agent (or ?synthetic / force_session_type,
+         the pizza builder's own test switches) goes straight to the wizard,
+         query string kept.
+     location.replace, so the redirect doesn't add a history entry. -->
 <script>
   (function () {
-    if (new URLSearchParams(window.location.search).get('force_session_type') !== 'user') return;
-    function deleteCookie(n) {
-      var b = n + '=; Max-Age=0; path=/'; var h = window.location.hostname;
-      var p = h.indexOf('.') !== -1 ? '.' + h.split('.').slice(1).join('.') : null;
-      document.cookie = b; document.cookie = b + '; domain=' + h;
-      if (p) document.cookie = b + '; domain=' + p;
-    }
-    // Stash pre-clear state for app.js to log after the SDK is ready.
-    window.__preInitSynthetics = {
-      rumContext: window['_DATADOG_SYNTHETICS_RUM_CONTEXT'],
-      cookies: document.cookie.split(';').filter(function(c) { return c.indexOf('datadog-synthetics') !== -1; }).map(function(c) { return c.trim(); }),
-    };
-    delete window['_DATADOG_SYNTHETICS_RUM_CONTEXT'];
-    delete window['_DATADOG_SYNTHETICS_PUBLIC_ID'];
-    delete window['_DATADOG_SYNTHETICS_RESULT_ID'];
-    delete window['_DATADOG_SYNTHETICS_INJECTS_RUM'];
-    deleteCookie('datadog-synthetics-rum-context');
-    deleteCookie('datadog-synthetics-public-id');
-    deleteCookie('datadog-synthetics-result-id');
-    deleteCookie('datadog-synthetics-injects-rum');
+    var q = new URLSearchParams(location.search);
+    var oldStep = /^#(crust|sauce|cheese|toppings|size|results)$/.test(location.hash);
+    var synthetic = /DatadogSynthetics/i.test(navigator.userAgent) || q.has('synthetic') || q.has('force_session_type');
+    if (oldStep || synthetic) location.replace('pizza-builder-lab/' + location.search + location.hash);
   })();
 </script>
 <script>
@@ -68,322 +49,36 @@
     n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
   })(window,document,'script','https://www.datadoghq-browser-agent.com/us1/v6/datadog-rum.js','DD_RUM')
 </script>
-<script>
-  (function(h,o,u,n,d) {
-    h=h[d]=h[d]||{q:[],onReady:function(c){h.q.push(c)}}
-    d=o.createElement(u);d.async=1;d.src=n;d.crossOrigin=''
-    n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
-  })(window,document,'script','https://www.datadoghq-browser-agent.com/us1/v6/datadog-logs.js','DD_LOGS')
-</script>
 <script src="config.js"></script>
+<link rel="stylesheet" href="druids-tokens.css">
+<link rel="stylesheet" href="tokens-dark-hc.css">
 <link rel="stylesheet" href="tokens.css">
-<link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="lab-shared.css">
 <script>
   // Resolve and apply the theme before first paint to avoid a flash.
-  // One source of truth drives two mechanisms:
-  //   data-theme="light|dark"  — our own CSS (tokens.css, JSON syntax colors)
-  //   class="wa-light|wa-dark" — Web Awesome's theming
+  // One saved value drives both switches DRUIDS and our own code read:
+  //   class="theme-dark theme-dark-hc"  — DRUIDS tokens (none = light)
+  //   data-theme="light|dark"           — anything that reads the attribute
   // Kept inline and duplicated per page on purpose: it has to run before the
-  // first paint, which rules out the deferred lab-shared.js.
+  // first paint, which rules out lab-shared.js at the end of <body>.
   (function () {
     var saved = localStorage.getItem('theme');
     var dark = saved ? saved === 'dark'
                      : window.matchMedia('(prefers-color-scheme: dark)').matches;
-    var theme = dark ? 'dark' : 'light';
-    document.documentElement.setAttribute('data-theme', theme);
-    document.documentElement.classList.add('wa-' + theme);
+    var root = document.documentElement;
+    root.setAttribute('data-theme', dark ? 'dark' : 'light');
+    if (dark) root.classList.add('theme-dark', 'theme-dark-hc');
   })();
 </script>
 </head>
 <body>
 
-<div class="training-layout">
+<!-- Filled from labs.json by lab-shared.js: cards by default, or a table. -->
+<div id="lab-content"></div>
 
-  <!-- ===== LEFT SIDEBAR ===== -->
-  <aside class="training-sidebar">
-
-    <div class="sidebar-header">
-      <div class="sidebar-brand">
-        <span class="sidebar-logo">🍕</span>
-        <div>
-          <div class="sidebar-title">RUM Pizza Builder</div>
-          <div class="sidebar-subtitle">Datadog RUM Training</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="sidebar-intro">
-      <p>This interactive demo shows how Datadog Real User Monitoring captures user behavior in a single-page app — without any page reloads. Work through the pizza wizard and watch RUM events appear in real time.</p>
-      <p>🍪 Also see the <a href="consent-lab/">Consent &amp; Storage Lab</a> — testing <code>sessionPersistence</code> and tracking-consent against strict EU cookie-consent requirements.</p>
-      <p>🔬 And the <a href="otel-rum-lab/">OTel Browser Lab</a> — sending browser telemetry to Datadog with standard OpenTelemetry instrumentation instead of the RUM SDK.</p>
-      <p>🎲 And the <a href="trace-sampling-lab/">Trace Sampling Lab</a> — how <code>traceSampleRate</code> and <code>traceContextInjection</code> decide which browser requests end up as backend traces in Datadog.</p>
-    </div>
-
-    <nav class="sidebar-nav">
-      <p class="sidebar-nav-label">Training topics</p>
-
-      <wa-details class="sidebar-section" appearance="plain" open>
-        <span slot="summary"><span class="sidebar-tag tag-view">View</span><span class="sidebar-section-title">Fragment-based view tracking</span></span>
-        <div class="sidebar-section-body">
-          <p>Each time this wizard changes <code>location.hash</code>, the RUM SDK records a new <strong>View</strong> event — no page reload needed. The SDK detects hash changes automatically and starts a fresh view with its own load time, action count, and frustration signal tracking.</p>
-          <p>In <strong>RUM › Explorer</strong>, set the event type to <em>Views</em> and group by <code>@view.url_hash</code> to see per-step engagement. Each hash is a named wizard step:</p>
-          <div class="sidebar-steps">
-            <span class="step-chip">#crust</span><span class="arrow">→</span>
-            <span class="step-chip">#sauce</span><span class="arrow">→</span>
-            <span class="step-chip">#cheese</span><span class="arrow">→</span>
-            <span class="step-chip">#toppings</span><span class="arrow">→</span>
-            <span class="step-chip">#size</span><span class="arrow">→</span>
-            <span class="step-chip">#results</span>
-          </div>
-          <p>You can also correlate view events with <strong>error</strong> events on the same hash to understand whether a drop-off was caused by a page problem or the user simply leaving.</p>
-          <pre>source:browser service:datadog-rum-pizza-builder @type:view
-| stats count() by @view.url_hash</pre>
-        </div>
-      </wa-details>
-
-      <wa-details class="sidebar-section" appearance="plain">
-        <span slot="summary"><span class="sidebar-tag tag-funnel">Funnel</span><span class="sidebar-section-title">Conversion funnel by action</span></span>
-        <div class="sidebar-section-body">
-          <p>In <strong>RUM › Explorer</strong>, set the scope to <em>Sessions</em> and switch the visualization to <strong>Funnel</strong>. Each funnel step can be a <em>View</em> or an <em>Action</em>.</p>
-          <p>For this wizard, the most meaningful action-based funnel tracks the three key events across the full flow:</p>
-          <pre>Step 1  Action: click on Start Building
-Step 2  Action: click on See My Pizza
-Step 3  Action: pizza_order_submitted</pre>
-          <p>This matches exactly what Datadog shows — sessions that clicked <em>Start Building</em>, then reached the final step, then successfully fired the custom submission action. The drop-off between steps tells you where users abandoned and how many made it through end-to-end.</p>
-          <p>To investigate a drop-off step, click into it and review individual sessions — session replays will show whether an error blocked the user or they simply left.</p>
-        </div>
-      </wa-details>
-
-      <wa-details class="sidebar-section" appearance="plain">
-        <span slot="summary"><span class="sidebar-tag tag-metric">Metric</span><span class="sidebar-section-title">Custom metrics from actions</span></span>
-        <div class="sidebar-section-body">
-          <p>When a user reaches the results screen, this app fires a custom RUM <strong>Action</strong> with the full order as context attributes:</p>
-          <pre>DD_RUM.addAction('pizza_order_submitted', {
-  pizza_order: {
-    crust:    "Hand-Tossed",
-    sauce:    "BBQ",
-    cheese:   "Mozzarella",
-    toppings: "Pepperoni",
-    size:     "Large (16 in)"
-  }
-})</pre>
-          <p>In <strong>RUM › Generate Metrics</strong>, create a <em>count</em> metric from this action. The metric used in the Results dashboard is:</p>
-          <pre>Event type:  Action
-Filter:      @action.target.name:pizza_order_submitted
-Metric name: rum.pizza_order.submissions
-Group by:    @context.pizza_order.crust
-             @context.pizza_order.sauce
-             @context.pizza_order.cheese
-             @context.pizza_order.toppings
-             @context.pizza_order.size
-             @geo.country
-             @geo.country_iso_code</pre>
-          <p>The <code>@geo.country</code> dimension comes from RUM's automatic geo-enrichment — resolved from the user's IP and attached to every event for free.</p>
-          <p>At submission, the app also calls <code>DD_RUM.setUser()</code> with a generated name, email, and a deterministic ID hashed from those values. This lets you filter all sessions for a given fictional user via <code>@usr.id</code>, <code>@usr.name</code>, or <code>@usr.email</code> in the Explorer — simulating a returning customer.</p>
-          <p>The <strong>Results</strong> tab shows the metric broken down using <em>toplist</em>, <em>timeseries</em>, <em>sunburst</em>, and <em>geomap</em> widgets, each filterable via dashboard template variables.</p>
-        </div>
-      </wa-details>
-
-      <wa-details class="sidebar-section" appearance="plain">
-        <span slot="summary"><span class="sidebar-tag tag-slo">SLO</span><span class="sidebar-section-title">Synthetic tests &amp; error budget</span></span>
-        <div class="sidebar-section-body">
-          <p>A Datadog <strong>Browser Synthetic test</strong> runs against this app on a schedule, simulating the full wizard from start to finish. Option order is randomized per run so "always click first" produces varied data.</p>
-          <p>On ~20% of runs, a simulated JS error is injected at a random step, blocking completion and producing intentional funnel drop-off for training purposes. Each session is tagged with <code>@context.synthetic.will_fail</code> and <code>@context.synthetic.intended_fail_step</code> so you can filter intentional failures in the Explorer. The error surfaces as <code>@error.source:console</code> — captured automatically from <code>console.error()</code> with no custom instrumentation.</p>
-          <p>An <strong>SLO</strong> tracks completion rate over a rolling window:</p>
-          <pre>SLO type:   Monitor-based
-Target:     99% uptime (1% error budget)
-Window:     7-day rolling</pre>
-          <p>The Results dashboard includes an SLO widget. A breach beyond the simulated noise level signals a real problem — investigate in the RUM funnel and session replays.</p>
-        </div>
-      </wa-details>
-    </nav>
-
-    <footer class="sidebar-footer">
-      <div class="sidebar-footer-links">
-        Built by <a href="https://github.com/kyletaylored" target="_blank" rel="noopener">Kyle Taylor</a> &middot;
-        <a href="%%GITHUB_REPO%%" target="_blank" rel="noopener">GitHub</a>
-      </div>
-      <label class="theme-toggle" aria-label="Toggle light/dark mode">
-        <span class="theme-icon">☀️</span>
-        <wa-switch id="theme-toggle" onchange="toggleTheme(this)"></wa-switch>
-        <span class="theme-icon">🌙</span>
-      </label>
-    </footer>
-
-    <div class="sidebar-resizer" id="sidebar-resizer" title="Drag to resize"></div>
-  </aside><!-- /.training-sidebar -->
-
-  <!-- ===== MAIN CONTENT ===== -->
-  <div class="training-main">
-
-    <nav class="tab-nav" role="tablist">
-      <button class="tab-btn active" role="tab" aria-selected="true"  aria-controls="tab-build"   onclick="switchTab('build')">🍕 Build</button>
-      <button class="tab-btn"        role="tab" aria-selected="false" aria-controls="tab-results" onclick="switchTab('results-tab')">📊 Results</button>
-      <button class="tab-btn"        role="tab" aria-selected="false" aria-controls="tab-config"  onclick="switchTab('config')">⚙️ Config</button>
-    </nav>
-
-    <!-- Build tab -->
-    <div id="tab-build" role="tabpanel" class="tab-panel">
-
-      <div class="progress-wrap" id="progress-wrap" style="display:none">
-        <div class="progress-labels">
-          <span id="step-label">Step 1 of 5</span>
-          <span id="step-name"></span>
-        </div>
-        <wa-progress-bar id="progress-bar" value="0"></wa-progress-bar>
-      </div>
-
-      <div class="screen active" id="screen-start">
-        <div id="start-screen">
-          <div class="pizza-hero">🍕</div>
-          <h2>Ready to build your pizza?</h2>
-          <p>Choose your crust, sauce, cheese, toppings, and size — we'll handle the rest.</p>
-          <button class="wa-brand" data-dd-action-name="Start Building" onclick="goTo(1)">Start Building</button>
-        </div>
-      </div>
-
-      <div class="screen" id="screen-1">
-        <h2>Choose your crust</h2>
-        <div class="options" id="opts-1">
-          <div class="option-card" onclick="select(1,this,'Thin & Crispy')"><span class="emoji">🥨</span><div class="label">Thin & Crispy</div><div class="desc">Light and snappy</div></div>
-          <div class="option-card" onclick="select(1,this,'Hand-Tossed')"><span class="emoji">🫓</span><div class="label">Hand-Tossed</div><div class="desc">Classic and chewy</div></div>
-          <div class="option-card" onclick="select(1,this,'Deep Dish')"><span class="emoji">🍞</span><div class="label">Deep Dish</div><div class="desc">Thick and doughy</div></div>
-          <div class="option-card" onclick="select(1,this,'Gluten-Free')"><span class="emoji">🌾</span><div class="label">Gluten-Free</div><div class="desc">Light rice crust</div></div>
-        </div>
-        <div class="btn-row">
-          <button class="wa-neutral wa-outlined" onclick="goTo(0)">Back</button>
-          <button class="wa-brand" id="btn-1" disabled onclick="goTo(2)">Continue</button>
-        </div>
-      </div>
-
-      <div class="screen" id="screen-2">
-        <h2>Pick your sauce</h2>
-        <div class="options" id="opts-2">
-          <div class="option-card" onclick="select(2,this,'Classic Tomato')"><span class="emoji">🍅</span><div class="label">Classic Tomato</div><div class="desc">Rich marinara</div></div>
-          <div class="option-card" onclick="select(2,this,'White Garlic')"><span class="emoji">🧄</span><div class="label">White Garlic</div><div class="desc">Creamy alfredo</div></div>
-          <div class="option-card" onclick="select(2,this,'BBQ')"><span class="emoji">🔥</span><div class="label">BBQ</div><div class="desc">Smoky and sweet</div></div>
-          <div class="option-card" onclick="select(2,this,'Pesto')"><span class="emoji">🌿</span><div class="label">Pesto</div><div class="desc">Fresh basil blend</div></div>
-        </div>
-        <div class="btn-row">
-          <button class="wa-neutral wa-outlined" onclick="goTo(1)">Back</button>
-          <button class="wa-brand" id="btn-2" disabled onclick="goTo(3)">Continue</button>
-        </div>
-      </div>
-
-      <div class="screen" id="screen-3">
-        <h2>Select your cheese</h2>
-        <div class="options" id="opts-3">
-          <div class="option-card" onclick="select(3,this,'Mozzarella')"><span class="emoji">🧀</span><div class="label">Mozzarella</div><div class="desc">The OG melt</div></div>
-          <div class="option-card" onclick="select(3,this,'Four Cheese')"><span class="emoji">🫕</span><div class="label">Four Cheese</div><div class="desc">Mozz, provolone, parmesan, romano</div></div>
-          <div class="option-card" onclick="select(3,this,'Vegan')"><span class="emoji">🌱</span><div class="label">Vegan</div><div class="desc">Cashew-based</div></div>
-          <div class="option-card" onclick="select(3,this,'No Cheese')"><span class="emoji">🚫</span><div class="label">No Cheese</div><div class="desc">Sauce only</div></div>
-        </div>
-        <div class="btn-row">
-          <button class="wa-neutral wa-outlined" onclick="goTo(2)">Back</button>
-          <button class="wa-brand" id="btn-3" disabled onclick="goTo(4)">Continue</button>
-        </div>
-      </div>
-
-      <div class="screen" id="screen-4">
-        <h2>Add your toppings</h2>
-        <div class="options" id="opts-4">
-          <div class="option-card" onclick="select(4,this,'Pepperoni')"><span class="emoji">🍖</span><div class="label">Pepperoni</div><div class="desc">A classic</div></div>
-          <div class="option-card" onclick="select(4,this,'Mushrooms')"><span class="emoji">🍄</span><div class="label">Mushrooms</div><div class="desc">Earthy and savory</div></div>
-          <div class="option-card" onclick="select(4,this,'Bell Peppers')"><span class="emoji">🫑</span><div class="label">Bell Peppers</div><div class="desc">Crisp and sweet</div></div>
-          <div class="option-card" onclick="select(4,this,'Jalapeños')"><span class="emoji">🌶️</span><div class="label">Jalapeños</div><div class="desc">Bring the heat</div></div>
-        </div>
-        <div class="btn-row">
-          <button class="wa-neutral wa-outlined" onclick="goTo(3)">Back</button>
-          <button class="wa-brand" id="btn-4" disabled onclick="goTo(5)">Continue</button>
-        </div>
-      </div>
-
-      <div class="screen" id="screen-5">
-        <h2>Choose your size</h2>
-        <div class="options" id="opts-5">
-          <div class="option-card" onclick="select(5,this,'Personal (6 in)')"><span class="emoji">🤏</span><div class="label">Personal</div><div class="desc">6" · 4 slices</div></div>
-          <div class="option-card" onclick="select(5,this,'Medium (12 in)')"><span class="emoji">✋</span><div class="label">Medium</div><div class="desc">12" · 8 slices</div></div>
-          <div class="option-card" onclick="select(5,this,'Large (16 in)')"><span class="emoji">🙌</span><div class="label">Large</div><div class="desc">16" · 10 slices</div></div>
-          <div class="option-card" onclick="select(5,this,'XL Party (20 in)')"><span class="emoji">🎉</span><div class="label">XL Party</div><div class="desc">20" · 12 slices</div></div>
-        </div>
-        <div class="btn-row">
-          <button class="wa-neutral wa-outlined" onclick="goTo(4)">Back</button>
-          <button class="wa-brand" id="btn-5" disabled data-dd-action-name="See My Pizza" onclick="goTo('results')">See My Pizza</button>
-        </div>
-      </div>
-
-      <div class="screen" id="screen-results">
-        <h2>🎉 Your Pizza Order</h2>
-        <p>Here's what you built:</p>
-        <ul class="result-list" id="result-list"></ul>
-        <div class="btn-row" style="justify-content:center; margin-top:2rem">
-          <button class="wa-brand" onclick="stopAndRestart()">Start Over</button>
-        </div>
-      </div>
-
-      <!-- RUM Event Log -->
-      <div id="rum-log-wrap">
-        <div id="rum-log-header">
-          <h3>Datadog RUM events</h3>
-          <div class="log-controls">
-            <button class="filter-btn view active"      data-filter="view"      onclick="toggleFilter('view')">view</button>
-            <button class="filter-btn action active"    data-filter="action"    onclick="toggleFilter('action')">action</button>
-            <button class="filter-btn resource"         data-filter="resource"  onclick="toggleFilter('resource')">xhr/fetch</button>
-            <button class="filter-btn error active"     data-filter="error"     onclick="toggleFilter('error')">error</button>
-            <button class="filter-btn long_task active" data-filter="long_task" onclick="toggleFilter('long_task')">long_task</button>
-            <button class="wa-neutral wa-outlined" id="clear-log-btn" onclick="clearLog()">Clear</button>
-            <button class="wa-neutral wa-outlined log-collapse-btn" id="log-collapse-btn" aria-expanded="true" aria-controls="rum-table-wrap" title="Hide activity log">&#9662;</button>
-          </div>
-        </div>
-        <div id="rum-table-wrap">
-          <table id="rum-table">
-            <colgroup>
-              <col class="col-time"><col class="col-type"><col class="col-a"><col class="col-b">
-            </colgroup>
-            <thead id="rum-thead">
-              <tr>
-                <th>time</th>
-                <th>type</th>
-                <th id="col-a-head">path / name</th>
-                <th id="col-b-head">hash / payload</th>
-              </tr>
-            </thead>
-            <tbody id="rum-tbody">
-              <tr id="rum-empty-row"><td colspan="4">Waiting for events…</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-    </div><!-- /#tab-build -->
-
-    <!-- Results tab -->
-    <div id="tab-results" role="tabpanel" class="tab-panel" style="display:none">
-      <iframe
-        src="https://p.datadoghq.com/sb/embed/2bbb2f98-12da-11ef-8e28-da7ad0900002-025183052842e2e0e2253a3d191e6fda"
-        title="Pizza Order Submissions Dashboard"
-        class="dashboard-iframe"
-        allowfullscreen>
-      </iframe>
-    </div><!-- /#tab-results -->
-
-    <!-- Config tab -->
-    <div id="tab-config" role="tabpanel" class="tab-panel" style="display:none">
-      <div class="container">
-        <h3>Active SDK Configuration</h3>
-        <p>The <code>DD_CONFIG</code> object is shared by both SDKs and generated at deploy time by the GitHub Actions workflow. Values for <code>env</code> and <code>version</code> are resolved at runtime.</p>
-        <h4>RUM</h4>
-        <pre id="config-rum-pre" class="config-code"><code id="config-rum-json"></code></pre>
-        <h4>Logs</h4>
-        <pre id="config-logs-pre" class="config-code"><code id="config-logs-json"></code></pre>
-      </div>
-    </div><!-- /#tab-config -->
-
-  </div><!-- /.training-main -->
-
-</div><!-- /.training-layout -->
-
+<script>
+  window.LAB_PAGE = { id: 'home' };
+</script>
 <script src="lab-shared.js"></script>
 <script src="app.js"></script>
 </body>

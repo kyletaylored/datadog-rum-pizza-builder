@@ -1,6 +1,6 @@
 # 🔬 OTel Browser → Datadog RUM Lab
 
-An experimental companion to the [Pizza Builder](../) demo, exploring a different question: instead of the `datadog-rum` browser SDK, what happens if you send browser telemetry to Datadog using only **standard OpenTelemetry** — the official [`@opentelemetry/browser-instrumentation`](https://github.com/open-telemetry/opentelemetry-browser) package with stock auto-instrumentation, exported over OTLP?
+An experimental companion to the [Pizza Builder](../pizza-builder-lab/) demo, exploring a different question: instead of the `datadog-rum` browser SDK, what happens if you send browser telemetry to Datadog using only **standard OpenTelemetry** — the official [`@opentelemetry/browser-instrumentation`](https://github.com/open-telemetry/opentelemetry-browser) package with stock auto-instrumentation, exported over OTLP?
 
 This is exploratory and educational, runs entirely as static files (this whole page works standalone, including on GitHub Pages, with zero backend required), and isn't a statement about what Datadog does or doesn't support — it's a hands-on look at the moving pieces involved in getting a browser OTel pipeline talking to Datadog at all, run against the same pizza wizard flow as the main demo so the two are easy to compare.
 
@@ -41,11 +41,11 @@ export class LiveTableLogProcessor {
 }
 ```
 
-This is the direct OpenTelemetry equivalent of the RUM SDK's `beforeSend` callback that powers the event log table in the main demo — same idea, different SDK, and it reuses the exact table styling and filter-pill pattern from that log too, for the same reason: this should read as the same site, not a one-off page.
+This is the direct OpenTelemetry equivalent of the RUM SDK's `beforeSend` callback that powers the event log table in the main demo — same idea, different SDK, and it feeds the same shared docked log (`LabLog` in `../lab-shared.js`) every other lab uses, for the same reason: this should read as the same site, not a one-off page.
 
 Every log record also prints to the devtools console via `@opentelemetry/sdk-logs`'s built-in `ConsoleLogRecordExporter` — the same one the [official getting-started guide](https://opentelemetry.io/docs/languages/js/getting-started/browser/) uses. Toggle it from the **Config** tab.
 
-One filtering note carried over from the main demo: `ResourceTimingInstrumentation` fires for every asset the page loads (Web Awesome's autoloader alone pulls ~55 chunks), so the table only surfaces real network calls (`fetch`/`xhr` initiators) rather than every static asset — same fix, same reason, as `../app.js`'s own resource-event filtering.
+One filtering note carried over from the main demo: `ResourceTimingInstrumentation` fires for every asset the page loads (stylesheets, fonts, icons), so it's limited to `fetch`/`xhr` initiators and the table only surfaces real network calls rather than every static asset — same fix, same reason, as the pizza builder's own resource-event filtering.
 
 ## What this app instruments
 
@@ -69,7 +69,7 @@ Everything in the first six rows is stock instrumentation from the npm package �
 
 ## Running locally
 
-This page shares its CSS/JS chrome (`tokens.css`, `style.css`, `lab-shared.css`, `lab-shared.js`) with the rest of the site via `../` paths — the same way `../consent-lab/` does — so **serve from the repo root**, not from inside this directory, or those requests 404.
+This page shares its CSS/JS chrome (`druids-tokens.css`, `tokens.css`, `lab-shared.css`, `lab-shared.js`, `labs.json`) with the rest of the site via `../` paths — the same way `../consent-lab/` does — so **serve from the repo root**, not from inside this directory, or those requests 404.
 
 ```bash
 npm install                  # from the repo root — one package.json builds every lab
@@ -91,6 +91,6 @@ To also forward events to a real Datadog org: copy `otel-rum-lab/.env.example` t
 - [`@opentelemetry/browser-instrumentation`](https://github.com/open-telemetry/opentelemetry-browser) — the official browser event instrumentations
 - [Datadog OTLP ingest](https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest/) — public docs on sending OTLP directly to Datadog
 - esbuild — bundles the npm-only OTel packages into `dist/bundle.js`
-- `app.js` — plain, unbundled page UI (theme, tabs, wizard, table, the export form), loaded *before* the bundle so `window.otelLab.logEvent` exists by the time events start arriving. Same split as `../app.js` and `../consent-lab/app.js`: OTel setup only in the bundle, everything about how the page looks and behaves lives here instead
-- `../tokens.css`, `../style.css`, `../lab-shared.css`, `../lab-shared.js` — this lab is a skin on the same design system as the rest of the site, not a one-off page
+- `app.js` — plain, unbundled page UI (wizard, event feed, the export form), loaded *before* the bundle so `window.otelLab.logEvent` exists by the time events start arriving. Same split as `../pizza-builder-lab/app.js` and `../consent-lab/app.js`: OTel setup only in the bundle, everything about how the page looks and behaves lives here instead
+- `../lab-shared.js`, `../lab-shared.css` and the DRUIDS tokens — the shared shell (rail, tabs, guide, docked log, status bar); this lab supplies content, not chrome
 - A minimal Node proxy — the only thing holding a key (your RUM app's client token works fine), and entirely optional

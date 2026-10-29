@@ -1,6 +1,6 @@
 # 🎲 Trace Sampling Lab
 
-A companion to the [Pizza Builder](../) demo for a recurring question: with RUM connected to APM, **which browser requests end up as traces in Datadog, and which of those link back to RUM?** Two RUM options decide it, and they interact with whatever sampling the backend does:
+A companion to the [Pizza Builder](../pizza-builder-lab/) demo for a recurring question: with RUM connected to APM, **which browser requests end up as traces in Datadog, and which of those link back to RUM?** Two RUM options decide it, and they interact with whatever sampling the backend does:
 
 | Option | Default (v6) | What it does |
 | --- | --- | --- |

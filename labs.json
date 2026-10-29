@@ -1,0 +1,50 @@
+[
+  {
+    "id": "pizza",
+    "dir": "pizza-builder-lab",
+    "name": "RUM Pizza Builder",
+    "short": "Pizza Builder",
+    "icon": "pizza",
+    "category": "RUM SDK basics",
+    "blurb": "How Datadog RUM captures views, actions and users in a single-page app, without page reloads.",
+    "apis": ["addAction", "setUser", "beforeSend", "stopSession"],
+    "tabs": ["Build", "Results", "Config"],
+    "topics": 4
+  },
+  {
+    "id": "trace",
+    "dir": "trace-sampling-lab",
+    "name": "Trace Sampling Lab",
+    "short": "Trace Sampling",
+    "icon": "dices",
+    "category": "RUM ↔ APM",
+    "blurb": "How traceSampleRate and traceContextInjection decide which browser requests end up as backend traces in Datadog.",
+    "apis": ["traceSampleRate", "traceContextInjection", "allowedTracingUrls"],
+    "tabs": ["Try it live", "See the big picture", "Config"],
+    "topics": 5
+  },
+  {
+    "id": "consent",
+    "dir": "consent-lab",
+    "name": "Consent & Storage Lab",
+    "short": "Consent & Storage",
+    "icon": "cookie",
+    "category": "Privacy & sessions",
+    "blurb": "Testing sessionPersistence and tracking consent against strict EU cookie-consent requirements.",
+    "apis": ["sessionPersistence", "setTrackingConsent", "forwardErrorsToLogs"],
+    "tabs": ["Storage inspector", "Multi-tab test", "Error capture", "Config"],
+    "topics": 8
+  },
+  {
+    "id": "otel",
+    "dir": "otel-rum-lab",
+    "name": "OTel Browser Lab",
+    "short": "OTel Browser",
+    "icon": "radar",
+    "category": "OpenTelemetry",
+    "blurb": "Sending browser telemetry to Datadog with standard OpenTelemetry instrumentation instead of the RUM SDK.",
+    "apis": ["LogRecordProcessor", "OTLPLogExporter", "browser-instrumentation"],
+    "tabs": ["Wizard", "Config"],
+    "topics": 5
+  }
+]

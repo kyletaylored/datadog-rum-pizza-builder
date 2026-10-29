@@ -1,14 +1,33 @@
-# 🍕 Datadog RUM Pizza Builder
+# Datadog RUM Labs
 
-A self-contained demo app for exploring [Datadog Real User Monitoring (RUM)](https://docs.datadoghq.com/real_user_monitoring/) — built as an interactive pizza order wizard.
+Hands-on labs for [Datadog Real User Monitoring (RUM)](https://docs.datadoghq.com/real_user_monitoring/). Each one runs the real SDK in your browser and shows the events it sends as they happen.
 
-**[Live Demo →](%%PAGES_URL%%/)**
+**[Open the labs →](%%PAGES_URL%%/)**
 
-![Pizza Builder wizard interface](assets/pizza-builder.webp)
+![The All labs page](assets/rum-labs.webp)
+
+| Lab | What it answers |
+| --- | --- |
+| [RUM Pizza Builder](%%PAGES_URL%%/pizza-builder-lab/) | How RUM captures views, actions and users in a single-page app, without page reloads |
+| [Trace Sampling Lab](%%PAGES_URL%%/trace-sampling-lab/) | How `traceSampleRate` and `traceContextInjection` decide which browser requests end up as backend traces |
+| [Consent & Storage Lab](%%PAGES_URL%%/consent-lab/) | How `sessionPersistence` and tracking consent hold up against strict EU cookie-consent requirements |
+| [OTel Browser Lab](%%PAGES_URL%%/otel-rum-lab/) | What sending browser telemetry with standard OpenTelemetry, instead of the RUM SDK, looks like |
+
+Every lab shares one shell, built on DRUIDS (Datadog's design system) tokens: a lab rail on the left, tabs in the header, a guide panel that steps through the lab's topics, a docked event log fed straight from the SDK (`beforeSend` or its equivalent), and a status bar with what's initialized and the current session ID. The home page lists the labs as cards or as a table, both generated from [`labs.json`](labs.json).
+
+![The All labs page as a table](assets/rum-labs-table.webp)
 
 ---
 
-## Results dashboard
+## RUM Pizza Builder
+
+**[Try it →](%%PAGES_URL%%/pizza-builder-lab/)**
+
+An interactive pizza order wizard at `/pizza-builder-lab/`. It used to be the home page at `/`; old `/#crust`-style links redirect to it. See [`pizza-builder-lab/README.md`](pizza-builder-lab/README.md).
+
+![The pizza builder's Build tab, with RUM events in the docked log](assets/pizza-builder.webp)
+
+### Results dashboard
 
 The Results tab embeds a live Datadog dashboard showing metric charts for pizza order submissions — broken down by crust, sauce, cheese, toppings, size, and geography.
 
@@ -16,11 +35,11 @@ The Results tab embeds a live Datadog dashboard showing metric charts for pizza 
 
 ---
 
-## What this demonstrates
+### What this demonstrates
 
 This app is designed as a hands-on training tool to show how Datadog RUM captures user behavior in a single-page app using URL fragment-based navigation.
 
-### Views
+#### Views
 
 Each wizard step updates the URL hash, triggering a new RUM view:
 
@@ -35,7 +54,7 @@ Each wizard step updates the URL hash, triggering a new RUM view:
 
 In the RUM Explorer, these appear as distinct views with their own load times, action counts, and frustration signals — even though no page navigation occurred.
 
-### Actions
+#### Actions
 
 RUM auto-captures clicks (e.g. "Continue", "Start Over") as `click` actions. The final step also fires a **custom action**:
 
@@ -53,7 +72,7 @@ DD_RUM.addAction("pizza_order_submitted", {
 
 In the RUM Explorer, filter by `@action.target.name:pizza_order_submitted` and use `@context.pizza_order.*` attributes as facets to see the full order payload.
 
-### User tracking
+#### User tracking
 
 When an order is submitted, the app calls `DD_RUM.setUser()` with a generated name, email, and a deterministic ID hashed from those values:
 
@@ -67,7 +86,7 @@ DD_RUM.setUser({
 
 The ID is an idempotent djb2 hash of name + email — the same fictional person always gets the same ID, simulating a returning user across sessions. In the RUM Explorer, filter by `@usr.id`, `@usr.name`, or `@usr.email` to see all sessions for a given user.
 
-### Error collection
+#### Error collection
 
 The app collects errors in two ways:
 
@@ -76,7 +95,7 @@ The app collects errors in two ways:
 
 In the RUM Explorer, filter by `@error.source:console` to see the synthetic injection errors.
 
-### `beforeSend` callback
+#### `beforeSend` callback
 
 The RUM SDK is initialized with a `beforeSend` callback that intercepts every event before it's sent to Datadog. The demo uses this to power the live event log table at the bottom of the page — showing event type, view path, URL hash, action names, and context payloads in real time.
 
@@ -89,11 +108,11 @@ beforeSend: (event) => {
 
 Returning `false` from `beforeSend` would discard the event. See the [Datadog docs](https://docs.datadoghq.com/real_user_monitoring/guide/enrich-and-control-rum-data/?tab=npm) for enrichment and filtering patterns.
 
-### Session lifecycle
+#### Session lifecycle
 
 Clicking **Start Over** calls `DD_RUM.stopSession()`, ending the current RUM session. A new session begins on the next user interaction. This is useful for demonstrating session boundaries in training scenarios.
 
-### Synthetic tests & SLO
+#### Synthetic tests & SLO
 
 A Datadog Browser Synthetic test runs against this app on a schedule, simulating the full wizard flow from start to finish. To generate varied data, the app detects the `DatadogSynthetics` user agent and randomizes the option order on each step — so the test always clicks the first card but gets a different pizza every run.
 
@@ -106,6 +125,8 @@ An **SLO** is built on the synthetic monitor to track wizard completion rate ove
 ## Consent & Storage Lab
 
 **[Try it →](%%PAGES_URL%%/consent-lab/)**
+
+![The Consent & Storage Lab's storage inspector](assets/consent-lab.webp)
 
 A second, standalone demo at `/consent-lab/` for a real recurring sales-engineering question: an EU customer's legal team won't allow *any* cookie — including RUM's first-party session cookie — without prior consent, but they still want 100% error capture and don't want session counts inflated by a multi-tab, refresh-heavy flow.
 
@@ -127,17 +148,27 @@ The lab also calls out an important caveat: switching to `local-storage` removes
 
 **[Try it →](%%PAGES_URL%%/trace-sampling-lab/)**
 
+![The Trace Sampling Lab after a batch of requests](assets/trace-sampling-lab.webp)
+
 A lab at `/trace-sampling-lab/` on how two RUM options, `traceSampleRate` and `traceContextInjection`, decide which browser requests end up as backend traces in Datadog, and which of those link back to RUM. It fires real `fetch` calls through the real RUM SDK. A service worker stands in for the backend, so it runs on GitHub Pages with no server.
 
 - **A guided walkthrough.** The *Try it live* tab follows one request's trip in four steps: pick a scenario, set the backend's rate, send requests, read what happened. The three classic scenarios are one click each: keep everything (`100` / `'all'`), browser says drop (`0` / `'all'`) and backend decides the rest (`20` / `'sampled'`). A plain-language summary and a docked request-by-request table show what the browser attached, what the pretend backend did with it, and whether RUM's resource event carries the same `_dd.trace_id` as the kept trace. The same requests are in devtools › Network.
 - **Per session, not per request.** The SDK hashes the session ID to make the trace decision, so at `traceSampleRate: 20` a single session sends priority 1 on every request or on none. The 20% only shows up across sessions. A **Start a new RUM session** button and a per-session table make that visible.
 - **A ReactFlow model.** The *See the big picture* tab draws both `traceContextInjection` routes on one graph, with `sessionSampleRate`, `traceSampleRate` and `DD_TRACE_SAMPLE_RATE` sliders. It shows how many of N requests become traces linked to RUM, traces that exist only in the backend, or nothing.
 
+## OTel Browser Lab
+
+**[Try it →](%%PAGES_URL%%/otel-rum-lab/)**
+
+An experimental lab at `/otel-rum-lab/` that runs the same pizza wizard with only standard OpenTelemetry — `@opentelemetry/browser-instrumentation` plus `sdk-logs`, no RUM SDK. Every navigation, click, web vital, resource and error becomes an OTel log record, rendered into the docked log by a `LogRecordProcessor` (the OpenTelemetry version of `beforeSend`) before it's optionally exported to Datadog through a small local OTLP proxy. Export is off by default, so the page works on GitHub Pages with no backend. See [`otel-rum-lab/README.md`](otel-rum-lab/README.md).
+
+![The OTel Browser Lab's wizard, with OTel log records in the docked log](assets/otel-rum-lab.webp)
+
 ---
 
 ## Running locally
 
-Every environment — this home page and each lab directory — builds from the one `package.json` at the repo root:
+Every environment — the All labs home page and each lab directory — builds from the one `package.json` at the repo root:
 
 ```bash
 npm install
@@ -150,11 +181,11 @@ npm run dev                        # serve the repo root at http://localhost:876
 | `npm run dev` | Watches every lab bundle and serves the repo root with caching disabled — edit and reload |
 | `npm run build` | Builds every environment into `_site/`: bundles, `config.js`, URL templating, cache-busting, source maps, validation |
 | `npm run preview` | `build`, then serves `_site/` exactly as it will be deployed |
-| `npm run labs` | Lists the environments the build discovered |
+| `npm run labs` | Lists the environments the build discovered, and fails if `labs.json` disagrees |
 | `npm run proxy` | Starts the [OTel lab](otel-rum-lab/)'s optional local OTLP proxy |
 | `npm run sourcemaps:upload` | Uploads `_site/`'s source maps to Datadog (needs `DATADOG_API_KEY` and `PAGES_URL`) |
 
-Environments are discovered, not listed: the root plus any top-level directory with an `index.html` is one, and a lab with a `src/main.js` gets it bundled by esbuild into `<lab>/dist/bundle.js`. Adding a lab needs no build or workflow change. See [`scripts/build.js`](scripts/build.js) for every step.
+Environments are discovered, not listed: the root plus any top-level directory with an `index.html` is one, and a lab with a `src/main.js` gets it bundled by esbuild into `<lab>/dist/bundle.js`. Adding a lab needs no build or workflow change, just a [`labs.json`](labs.json) entry so it shows up in the rail and on the home page. See [`AGENTS.md`](AGENTS.md) for the steps and [`scripts/build.js`](scripts/build.js) for every build step.
 
 `npm run build` reads `DD_APP_ID` / `DD_CLIENT_TOKEN` from the environment and falls back to your local `config.js`; `PAGES_URL`, `VERSION`, and `GITHUB_REPOSITORY` are optional.
 
@@ -169,6 +200,6 @@ This repo is deployed via **GitHub Pages** by [the Pages workflow](.github/workf
 ## Stack
 
 - [Datadog RUM Browser SDK v6](https://docs.datadoghq.com/real_user_monitoring/browser/)
-- [Web Awesome 3](https://webawesome.com/) — framework-agnostic web components, loaded from CDN
-- A small design-token layer of our own (`tokens.css`) that every custom component reads from, so the framework underneath stays swappable
+- DRUIDS design tokens (`druids-tokens.css`), Noto Sans, and [Lucide](https://lucide.dev/) icons (`lucide-static`, pinned, from jsDelivr)
+- A small alias layer of our own (`tokens.css`) that every component reads from, plus one shared shell (`lab-shared.css` / `lab-shared.js`) that every environment uses
 - Vanilla JS pages; one root `package.json` builds every environment (esbuild for the lab bundles, terser for source maps)

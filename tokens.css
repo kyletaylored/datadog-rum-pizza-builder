@@ -1,170 +1,117 @@
 /**
  * tokens.css — this site's own design-token layer.
  *
- * Every custom component in style.css / lab-shared.css reads `--dd-*` tokens
- * from here instead of reaching into the UI framework's variables directly.
- * That keeps the framework swappable: changing frameworks means re-aliasing
- * this one file, not hunting through every component rule.
+ * Every component in lab-shared.css (and each page's own <style>) reads
+ * `--dd-*` tokens from here, or DRUIDS `--ui-*` semantics directly, instead
+ * of hardcoding values. The `--dd-*` names predate DRUIDS: they used to alias
+ * Web Awesome, and now alias DRUIDS semantics, so swapping the underlying
+ * system means editing this one file.
  *
- * Load order matters — this must come AFTER the framework stylesheet (so the
- * framework's variables exist to alias) and BEFORE style.css / lab-shared.css
- * (so the tokens exist by the time components read them).
+ * Load order: druids-tokens.css → tokens-dark-hc.css → this file →
+ * lab-shared.css. DRUIDS has to come first so its variables exist to alias.
  *
- * These alias Web Awesome's OKLCH token system, which already swaps light and
- * dark values off the `wa-light`/`wa-dark` class, so nothing here needs a
- * per-theme override.
- *
- * Deliberately unlayered: the framework ships its theme inside cascade layers
- * (`@layer wa-theme` etc.), and unlayered CSS outranks every layer, so these
- * definitions always win without needing !important.
+ * Theme: dark is `<html class="theme-dark theme-dark-hc">`, light is no
+ * class. DRUIDS redefines its own variables under those classes, and every
+ * alias here resolves on <html> itself, so nothing below needs a per-theme
+ * override except the logo color.
  */
 
 :root {
   /* --- Surfaces & lines -------------------------------------------------- */
-  /* --dd-surface        raised panel background (open accordion, table head)
-     --dd-surface-sunken recessed background (sidebar, code blocks, zebra rows)
-     --dd-surface-code   inline code / monospace chip background
-     --dd-color-border   hairline dividers and component borders            */
-  /* Two elevation levels, so the app chrome and the content it frames never
-     read as the same plane. The framework's "lowered" goes darker than the
-     page, which in a dark theme has nowhere left to go — the page is already
-     near-black, so a lowered sidebar came out identical to the page behind
-     it. Inverting the model fixes both themes at once: the page sits at the
-     recessed level and content panels are raised off it.
-       light  page #f1f2f3  →  panel #ffffff
-       dark   page #101219  →  panel #1b1d26                              */
-  --dd-surface-page: var(--wa-color-surface-lowered);
-  --dd-surface: var(--wa-color-surface-raised);
-  --dd-surface-sunken: var(--wa-color-surface-lowered);
-  --dd-surface-code: var(--wa-color-neutral-fill-quiet);
-  --dd-color-border: var(--wa-color-surface-border);
+  --dd-surface: var(--ui-background);
+  --dd-surface-page: var(--ui-background-secondary);
+  --dd-surface-sunken: var(--ui-background-secondary);
+  --dd-surface-code: var(--tag-background);
+  --dd-color-border: var(--ui-border);
+  --dd-color-form-border: var(--form-border);
 
   /* --- Text -------------------------------------------------------------- */
-  --dd-color-muted: var(--wa-color-text-quiet);
+  --dd-color-text: var(--ui-text);
+  --dd-color-muted: var(--ui-text-secondary);
+  --dd-color-subtle: var(--ui-text-tertiary);
+
+  /* --- Interaction (blue — never purple) ---------------------------------- */
+  --dd-color-primary: var(--ui-interaction-primary);
+  --dd-color-primary-fill: var(--ui-interaction-primary);
+  --dd-color-primary-contrast: var(--ui-interaction-primary-contrast);
+  --dd-color-primary-soft: var(--ui-interaction-secondary);
+  --dd-color-on-primary: var(--ui-text-knockout);
 
   /* --- Brand ------------------------------------------------------------- */
-  /* --dd-color-primary    accent for links, active tabs, selected borders
-     --dd-color-primary-fill  solid brand fill behind --dd-color-on-primary  */
-  --dd-color-primary: var(--wa-color-brand-on-quiet);
-  --dd-color-primary-fill: var(--wa-color-brand-fill-loud);
-  --dd-color-on-primary: var(--wa-color-brand-on-loud);
+  /* The only literal colors allowed anywhere: the logo mark. Purple is for
+     the logo, never for actions. */
+  --dd-logo: #632ca6;
 
-  /* --- Density -----------------------------------------------------------
-     The framework's defaults are sized for marketing pages. Left alone,
-     --wa-form-control-height resolves to 2 x 0.75em padding + 1.5em line
-     height = ~48px buttons, and --wa-panel-border-radius to 12px, which made
-     every control and card read oversized next to this site's dense tables
-     and logs. Tightened here rather than per component so framework
-     internals (cards, details, switches) come along too.                    */
-  --wa-form-control-padding-block: 0.45em;   /* ~48px buttons -> ~38px       */
-  --wa-form-control-padding-inline: 0.85em;
-  --wa-panel-border-radius: var(--wa-border-radius-m);
-  --wa-space-scale: 0.92;
+  /* --- Type -------------------------------------------------------------- */
+  --dd-font: var(--font-family-base);
+  --dd-font-mono: var(--font-family-monospace);
+  --dd-text-xs: var(--font-size-xs);   /* 11px — eyebrows, badges, tags */
+  --dd-text-s: var(--font-size-sm);    /* 12px — mono, secondary UI      */
+  --dd-text-m: var(--font-size-md);    /* 13px — body                    */
+  --dd-text-l: var(--font-size-lg);    /* 15px — card titles             */
+  --dd-text-xl: var(--font-size-xl);   /* 18px — section titles          */
+  --dd-text-xxl: var(--font-size-xxl); /* 23px — page H2                 */
+  --dd-text-body: var(--font-size-md);
+  --dd-measure: 76ch;
 
-  /* --- Type scale --------------------------------------------------------
-     Absolute sizes, not ratios. The sidebar's sizes were originally authored
-     against Pico's 20px root; on a 16px root every one of them shrank ~20%,
-     which put the accordion titles at 11.2px and made the whole chrome read
-     as cramped. Pinning them here keeps the small UI text legible regardless
-     of what the framework does to the root size.                            */
-  --dd-text-xs: 0.6875rem;  /* 11px — badges, tag pills                     */
-  --dd-text-s: 0.75rem;     /* 12px — code blocks, table body, log header   */
-  --dd-text-m: 0.8125rem;   /* 13px — sidebar prose, accordion titles       */
-  --dd-text-l: 0.9375rem;   /* 15px — tabs, main-column supporting text     */
+  /* --- Density & shape ----------------------------------------------------- */
+  --dd-control-height: var(--height-md);    /* 28px */
+  --dd-control-height-sm: var(--height-sm); /* 24px */
+  --dd-chip-height: var(--height-xs);       /* 20px */
+  --dd-radius: var(--border-radius);        /* 4px: controls, tags, pills */
+  --dd-radius-lg: var(--border-radius-lg);  /* 8px: cards */
+  /* Kept so old rules still resolve; nothing in this system is pill-shaped. */
+  --dd-radius-pill: var(--border-radius);
 
-  /* Main-column scale. Body was inheriting the framework's 16px with
-     proportionally large headings, which is a lot of room for a training
-     page whose point is the data underneath the prose.                      */
-  --dd-text-body: 0.9375rem; /* 15px */
-  --dd-text-h2: 1.5rem;      /* 24px */
-  --dd-text-h3: 1.1875rem;   /* 19px */
-  --dd-text-h4: 1rem;        /* 16px */
-
-  /* Comfortable measure for prose. Unconstrained, the main column runs to
-     ~130 characters a line, which is roughly twice a readable length.       */
-  --dd-measure: 72ch;
-
-  /* --- Shape ------------------------------------------------------------- */
-  --dd-radius: var(--wa-border-radius-m);
-  --dd-radius-pill: var(--wa-border-radius-pill);
+  /* --- Shell geometry ---------------------------------------------------- */
+  --dd-rail-width: 72px;
+  --dd-header-height: 48px;
+  --dd-status-height: 26px;
 
   /* --- Elevation & motion ------------------------------------------------ */
-  --dd-shadow-s: var(--wa-shadow-s);
-  --dd-shadow-m: var(--wa-shadow-m);
-  --dd-ease: var(--wa-transition-easing);
-  --dd-speed-fast: var(--wa-transition-fast);
-  --dd-speed: var(--wa-transition-normal);
+  /* Borders, not shadows. Kept as names so older rules degrade to nothing. */
+  --dd-shadow-s: none;
+  --dd-shadow-m: none;
+  --dd-ease: cubic-bezier(0.2, 0, 0, 1);
+  --dd-speed-fast: 120ms;
+  --dd-speed: 200ms;
 
-  /* --- Semantic hue ramps ------------------------------------------------ */
-  /* The badges, filter pills, topic tags and state pills used to hardcode
-     light-mode pastel hex pairs, which meant dark mode showed pale fills with
-     dark text on a dark page. Each hue now resolves to a fill / text / border
-     triple, remapped for dark mode below, so every one of those components
-     inherits correct contrast in both themes from one place. */
-  --dd-red-fill: var(--wa-color-red-95);
-  --dd-red-on: var(--wa-color-red-40);
-  --dd-red-border: var(--wa-color-red-90);
-  --dd-orange-fill: var(--wa-color-orange-95);
-  --dd-orange-on: var(--wa-color-orange-40);
-  --dd-orange-border: var(--wa-color-orange-90);
-  --dd-yellow-fill: var(--wa-color-yellow-95);
-  --dd-yellow-on: var(--wa-color-yellow-40);
-  --dd-yellow-border: var(--wa-color-yellow-90);
-  --dd-green-fill: var(--wa-color-green-95);
-  --dd-green-on: var(--wa-color-green-40);
-  --dd-green-border: var(--wa-color-green-90);
-  --dd-cyan-fill: var(--wa-color-cyan-95);
-  --dd-cyan-on: var(--wa-color-cyan-40);
-  --dd-cyan-border: var(--wa-color-cyan-90);
-  --dd-blue-fill: var(--wa-color-blue-95);
-  --dd-blue-on: var(--wa-color-blue-40);
-  --dd-blue-border: var(--wa-color-blue-90);
-  --dd-indigo-fill: var(--wa-color-indigo-95);
-  --dd-indigo-on: var(--wa-color-indigo-40);
-  --dd-indigo-border: var(--wa-color-indigo-90);
-  --dd-purple-fill: var(--wa-color-purple-95);
-  --dd-purple-on: var(--wa-color-purple-40);
-  --dd-purple-border: var(--wa-color-purple-90);
-  --dd-pink-fill: var(--wa-color-pink-95);
-  --dd-pink-on: var(--wa-color-pink-40);
-  --dd-pink-border: var(--wa-color-pink-90);
-  --dd-gray-fill: var(--wa-color-gray-95);
-  --dd-gray-on: var(--wa-color-gray-40);
-  --dd-gray-border: var(--wa-color-gray-90);
+  /* --- Semantic hue pairs ------------------------------------------------ */
+  /* Older components (and the ReactFlow diagram) pick a hue by name. Each
+     name now maps onto one of the five DRUIDS status families or the
+     interaction / AI colors, so they follow the theme for free. */
+  --dd-red-fill: var(--ui-status-danger-soft);
+  --dd-red-on: var(--ui-status-danger-contrast);
+  --dd-red-border: var(--ui-status-danger);
+  --dd-orange-fill: var(--ui-status-warning-soft);
+  --dd-orange-on: var(--ui-status-warning-contrast);
+  --dd-orange-border: var(--ui-status-warning);
+  --dd-yellow-fill: var(--ui-status-warning-soft);
+  --dd-yellow-on: var(--ui-status-warning-contrast);
+  --dd-yellow-border: var(--ui-status-warning);
+  --dd-green-fill: var(--ui-status-success-soft);
+  --dd-green-on: var(--ui-status-success-contrast);
+  --dd-green-border: var(--ui-status-success);
+  --dd-blue-fill: var(--ui-interaction-secondary);
+  --dd-blue-on: var(--ui-interaction-primary-contrast);
+  --dd-blue-border: var(--ui-interaction-primary);
+  --dd-cyan-fill: var(--ui-interaction-secondary);
+  --dd-cyan-on: var(--ui-interaction-primary-contrast);
+  --dd-cyan-border: var(--ui-interaction-primary);
+  --dd-indigo-fill: var(--ui-ai-background-primary);
+  --dd-indigo-on: var(--ui-ai-primary);
+  --dd-indigo-border: var(--ui-ai-primary);
+  --dd-purple-fill: var(--ui-status-in-progress-soft);
+  --dd-purple-on: var(--ui-status-in-progress-contrast);
+  --dd-purple-border: var(--ui-status-in-progress);
+  --dd-pink-fill: var(--ui-status-in-progress-soft);
+  --dd-pink-on: var(--ui-status-in-progress-contrast);
+  --dd-pink-border: var(--ui-status-in-progress);
+  --dd-gray-fill: var(--ui-status-other-soft);
+  --dd-gray-on: var(--ui-text-secondary);
+  --dd-gray-border: var(--ui-status-other);
 }
 
-/* Dark mode keyed off our own `data-theme` rather than the framework's class,
-   so the token layer keeps its own switch. Same hues, inverted ends of each
-   ramp: deep fill, light text. */
-:root[data-theme='dark'] {
-  --dd-red-fill: var(--wa-color-red-20);
-  --dd-red-on: var(--wa-color-red-70);
-  --dd-red-border: var(--wa-color-red-30);
-  --dd-orange-fill: var(--wa-color-orange-20);
-  --dd-orange-on: var(--wa-color-orange-70);
-  --dd-orange-border: var(--wa-color-orange-30);
-  --dd-yellow-fill: var(--wa-color-yellow-20);
-  --dd-yellow-on: var(--wa-color-yellow-70);
-  --dd-yellow-border: var(--wa-color-yellow-30);
-  --dd-green-fill: var(--wa-color-green-20);
-  --dd-green-on: var(--wa-color-green-70);
-  --dd-green-border: var(--wa-color-green-30);
-  --dd-cyan-fill: var(--wa-color-cyan-20);
-  --dd-cyan-on: var(--wa-color-cyan-70);
-  --dd-cyan-border: var(--wa-color-cyan-30);
-  --dd-blue-fill: var(--wa-color-blue-20);
-  --dd-blue-on: var(--wa-color-blue-70);
-  --dd-blue-border: var(--wa-color-blue-30);
-  --dd-indigo-fill: var(--wa-color-indigo-20);
-  --dd-indigo-on: var(--wa-color-indigo-70);
-  --dd-indigo-border: var(--wa-color-indigo-30);
-  --dd-purple-fill: var(--wa-color-purple-20);
-  --dd-purple-on: var(--wa-color-purple-70);
-  --dd-purple-border: var(--wa-color-purple-30);
-  --dd-pink-fill: var(--wa-color-pink-20);
-  --dd-pink-on: var(--wa-color-pink-70);
-  --dd-pink-border: var(--wa-color-pink-30);
-  --dd-gray-fill: var(--wa-color-gray-20);
-  --dd-gray-on: var(--wa-color-gray-70);
-  --dd-gray-border: var(--wa-color-gray-30);
+.theme-dark {
+  --dd-logo: #ffffff;
 }

@@ -20,7 +20,7 @@
     "category": "RUM ↔ APM",
     "blurb": "How traceSampleRate and traceContextInjection decide which browser requests end up as backend traces in Datadog.",
     "apis": ["traceSampleRate", "traceContextInjection", "allowedTracingUrls"],
-    "tabs": ["Try it live", "See the big picture", "Config"],
+    "tabs": ["Try it live", "Simulation View", "Config"],
     "topics": 5
   },
   {

@@ -20,7 +20,7 @@ The site is a set of **environments**: the All labs home page at the repo root, 
 | `assets/` | Fonts (`assets/fonts/`), the logo mask, and README / PR screenshots |
 | `config.template.js` | Template for `config.js` (`window.DD_CONFIG`), the shared Datadog RUM/Logs settings |
 | `scripts/` | Build tooling: `labs.js` (discovery + registry check), `build.js`, `bundle.js`, `dev.js`, `serve.js`, `upload-sourcemaps.js` |
-| `.github/workflows/jekyll-docker.yml` | Pages deploy: `npm ci` → `npm run build` → `npm run sourcemaps:upload` → publish `_site/` |
+| `.github/workflows/jekyll-docker.yml` | `build` job (every push and PR): `npm ci` → `npm run build` (+ `npm run sourcemaps:upload` on `main`). `deploy` job (`main` only): publish `_site/` |
 
 ## Commands
 

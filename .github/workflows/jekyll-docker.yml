@@ -8,19 +8,17 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
-
+# Two jobs so pull requests get a real build check: the github-pages
+# environment only accepts deploys from main, and a job that names it is
+# rejected outright on a PR — before a single step runs. `build` never
+# touches that environment, so it runs everywhere; only `deploy` does.
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read # configure-pages reads the site's base_url
     steps:
       - uses: actions/checkout@v6
 
@@ -52,7 +50,10 @@ jobs:
           PAGES_URL: ${{ steps.pages.outputs.base_url }}
         run: npm run build
 
+      # Main only: PR builds stamp a version that never reaches production,
+      # so their maps would just be noise in Datadog.
       - name: Upload source maps to Datadog
+        if: github.event_name == 'push'
         env:
           DATADOG_API_KEY: ${{ secrets.DD_API_KEY }}
           PAGES_URL: ${{ steps.pages.outputs.base_url }}
@@ -62,6 +63,23 @@ jobs:
         uses: actions/upload-pages-artifact@v4
         with:
           path: _site
+
+  deploy:
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    # Scoped to this job, not the workflow, so a PR build never queues
+    # behind an in-flight deploy.
+    concurrency:
+      group: "pages"
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5

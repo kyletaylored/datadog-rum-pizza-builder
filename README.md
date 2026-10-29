@@ -154,7 +154,7 @@ A lab at `/trace-sampling-lab/` on how two RUM options, `traceSampleRate` and `t
 
 - **A guided walkthrough.** The *Try it live* tab follows one request's trip in four steps: pick a scenario, set the backend's rate, send requests, read what happened. The three classic scenarios are one click each: keep everything (`100` / `'all'`), browser says drop (`0` / `'all'`) and backend decides the rest (`20` / `'sampled'`). A plain-language summary and a docked request-by-request table show what the browser attached, what the pretend backend did with it, and whether RUM's resource event carries the same `_dd.trace_id` as the kept trace. The same requests are in devtools › Network.
 - **Per session, not per request.** The SDK hashes the session ID to make the trace decision, so at `traceSampleRate: 20` a single session sends priority 1 on every request or on none. The 20% only shows up across sessions. A **Start a new RUM session** button and a per-session table make that visible.
-- **A ReactFlow model.** The *See the big picture* tab draws both `traceContextInjection` routes on one graph, with `sessionSampleRate`, `traceSampleRate` and `DD_TRACE_SAMPLE_RATE` sliders. It shows how many of N requests become traces linked to RUM, traces that exist only in the backend, or nothing.
+- **A ReactFlow model.** The *Simulation View* tab draws both `traceContextInjection` routes on one graph, with `sessionSampleRate`, `traceSampleRate` and `DD_TRACE_SAMPLE_RATE` sliders. It shows how many of N requests become traces linked to RUM, traces that exist only in the backend, or nothing.
 
 ## OTel Browser Lab
 

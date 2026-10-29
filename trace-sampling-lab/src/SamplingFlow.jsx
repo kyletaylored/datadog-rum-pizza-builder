@@ -199,9 +199,10 @@ function FlowEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targ
 
 const NODE_TYPES = { lab: FlowNode };
 const EDGE_TYPES = { lab: FlowEdge };
-// Edges into an outcome take its color, so the green and red endings read
-// from a distance.
-const EDGE_COLOR = { datadog: 'var(--dd-green-on)', drop: 'var(--dd-red-on)' };
+// DRUIDS: paths the current settings send requests down are the interaction
+// blue; the other option's route and empty edges stay in the border color.
+const EDGE_ACTIVE = 'var(--ui-interaction-primary)';
+const EDGE_IDLE = 'var(--form-border)';
 
 function useTheme() {
   const read = () => (document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
@@ -257,7 +258,6 @@ export default function SamplingFlow({ initial }) {
   const { nodes, edges } = useMemo(() => {
     const isMuted = (route) => !!route && route !== cfg.injection;
     const max = Math.max(1, cfg.requests);
-    const kindOf = Object.fromEntries(graph.nodes.map((n) => [n.id, n.kind]));
     const visited = new Set(trip ? trip.stops.slice(0, trip.step + 1) : []);
     const tokenEdge = trip && !tripDone ? `${trip.stops[trip.step]}-${trip.stops[trip.step + 1]}` : null;
     const motion = !reducedMotion();
@@ -281,7 +281,7 @@ export default function SamplingFlow({ initial }) {
       edges: graph.edges.map((e) => {
         const muted = isMuted(e.route);
         const empty = e.count <= 0;
-        const color = (!muted && !empty && EDGE_COLOR[kindOf[e.target]]) || 'var(--dd-color-muted)';
+        const color = !muted && !empty ? EDGE_ACTIVE : EDGE_IDLE;
         const id = `${e.source}-${e.target}`;
         return {
           id,
@@ -364,7 +364,9 @@ export default function SamplingFlow({ initial }) {
           proOptions={{ hideAttribution: true }}
         >
           <Panel position="top-left" className="flow-trip">
-            <button type="button" className="wa-brand" onClick={followOne}>▶ Follow one request</button>
+            <button type="button" className="btn btn--primary" onClick={followOne}>
+              <span className="icon icon--14" data-icon="play" aria-hidden="true" />Follow one request
+            </button>
             {trip && (
               <ol className="flow-trip__steps" aria-live="polite">
                 {trip.stops.slice(0, trip.step + 1).map((id) => <li key={id}>{TRIP_STEP[id]}</li>)}
@@ -404,8 +406,8 @@ export default function SamplingFlow({ initial }) {
           <tbody>
             {modes.map(([mode, x]) => (
               <tr key={mode} data-active={mode === cfg.injection}>
-                <td><code>'{mode}'</code>{mode === cfg.injection && <span className="type-badge info">showing</span>}</td>
-                <td><strong>{fmt(x.total)}</strong> <span className="muted">({pct(x.total / Math.max(1, x.requests))})</span></td>
+                <td><code>'{mode}'</code>{mode === cfg.injection && <span className="type-badge view">showing</span>}</td>
+                <td><strong>{fmt(x.total)}</strong> <span className="subtle">({pct(x.total / Math.max(1, x.requests))})</span></td>
                 <td>{fmt(x.linked)}</td>
                 <td>{fmt(x.apmKeep)}</td>
                 <td>{fmt(x.droppedByPriority)}</td>

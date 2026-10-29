@@ -2,6 +2,7 @@
 // ready to publish as-is. This is everything the Pages workflow used to do
 // inline, so CI and a local build produce the same output:
 //
+//   0. labs.json agrees with the discovered lab directories (labs.js)
 //   1. esbuild bundles for labs with a src/main.js        (bundle.js)
 //   2. copy the publishable files into _site/
 //   3. generate _site/config.js from config.template.js
@@ -22,10 +23,11 @@ import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } fr
 import path from "node:path";
 import { minify } from "terser";
 import { buildBundles } from "./bundle.js";
-import { ROOT, discoverLabs } from "./labs.js";
+import { ROOT, assertRegistry, discoverLabs } from "./labs.js";
 import { IS_CI, SITE_DIR, ddCredentials, evalConfig, githubRepoUrl, pagesUrl, version } from "./env.js";
 
 const labs = discoverLabs();
+assertRegistry(labs);
 const sha = version();
 const site = (...p) => path.join(SITE_DIR, ...p);
 

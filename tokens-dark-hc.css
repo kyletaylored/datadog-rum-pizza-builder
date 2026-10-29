@@ -1,0 +1,36 @@
+/* Higher-contrast dark layer on top of DRUIDS .theme-dark. Apply alongside it: class="theme-dark theme-dark-hc" */
+.theme-dark.theme-dark-hc {
+  --ui-text:            rgba(255,255,255,0.92);
+  --ui-text-secondary:  rgba(255,255,255,0.70);
+  --ui-text-tertiary:   rgba(255,255,255,0.54);
+  --ui-text-disabled:   rgba(255,255,255,0.32);
+  --ui-icon:            rgba(255,255,255,0.68);
+  --ui-icon-secondary:  rgba(255,255,255,0.50);
+
+  --ui-background:           #161518;
+  --ui-background-secondary: #212024;
+  --ui-background-elevated:  #262529;
+  --ui-border:               #3f3d43;
+  --form-border:             #6a676f;
+  --form-border-hover:       #8f8c94;
+
+  --ui-interaction-primary:           #5aa6e6;
+  --ui-interaction-primary-contrast:  #8cc4f2;
+  --ui-interaction-secondary:         #13284a;
+  --ui-interaction-secondary-contrast:#183462;
+
+  --tag-background: #2e2c31;
+  --tag-text:       #9dbbe3;
+  --tag-text-key:   #b3b0b7;
+
+  --ui-status-success-contrast: #6fd08a;
+  --ui-status-success-soft:     #12321b;
+  --ui-status-warning-contrast: #f2b84a;
+  --ui-status-warning-soft:     #3a2a0b;
+  --ui-status-danger-contrast:  #ff7a8a;
+  --ui-status-danger-soft:      #3a1016;
+  --ui-status-other-soft:       #2e2c31;
+  --ui-status-in-progress-contrast: #c39af0;
+  --ui-status-in-progress-soft:     #2c1250;
+  --ui-code-string: #7fd8ff;
+}

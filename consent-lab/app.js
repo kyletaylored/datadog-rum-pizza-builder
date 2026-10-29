@@ -8,73 +8,18 @@
  */
 
 // ---------------------------------------------------------------------------
-// Theme toggle (shared localStorage key with the pizza builder)
+// Tab switching — the shell (../lab-shared.js) owns the tabs; this reacts.
 // ---------------------------------------------------------------------------
 
-/**
- * Apply a theme to <html>, driving both theming mechanisms from one call:
- * `data-theme` for our own CSS and the `wa-light`/`wa-dark` class for Web
- * Awesome. Persisted so it survives refreshes and carries across pages.
- *
- * @param {'light'|'dark'} theme
- */
-function applyTheme(theme) {
-  const root = document.documentElement;
-  root.setAttribute('data-theme', theme);
-  root.classList.toggle('wa-dark', theme === 'dark');
-  root.classList.toggle('wa-light', theme === 'light');
-  localStorage.setItem('theme', theme);
-}
-
-/**
- * Theme switch handler.
- *
- * @param {{checked: boolean}} sw - The <wa-switch> (or checkbox) element
- */
-function toggleTheme(sw) {
-  applyTheme(sw.checked ? 'dark' : 'light');
-}
-
-// Sync the switch with the theme the pre-paint script already resolved, which
-// may have come from the OS rather than localStorage.
-(function () {
-  const toggle = document.getElementById('theme-toggle');
-  if (!toggle) return;
-  const sync = () => { toggle.checked = document.documentElement.dataset.theme === 'dark'; };
-  sync();
-  // The CDN autoloader registers <wa-switch> asynchronously, after this script
-  // has already run. Setting `checked` before the upgrade doesn't survive it,
-  // and `whenDefined` can resolve before this instance is upgraded, so wait for
-  // the component's own first render to settle before syncing again.
-  if (toggle.localName.startsWith('wa-')) {
-    customElements.whenDefined(toggle.localName)
-      .then(() => toggle.updateComplete)
-      .then(sync);
-  }
-})();
-
-// ---------------------------------------------------------------------------
-// Tab switching
-// ---------------------------------------------------------------------------
-
-function switchLabTab(tab) {
-  const panels = { storage: 'tab-storage', tabs: 'tab-tabs', errors: 'tab-errors', config: 'tab-config' };
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    const isActive = btn.getAttribute('aria-controls') === panels[tab];
-    btn.classList.toggle('active', isActive);
-    btn.setAttribute('aria-selected', isActive);
-  });
-  Object.values(panels).forEach(id => { document.getElementById(id).style.display = 'none'; });
-  // Clear the inline value rather than setting 'block': the panel is a
-  // flex column in CSS, and an inline display would override it.
-  document.getElementById(panels[tab]).style.display = '';
+function onLabTab(tab, { initial = false } = {}) {
   if (tab === 'config') renderConfigTable();
   if (tab === 'errors') renderErrorMatrix();
 
   // Changing the hash is what makes RUM treat this as a new View — same
-  // fragment-based tracking the main pizza builder uses. Without this, RUM
-  // only ever sees a single view for the whole page (the initial load).
-  if (window.location.hash !== '#' + tab) window.location.hash = tab;
+  // fragment-based tracking the pizza builder uses. Without this, RUM only
+  // ever sees a single view for the whole page (the initial load). Skipped
+  // for the tab the page opens on, so the very first View isn't relabeled.
+  if (!initial && window.location.hash !== '#' + tab) window.location.hash = tab;
 }
 
 // ---------------------------------------------------------------------------
@@ -189,12 +134,15 @@ function applyConsentLive(consent) {
   renderConfigTable(true);
 }
 
+const CONSENT_STATE = { granted: 'success', 'not-granted': 'danger', pending: 'warning' };
+
 function renderConsentPills() {
   const consent = getConsent();
   document.querySelectorAll('.consent-state-pill').forEach(pill => {
-    pill.className = 'consent-state-pill ' + consent;
+    pill.className = `pill pill--${CONSENT_STATE[consent]} consent-state-pill`;
     pill.textContent = consent;
   });
+  LabStatus.set('consent', 'RUM consent: ' + consent, CONSENT_STATE[consent]);
 }
 
 // ---------------------------------------------------------------------------
@@ -218,18 +166,15 @@ window.DD_RUM && window.DD_RUM.onReady(function () {
     sessionPersistence: getPersistence(),
     trackingConsent: getConsent(),
     beforeSend: function (event) {
-      // Only API traffic goes in the table — stylesheets, scripts, images and
-      // fonts would bury it (the Web Awesome autoloader alone pulls ~55 chunks
-      // per load). Inlined `data:` URIs are reported as `fetch` but are really
-      // images, so they're excluded too. Everything is still sent to Datadog.
-      const isNoisyResource = event.type === 'resource'
-        && (!['xhr', 'fetch'].includes(event.resource?.type)
-            || /^data:/i.test(event.resource?.url || ''));
+      // Only API traffic goes in the table — stylesheets, scripts, images,
+      // fonts and icons would bury it. Everything is still sent to Datadog.
+      const isNoisyResource = event.type === 'resource' && !['xhr', 'fetch'].includes(event.resource?.type);
       if (!isNoisyResource) pushActivity('rum', ...rumEventCols(event));
       recordRumErrorProbe(event);
       return true;
     },
   });
+  if (LabShell.activeTab() === 'config') renderConfigTable();
 });
 
 window.DD_LOGS && window.DD_LOGS.onReady(function () {
@@ -261,6 +206,7 @@ window.DD_LOGS && window.DD_LOGS.onReady(function () {
       return true;
     },
   });
+  if (LabShell.activeTab() === 'config') renderConfigTable();
 });
 
 // ---------------------------------------------------------------------------
@@ -295,7 +241,7 @@ function renderStorageInspector() {
   const mode = getPersistence();
   ['cookie', 'local-storage', 'memory'].forEach(m => {
     const btn = document.getElementById('mode-btn-' + m);
-    if (btn) btn.classList.toggle('active', m === mode);
+    if (btn) btn.setAttribute('aria-pressed', String(m === mode));
   });
   const modeDisplay = document.getElementById('active-mode-display');
   if (modeDisplay) modeDisplay.textContent = mode;
@@ -368,21 +314,21 @@ function renderTabsTable() {
 
   tbody.innerHTML = rows.map(t => `
     <tr class="${t.tabId === LAB_TAB_ID ? 'tab-row-self' : ''}">
-      <td><span class="tab-badge">${t.tabId}${t.tabId === LAB_TAB_ID ? ' (this tab)' : ''}</span></td>
-      <td>${t.persistence}</td>
-      <td>${t.consent}</td>
-      <td><span class="session-id">${t.sessionId || '—'}</span></td>
+      <td><code>${t.tabId}</code>${t.tabId === LAB_TAB_ID ? ' (this tab)' : ''}</td>
+      <td><code>${escapeHtml(t.persistence)}</code></td>
+      <td>${escapeHtml(t.consent)}</td>
+      <td><code>${escapeHtml(t.sessionId || '—')}</code></td>
       <td>${Math.round((now - t.ts) / 1000)}s ago</td>
     </tr>`).join('');
 
   if (verdict) {
     const ids = [...new Set(rows.map(t => t.sessionId).filter(Boolean))];
     if (rows.length < 2) {
-      verdict.textContent = 'Open a second tab to compare session IDs.';
+      verdict.innerHTML = '<span class="pill">Open a second tab to compare session IDs.</span>';
     } else if (ids.length <= 1) {
-      verdict.innerHTML = `✅ <strong>${rows.length} tabs, 1 session</strong> — consistent, no inflation.`;
+      verdict.innerHTML = `<span class="pill pill--success">${rows.length} tabs, 1 session</span> Consistent, no inflation.`;
     } else {
-      verdict.innerHTML = `⚠️ <strong>${rows.length} tabs, ${ids.length} different session IDs</strong> — this persistence mode is fragmenting one visit into multiple sessions.`;
+      verdict.innerHTML = `<span class="pill pill--warning">${rows.length} tabs, ${ids.length} different session IDs</span> This persistence mode is fragmenting one visit into multiple sessions.`;
     }
   }
 }
@@ -395,10 +341,6 @@ window.addEventListener('beforeunload', () => {
 // Unified activity log — every RUM event and every Log entry, tagged by
 // source, visible under every tab (not just the Error capture tab).
 // ---------------------------------------------------------------------------
-
-const activityEvents = [];
-const activityFilters = new Set(['rum', 'logs']);
-const MAX_ACTIVITY_ROWS = 300;
 
 /**
  * Map a RUM event to [type, name/path, hash/payload] for the log table,
@@ -435,47 +377,19 @@ function logEventCols(log) {
   return [type, log.message || '—', origin];
 }
 
-function toggleActivityFilter(source) {
-  if (activityFilters.has(source)) activityFilters.delete(source);
-  else activityFilters.add(source);
-  document.querySelectorAll('.filter-btn.' + source).forEach(btn => btn.classList.toggle('active', activityFilters.has(source)));
-  renderActivityLog();
-}
-
-function clearActivityLog() {
-  activityEvents.length = 0;
-  renderActivityLog();
-}
-
+// The source (rum / logs) is the badge and the filter; the event's own type
+// rides along as a second badge, and the two detail columns read as one
+// message.
 function pushActivity(source, type, a, b) {
   const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  activityEvents.push({ source, type: type || 'other', time, a: String(a ?? '—'), b: String(b ?? '—') });
-  if (activityEvents.length > MAX_ACTIVITY_ROWS) activityEvents.shift();
-  renderActivityLog();
-}
-
-function renderActivityLog() {
-  const tbody = document.getElementById('rum-tbody');
-  if (!tbody) return;
-  const visible = activityEvents.filter(e => activityFilters.has(e.source));
-  if (!visible.length) {
-    tbody.innerHTML = '<tr id="rum-empty-row"><td colspan="5">Waiting for events…</td></tr>';
-    return;
-  }
-  const KNOWN_TYPES = ['view', 'action', 'resource', 'error', 'long_task', 'warn', 'info', 'debug'];
-  const wrap = document.getElementById('rum-table-wrap');
-  const wasScrolledToBottom = wrap && wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 20;
-  tbody.innerHTML = visible.slice(-150).map(e => {
-    const typeClass = KNOWN_TYPES.includes(e.type) ? e.type : 'other';
-    return `<tr>
-      <td>${e.time}</td>
-      <td><span class="type-badge ${e.source}">${e.source}</span></td>
-      <td><span class="type-badge ${typeClass}">${e.type}</span></td>
-      <td class="wrap">${escapeHtml(e.a)}</td>
-      <td class="wrap">${escapeHtml(e.b)}</td>
-    </tr>`;
-  }).join('');
-  if (wrap && wasScrolledToBottom) wrap.scrollTop = wrap.scrollHeight;
+  const t = String(type || 'other').replace(/[^a-z0-9_-]/gi, '');
+  const detail = [a, b].map(v => String(v ?? '—')).filter(v => v !== '—');
+  LabLog.add({
+    c1: time,
+    type: source,
+    c3: { html: `<span class="type-badge ${t}">${escapeHtml(t)}</span>` },
+    c4: detail.join(' · ') || '—',
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -786,8 +700,8 @@ function etVerdictCell(measured, meetsBar, neverApplies) {
   if (neverApplies) return '<span class="et-na">n/a</span>';
   if (!measured) return '—';
   return meetsBar
-    ? '<span class="type-badge action">issue</span>'
-    : '<span class="type-badge error">log only</span>';
+    ? `<span class="type-badge issue">${LabShell.icon('check', 12)} issue</span>`
+    : `<span class="type-badge error">${LabShell.icon('x', 12)} log only</span>`;
 }
 
 function renderErrorMatrix() {
@@ -817,7 +731,7 @@ function renderErrorMatrix() {
     const logsDrift = logs && logsMeets !== src.logsIssue;
     const rumDrift = rum && rumMeets !== src.rumIssue;
     const drift = logsDrift || rumDrift
-      ? ' <span class="et-drift" title="Measured payload differs from the documented expectation">⚠︎</span>'
+      ? `<span class="et-drift" title="Measured payload differs from the documented expectation">${LabShell.icon('triangle-alert', 14)}</span>`
       : '';
 
     let stackNote;
@@ -847,7 +761,7 @@ function renderErrorMatrix() {
       : `<span class="et-how">${escapeHtml(src.how)}</span>`;
 
     return `<tr>
-      <td><button class="wa-neutral wa-outlined et-fire-btn" onclick="etTrigger('${src.id}')">Fire</button></td>
+      <td><button type="button" class="btn btn--sm" onclick="etTrigger('${src.id}')">Fire</button></td>
       <td><strong>${escapeHtml(src.label)}</strong><br>${detail}</td>
       <td>${etVerdictCell(logs, logsMeets, src.id === 'rum-adderror')}</td>
       <td>${etVerdictCell(rum, rumMeets, false)}${drift}</td>
@@ -930,60 +844,35 @@ function labFetchResource() {
 // Config tab
 // ---------------------------------------------------------------------------
 
-function colorizeJson(obj) {
-  return JSON.stringify(obj, null, 2).replace(
-    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
-    match => {
-      let cls = 'json-num';
-      if (/^"/.test(match)) cls = /:$/.test(match) ? 'json-key' : 'json-str';
-      else if (/true|false/.test(match)) cls = 'json-bool';
-      else if (/null/.test(match)) cls = 'json-null';
-      return `<span class="${cls}">${match}</span>`;
-    }
-  );
-}
-
 function renderConfigTable(force) {
   const rumEl = document.getElementById('config-rum-json');
   const logsEl = document.getElementById('config-logs-json');
   if (!rumEl || !logsEl) return;
 
-  const cfg = window.DD_CONFIG || {};
-  const masked = cfg.clientToken ? cfg.clientToken.slice(0, 8) + '••••••••' : '—';
-
-  const rumConfig = {
-    applicationId: cfg.applicationId || '—',
-    clientToken: masked,
-    site: cfg.site || '—',
-    service: cfg.service || '—',
-    env: cfg.env || '—',
-    sessionPersistence: getPersistence(),
-    trackingConsent: getConsent(),
-  };
-
-  const logsConfig = {
-    clientToken: masked,
-    site: cfg.site || '—',
-    service: cfg.service || '—',
-    env: cfg.env || '—',
-    sessionPersistence: getPersistence(), // must match RUM — shared session store
-    trackingConsent: 'granted',
-    forwardErrorsToLogs: true,
-  };
-
-  rumEl.innerHTML = colorizeJson(rumConfig);
-  logsEl.innerHTML = colorizeJson(logsConfig);
+  // Read back from each SDK rather than restated here, so a mismatch between
+  // the two sessionPersistence values would show up on this tab.
+  LabShell.renderJson(rumEl, LabShell.sdkInitConfig('DD_RUM') || { status: 'RUM has not initialized yet' });
+  LabShell.renderJson(logsEl, LabShell.sdkInitConfig('DD_LOGS') || { status: 'Logs has not initialized yet' });
 }
 
 // ---------------------------------------------------------------------------
 // Boot
-// (Sidebar resizer behavior now lives in ../lab-shared.js, shared with the
-// pizza builder and any future lab.)
 // ---------------------------------------------------------------------------
+
+// On-demand events, in the docked log's header so they're there on every tab.
+LabLog.addAction({ label: 'Fire RUM action', icon: 'zap', onClick: labFireAction });
+LabLog.addAction({ label: 'Generate error', icon: 'bug', onClick: labGenerateError, title: 'Reports one real Error into both pipes: logger.error(msg, ctx, err) and DD_RUM.addError(err)' });
+LabLog.addAction({ label: 'Emit Logs info', icon: 'file-text', onClick: labLogInfo });
+LabLog.addAction({ label: 'Fetch a resource', icon: 'download', onClick: labFetchResource });
+
+let firstTab = true;
+LabShell.onTab(tab => {
+  onLabTab(tab, { initial: firstTab });
+  firstTab = false;
+});
 
 renderConsentPills();
 renderStorageInspector();
-renderActivityLog();
 setInterval(renderStorageInspector, 1000);
 
 announceTab();

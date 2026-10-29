@@ -66,45 +66,49 @@ const resource = resourceFromAttributes({
 // doesn't patch (it only wraps log/warn/error/info/debug), so this can't
 // feed back into itself. Opt out with ?console=0.
 const processors = [new LiveTableLogProcessor()];
+// What each processor is, in words, for the Config tab (app.js) — built
+// alongside the processors so it can't describe a pipeline that isn't there.
+const processorNames = ["LiveTableLogProcessor"];
 if (params.get("console") !== "0") {
   processors.push(new SimpleLogRecordProcessor(new ConsoleLogRecordExporter()));
+  processorNames.push("SimpleLogRecordProcessor → ConsoleLogRecordExporter");
 }
 if (PROXY_BASE) {
   processors.push(
     new BatchLogRecordProcessor({ exporter: new OTLPLogExporter({ url: `${PROXY_BASE}/v1/logs` }) })
   );
+  processorNames.push("BatchLogRecordProcessor → OTLPLogExporter");
 }
 
 const loggerProvider = new LoggerProvider({ resource, processors });
 logs.setGlobalLoggerProvider(loggerProvider);
 
-registerInstrumentations({
-  instrumentations: [
-    new NavigationInstrumentation(),
-    new UserActionInstrumentation(),
-    new ErrorsInstrumentation(),
-    new WebVitalsInstrumentation(),
-    new ResourceTimingInstrumentation({
-      // Two fixes borrowed from the official sandbox
-      // (opentelemetry-browser/tree/main/sandbox), which hits the same two
-      // problems and solves them at the source instead of at display time:
-      //   - initiatorTypes: only fetch/xhr calls are "real" network activity
-      //     worth a row. Without this, every static asset load (~55 Web
-      //     Awesome chunks) gets captured — and, once export is on, actually
-      //     shipped to Datadog, not just shown in the table. app.js's own
-      //     isLoggableResourceTiming filter only ever hid them from the UI.
-      //   - ignoreUrls: without this, exporting a batch to our own proxy is
-      //     itself a fetch the instrumentation captures, which gets exported
-      //     in the next batch, which gets captured again — a self-feeding
-      //     trickle for as long as the tab stays open with export on.
-      initiatorTypes: ["fetch", "xmlhttprequest"],
-      ignoreUrls: [/\/v1\/logs$/, /\/v1\/traces$/],
-    }),
-    // Restricted to warn/error so this doesn't flood the live table with
-    // routine console.log noise from the page or its dependencies.
-    new ConsoleInstrumentation({ logMethods: ["warn", "error"] }),
-  ],
-});
+const instrumentations = [
+  new NavigationInstrumentation(),
+  new UserActionInstrumentation(),
+  new ErrorsInstrumentation(),
+  new WebVitalsInstrumentation(),
+  new ResourceTimingInstrumentation({
+    // Two fixes borrowed from the official sandbox
+    // (opentelemetry-browser/tree/main/sandbox), which hits the same two
+    // problems and solves them at the source instead of at display time:
+    //   - initiatorTypes: only fetch/xhr calls are "real" network activity
+    //     worth a row. Without this, every static asset load (stylesheets,
+    //     fonts, icons) gets captured — and, once export is on, actually
+    //     shipped to Datadog, not just shown in the table. app.js's own
+    //     isLoggableResourceTiming filter only ever hid them from the UI.
+    //   - ignoreUrls: without this, exporting a batch to our own proxy is
+    //     itself a fetch the instrumentation captures, which gets exported
+    //     in the next batch, which gets captured again — a self-feeding
+    //     trickle for as long as the tab stays open with export on.
+    initiatorTypes: ["fetch", "xmlhttprequest"],
+    ignoreUrls: [/\/v1\/logs$/, /\/v1\/traces$/],
+  }),
+  // Restricted to warn/error so this doesn't flood the live table with
+  // routine console.log noise from the page or its dependencies.
+  new ConsoleInstrumentation({ logMethods: ["warn", "error"] }),
+];
+registerInstrumentations({ instrumentations });
 
 const logger = logs.getLogger("datadog-rum-pizza-otlp");
 
@@ -129,7 +133,10 @@ function emitCustomLog({ eventName, body, attributes = {} }) {
 }
 
 initSession({
-  onStart: (id) => emitCustomLog({ eventName: "session.start", body: "session.start", attributes: { "session.id": id } }),
+  onStart: (id) => {
+    window.LabStatus?.setSession(id);
+    emitCustomLog({ eventName: "session.start", body: "session.start", attributes: { "session.id": id } });
+  },
   onEnd: (id) => emitCustomLog({ eventName: "session.end", body: "session.end", attributes: { "session.id": id } }),
 });
 getSessionId(); // prime the first session
@@ -138,6 +145,13 @@ getSessionId(); // prime the first session
 // app.js (loaded before this bundle — see index.html) already defines
 // window.otelLab.logEvent for the live table; this just adds to the same object.
 window.otelLab = window.otelLab ?? {};
+window.otelLab.config = {
+  applicationId: DD_APPLICATION_ID,
+  processors: processorNames,
+  otlpEndpoint: PROXY_BASE ? `${PROXY_BASE}/v1/logs` : null,
+  instrumentations: instrumentations.map((i) => i.instrumentationName),
+  resource: resource.attributes,
+};
 window.otelLab.submitOrder = function submitOrder(pizzaOrder) {
   emitCustomLog({
     eventName: "pizza_order_submitted",

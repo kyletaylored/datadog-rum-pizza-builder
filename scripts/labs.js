@@ -38,6 +38,16 @@ export function discoverLabs() {
   });
 }
 
+// The service an environment reports to RUM: the config.js prefix plus its
+// labs.json id ("home" for the root). lab-shared.js applies the same rule at
+// runtime, and source maps have to be uploaded under it to resolve.
+export function serviceFor(prefix, dir) {
+  if (dir === ".") return `${prefix}-home`;
+  const entry = JSON.parse(readFileSync(REGISTRY, "utf8")).find((e) => e.dir === dir);
+  if (!entry) throw new Error(`${dir}/ has no labs.json entry`);
+  return `${prefix}-${entry.id}`;
+}
+
 const STRING_FIELDS = ["id", "dir", "name", "short", "icon", "category", "blurb"];
 
 const decode = (s) => s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');

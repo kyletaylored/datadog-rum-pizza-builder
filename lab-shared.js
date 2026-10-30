@@ -36,6 +36,12 @@
   const PAGE = window.LAB_PAGE || {};
   const LAB_ID = PAGE.id || 'home';
   const IS_HOME = LAB_ID === 'home';
+
+  // One RUM application, one service per environment, so sessions can be
+  // filtered by lab (service:rum-labs-consent). config.js gives the prefix;
+  // this runs before app.js reads it for init(). scripts/labs.js serviceFor()
+  // applies the same rule to the source map upload.
+  if (window.DD_CONFIG?.service) window.DD_CONFIG.service = `${window.DD_CONFIG.service}-${LAB_ID}`;
   const SCRIPT_URL = new URL(document.currentScript.src);
   // The site root is wherever this script lives. The build appends ?v=<sha>
   // to it, so reusing that query busts the registry's cache on every deploy.

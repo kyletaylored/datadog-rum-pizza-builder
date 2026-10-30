@@ -268,7 +268,7 @@
     <p>Each time this wizard changes <code>location.hash</code>, the RUM SDK records a new <strong>View</strong> event — no page reload needed. The SDK detects hash changes automatically and starts a fresh view with its own load time, action count, and frustration signal tracking.</p>
     <p>In <strong>RUM › Explorer</strong>, set the event type to <em>Views</em> and group by <code>@view.url_hash</code> to see per-step engagement. Each hash is a named wizard step: <code>#crust</code> › <code>#sauce</code> › <code>#cheese</code> › <code>#toppings</code> › <code>#size</code> › <code>#results</code>.</p>
     <p>You can also correlate view events with <strong>error</strong> events on the same hash to understand whether a drop-off was caused by a page problem or the user simply leaving.</p>
-    <pre>source:browser service:datadog-rum-pizza-builder @type:view
+    <pre>source:browser service:rum-labs-pizza @type:view
 | stats count() by @view.url_hash</pre>
   </article>
 

@@ -189,6 +189,8 @@ Environments are discovered, not listed: the root plus any top-level directory w
 
 `npm run build` reads `DD_APP_ID` / `DD_CLIENT_TOKEN` from the environment and falls back to your local `config.js`; `PAGES_URL`, `VERSION`, and `GITHUB_REPOSITORY` are optional.
 
+Every environment sends to the same RUM application, but each reports its own service, `rum-labs-<id>` (`rum-labs-home`, `rum-labs-pizza`, `rum-labs-consent`, `rum-labs-trace`). Filter sessions by lab with `service:rum-labs-consent`, or every lab with `service:rum-labs-*`.
+
 ---
 
 ## Deployment

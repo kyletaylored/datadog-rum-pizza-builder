@@ -18,7 +18,10 @@ window.DD_CONFIG = {
   applicationId: '%%DD_APP_ID%%',
   clientToken:   '%%DD_CLIENT_TOKEN%%',
   site:          'datadoghq.com',
-  service:       'datadog-rum-pizza-builder',
+  // A prefix, not the final name: lab-shared.js appends the environment's
+  // labs.json id, so each one reports its own service (rum-labs-home,
+  // rum-labs-consent, …) under the one application.
+  service:       'rum-labs',
   version:       '%%VERSION%%',
   env:           window.location.hostname.endsWith('.github.io') ? 'prod' : 'local',
 };

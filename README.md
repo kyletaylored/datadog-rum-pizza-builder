@@ -160,7 +160,7 @@ A lab at `/trace-sampling-lab/` on how two RUM options, `traceSampleRate` and `t
 
 **[Try it →](%%PAGES_URL%%/otel-rum-lab/)**
 
-An experimental lab at `/otel-rum-lab/` that runs the same pizza wizard with only standard OpenTelemetry — `@opentelemetry/browser-instrumentation` plus `sdk-logs`, no RUM SDK. Every navigation, click, web vital, resource and error becomes an OTel log record, rendered into the docked log by a `LogRecordProcessor` (the OpenTelemetry version of `beforeSend`) before it's optionally exported to Datadog through a small local OTLP proxy. Export is off by default, so the page works on GitHub Pages with no backend. See [`otel-rum-lab/README.md`](otel-rum-lab/README.md).
+An experimental lab at `/otel-rum-lab/` that runs the same pizza wizard with only standard OpenTelemetry — `@opentelemetry/browser-sdk`'s `startBrowserSdk()` plus `@opentelemetry/browser-instrumentation`, no RUM SDK. Navigations, clicks, web vitals, resources and errors become OTel log records, and fetch/XHR calls become spans. Both are rendered into the docked log by processors (the OpenTelemetry version of `beforeSend`) before they're optionally exported to Datadog's OTLP intake, directly with the RUM client token as `dd-api-key` or through a small local proxy. Each signal's endpoint can be overridden on its own. Export is off by default. See [`otel-rum-lab/README.md`](otel-rum-lab/README.md), including [the minimum config Datadog needs](otel-rum-lab/README.md#what-datadog-needs) for RUM sessions and views.
 
 ![The OTel Browser Lab's wizard, with OTel log records in the docked log](assets/otel-rum-lab.webp)
 

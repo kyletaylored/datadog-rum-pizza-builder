@@ -22,3 +22,21 @@ export class LiveTableLogProcessor {
     return Promise.resolve();
   }
 }
+
+// Same tap point for the traces pipeline: hands every finished span (the
+// fetch/xhr instrumentations' client spans) to app.js.
+export class LiveTableSpanProcessor {
+  onStart() {}
+
+  onEnd(span) {
+    window.otelLab?.logSpan?.(span);
+  }
+
+  shutdown() {
+    return Promise.resolve();
+  }
+
+  forceFlush() {
+    return Promise.resolve();
+  }
+}

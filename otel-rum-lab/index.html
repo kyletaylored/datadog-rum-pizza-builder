@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OTel Browser Lab · RUM Labs</title>
-<meta name="description" content="An experimental lab exploring standard OpenTelemetry browser instrumentation as an alternative to the Datadog RUM SDK — logs-only, static, no backend required.">
+<meta name="description" content="An experimental lab exploring standard OpenTelemetry browser instrumentation as an alternative to the Datadog RUM SDK — logs and traces from one startBrowserSdk() call, no backend required.">
 <meta name="author" content="Kyle Taylor">
 <meta name="robots" content="index, follow">
 <meta name="lab-repo" content="%%GITHUB_REPO%%">
@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Datadog RUM Labs">
 <meta property="og:title" content="OTel Browser Lab · RUM Labs">
-<meta property="og:description" content="An experimental lab exploring standard OpenTelemetry browser instrumentation as an alternative to the Datadog RUM SDK — logs-only, static, no backend required.">
+<meta property="og:description" content="An experimental lab exploring standard OpenTelemetry browser instrumentation as an alternative to the Datadog RUM SDK — logs and traces from one startBrowserSdk() call, no backend required.">
 <meta property="og:url" content="%%PAGES_URL%%/otel-rum-lab/">
 <meta property="og:image" content="%%PAGES_URL%%/assets/og/otel-rum-lab.jpg">
 <meta property="og:image:width" content="1200">
@@ -25,12 +25,15 @@
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="OTel Browser Lab · RUM Labs">
-<meta name="twitter:description" content="An experimental lab exploring standard OpenTelemetry browser instrumentation as an alternative to the Datadog RUM SDK — logs-only, static, no backend required.">
+<meta name="twitter:description" content="An experimental lab exploring standard OpenTelemetry browser instrumentation as an alternative to the Datadog RUM SDK — logs and traces from one startBrowserSdk() call, no backend required.">
 <meta name="twitter:image" content="%%PAGES_URL%%/assets/og/otel-rum-lab.jpg">
 <meta name="twitter:image:alt" content="The pizza wizard instrumented with OpenTelemetry, with OTel log records in the docked log">
 
 
 <link rel="icon" type="image/svg+xml" href="../assets/icons/radar.svg">
+<!-- No Datadog SDK on this page: config.js is only read for the shared
+     application ID, client token, site, version and env. -->
+<script src="../config.js"></script>
 <link rel="stylesheet" href="../druids-tokens.css">
 <link rel="stylesheet" href="../tokens-dark-hc.css">
 <link rel="stylesheet" href="../tokens.css">
@@ -50,8 +53,9 @@
   /* ===== OTel lab — page-specific rules only. The wizard, cards, switch and
      docked log live in ../lab-shared.css. ===== */
   .export-card { max-width: 560px; }
-  #export-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  #export-form .input { flex: 1 1 200px; }
+  #export-form { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+  #export-form .field { display: flex; flex-direction: column; gap: 4px; align-self: stretch; }
+  #export-form .field[hidden] { display: none; }
   .field-label { font-size: var(--dd-text-s); font-weight: 600; }
 </style>
 </head>
@@ -166,12 +170,28 @@
   <section class="tab-panel" id="tab-config" data-tab="config" data-tab-label="Config">
     <div class="card export-card">
       <div class="card-title">Send events to Datadog</div>
-      <p class="muted">Off by default, so this page works with zero backend. Export goes through a local proxy that forwards OTel requests to Datadog. See the <a href="https://github.com/kyletaylored/datadog-rum-pizza-builder/blob/main/otel-rum-lab/proxy/server.js" target="_blank" rel="noopener">example proxy</a>.</p>
+      <p class="muted">Off by default, so nothing leaves the browser. <strong>Direct</strong> sends both signals to Datadog's OTLP intake, with the RUM client token as <code>dd-api-key</code>. <strong>Proxy</strong> goes through a local relay that adds the key server-side (see the <a href="https://github.com/kyletaylored/datadog-rum-pizza-builder/blob/main/otel-rum-lab/proxy/server.js" target="_blank" rel="noopener">example proxy</a>).</p>
       <form id="export-form" onsubmit="applyExportSettings(event)">
-        <label class="visually-hidden" for="proxy-url-input">Proxy URL</label>
-        <input class="input input--mono" type="url" id="proxy-url-input" placeholder="http://localhost:8791">
-        <button type="submit" class="btn btn--primary"><span class="icon icon--14" data-icon="plug"></span>Connect</button>
-        <button type="button" class="btn" onclick="disconnectExport()" title="Disconnects the proxy — nothing will be sent to Datadog"><span class="icon icon--14" data-icon="unplug"></span>Disconnect</button>
+        <div class="seg" role="group" aria-label="Export mode">
+          <button type="button" class="seg-btn" data-mode="off" aria-pressed="true" onclick="setExportMode('off')">Off</button>
+          <button type="button" class="seg-btn" data-mode="direct" aria-pressed="false" onclick="setExportMode('direct')">Direct</button>
+          <button type="button" class="seg-btn" data-mode="proxy" aria-pressed="false" onclick="setExportMode('proxy')">Proxy</button>
+        </div>
+        <label class="field" id="proxy-field">
+          <span class="field-label">Proxy URL</span>
+          <input class="input input--mono" type="url" id="proxy-url-input" placeholder="http://localhost:8791">
+        </label>
+        <label class="field export-endpoint">
+          <span class="field-label">Traces endpoint <span class="muted">(optional override)</span></span>
+          <input class="input input--mono" type="url" id="traces-url-input">
+        </label>
+        <label class="field export-endpoint">
+          <span class="field-label">Logs endpoint <span class="muted">(optional override)</span></span>
+          <input class="input input--mono" type="url" id="logs-url-input">
+        </label>
+        <div class="btn-row">
+          <button type="submit" class="btn btn--primary"><span class="icon icon--14" data-icon="plug"></span>Apply</button>
+        </div>
       </form>
       <label class="switch">
         <input type="checkbox" role="switch" id="console-toggle" checked onchange="document.getElementById('export-form').requestSubmit()">
@@ -183,7 +203,7 @@
 
     <div class="section-head">
       <h3 class="section-title">Active configuration</h3>
-      <p>The pipeline as the bundle actually built it for your current settings: which processors and exporters every log record passes through, the instrumentations registered, and the resource attributes stamped on every record.</p>
+      <p>The pipeline as the bundle actually built it for your current settings: the endpoint each signal exports to, which processors every log record and span passes through, the instrumentations registered, and the resource attributes stamped on everything.</p>
     </div>
     <div class="code-grid">
       <div class="code-panel"><div class="eyebrow">Pipeline</div><pre><code id="config-json"></code></pre></div>
@@ -195,54 +215,79 @@
 
 <div id="lab-guide" hidden>
   <div class="guide-intro">
-    <p>What happens if you send browser telemetry to Datadog using only standard <strong>OpenTelemetry</strong> — no RUM SDK? This lab runs the real thing: <code>@opentelemetry/browser-instrumentation</code> + <code>sdk-logs</code>, against the same pizza wizard.</p>
+    <p>What happens if you send browser telemetry to Datadog using only standard <strong>OpenTelemetry</strong> — no RUM SDK? This lab runs the real thing: <code>@opentelemetry/browser-sdk</code> + <code>@opentelemetry/browser-instrumentation</code>, against the same pizza wizard.</p>
   </div>
 
-  <article class="guide-topic" data-tag="Pattern" data-title="Browser → logs → table → optional export">
-    <p>Everything on this page is <strong>log-based</strong>, not span-based — no <code>sdk-trace-web</code>, no Zone.js. Every log flows through a <code>LogRecordProcessor</code> that feeds the live table below, the same role the RUM SDK's <code>beforeSend</code> plays in the main demo.</p>
-    <p>Sending to Datadog is <strong>off by default</strong> — this page never holds an API key. Turn it on from the <strong>Config</strong> tab.</p>
+  <article class="guide-topic" data-tag="Start" data-title="One SDK call, two signals">
+    <p><code>startBrowserSdk()</code> starts a logs pipeline and a traces pipeline. Most instrumentations emit <strong>log records</strong>; <code>fetch</code> and <code>xhr</code> emit <strong>spans</strong>. Each signal has its own <code>exportConfig.url</code>, so traces and logs can go to different endpoints.</p>
+    <pre>startBrowserSdk({
+  serviceName: 'datadog-rum-pizza-otlp',
+  serviceVersion: cfg.version,
+  resourceAttributes: {
+    'datadog.application.id': cfg.applicationId,
+  },
+  traces: {
+    processors: [sessionSpans, documentSpans, liveTable],
+    exportConfig: { url: 'https://otlp.&lt;site&gt;/v1/traces?dd-api-key=&lt;client token&gt;' },
+  },
+  logs: {
+    processors: [sessionLogs, documentLogs, liveTable],
+    exportConfig: { url: 'https://otlp.&lt;site&gt;/api/v2/otlplogs?dd-api-key=&lt;client token&gt;' },
+  },
+});</pre>
+    <p>Sending to Datadog is <strong>off by default</strong>. Turn it on from the <strong>Config</strong> tab.</p>
   </article>
 
   <article class="guide-topic" data-tag="Auto" data-title="What's auto-instrumented">
-    <p>Six modules from the official <a href="https://github.com/open-telemetry/opentelemetry-browser" target="_blank" rel="noopener"><code>opentelemetry-browser</code></a> package, no hand-rolled code:</p>
+    <p>The official <a href="https://github.com/open-telemetry/opentelemetry-browser/blob/main/sandbox/src/otel.ts" target="_blank" rel="noopener">sandbox</a>'s instrumentation list and options, plus navigation and console. No hand-rolled code:</p>
     <div class="compare-table-wrap">
       <table class="compare-table">
         <thead><tr><th>Behavior</th><th>Event name</th></tr></thead>
         <tbody>
           <tr><td>Hash / URL change</td><td><code>browser.navigation</code></td></tr>
           <tr><td>Any click</td><td><code>browser.user_action.click</code></td></tr>
-          <tr><td>Page load timing</td><td><code>browser.web_vital</code></td></tr>
+          <tr><td>Page load timing</td><td><code>browser.navigation_timing</code></td></tr>
+          <tr><td>Core Web Vitals, with attribution</td><td><code>browser.web_vital</code></td></tr>
           <tr><td>Resource loads</td><td><code>browser.resource_timing</code></td></tr>
           <tr><td>Uncaught errors</td><td><code>exception</code></td></tr>
           <tr><td><code>console.warn/error</code></td><td><code>browser.console</code></td></tr>
+          <tr><td><code>fetch</code> / XHR calls</td><td>client span, <code>traceparent</code> header (contrib <code>instrumentation-fetch</code> / <code>-xml-http-request</code>)</td></tr>
         </tbody>
       </table>
     </div>
   </article>
 
   <article class="guide-topic" data-tag="Live table" data-title="The beforeSend equivalent">
-    <p>A <code>LogRecordProcessor</code> registered ahead of the OTLP exporter renders every log into the table below before it's exported — the OpenTelemetry version of the RUM SDK's <code>beforeSend</code>.</p>
-    <p>Every log also prints to devtools via <code>ConsoleLogRecordExporter</code> — the same one the <a href="https://opentelemetry.io/docs/languages/js/getting-started/browser/" target="_blank" rel="noopener">official getting-started guide</a> uses. Toggle it from the Config tab.</p>
+    <p>A <code>LogRecordProcessor</code> and a <code>SpanProcessor</code> registered ahead of the OTLP exporters render every log and finished span into the table below before it's exported — the OpenTelemetry version of the RUM SDK's <code>beforeSend</code>. The SDK's session and document processors run first and stamp <code>session.id</code> and <code>browser.document.url.full</code> (the page the event happened on, hash included) on both.</p>
+    <p>Every log and span also prints to devtools via <code>ConsoleLogRecordExporter</code> / <code>ConsoleSpanExporter</code> — the same one the <a href="https://opentelemetry.io/docs/languages/js/getting-started/browser/" target="_blank" rel="noopener">official getting-started guide</a> uses. Toggle it from the Config tab.</p>
   </article>
 
-  <article class="guide-topic" data-tag="Export" data-title="Why there's a proxy at all">
-    <p>Datadog's OTLP intake has no CORS support at all — confirmed by probing the preflight response directly, every combination comes back with zero <code>Access-Control-*</code> headers. A browser can never call it directly, so this page talks to your own small local proxy instead (server-to-server, no CORS involved).</p>
-    <p>The key the proxy holds doesn't need to be a separate Datadog API key — the RUM app's own public <code>clientToken</code> works fine in that slot, confirmed by testing. Wire it up from the <strong>Config</strong> tab.</p>
+  <article class="guide-topic" data-tag="Export" data-title="Direct, proxy, or a separate trace endpoint">
+    <p><strong>Direct</strong> sends from the browser to <code>otlp.&lt;site&gt;</code>, with the RUM app's public client token in the <code>dd-api-key</code> query parameter (a header would add a CORS preflight to every export). It only works if the intake answers the browser's CORS check for this origin. Check devtools › Network for the <code>v1/traces</code> and <code>otlplogs</code> requests.</p>
+    <p><strong>Proxy</strong> sends to a local relay (<code>npm run proxy</code>) that adds the key server-side, so CORS never applies. In either mode, the traces and logs fields override one signal's endpoint, for example to send traces to your own collector. An override URL that already has a <code>dd-api-key</code> keeps it.</p>
   </article>
 
-  <article class="guide-topic" data-tag="Limits" data-title="What's not included">
-    <p>The same package also ships <code>fetch</code>/<code>xhr</code> instrumentations, but those two create <strong>spans</strong>, not logs — they'd need a full trace pipeline (<code>sdk-trace-web</code>) to do anything, which reverses the bundle-size tradeoff this lab is built around. Left out on purpose.</p>
-    <p>The "Fake backend call" button on the results screen still shows up via <code>browser.resource_timing</code> — just without trace correlation.</p>
+  <article class="guide-topic" data-tag="Datadog" data-title="Where it shows up in Datadog">
+    <p>Exported log records become <strong>RUM events</strong>, not logs. In RUM Explorer, query <code>service:datadog-rum-pizza-otlp</code>: each page load is one session and one view, with actions, resources and vitals under it.</p>
+    <p><code>view.url</code> is <code>browser.document.url.full</code>, and <code>view.name</code> is its path. A hash change updates <code>view.url</code> on later events but doesn't start a new view. Without <code>datadog.application.id</code> or <code>session.id</code>, the same records land in Log Explorer instead.</p>
+    <p>Measured on 2026-11-04 by removing one piece at a time. The minimum: logs exported to <code>/api/v2/otlplogs</code> with the client token, plus these three attributes.</p>
+    <pre>resourceAttributes: { 'datadog.application.id': applicationId },
+logs: {
+  processors: [
+    createSessionLogRecordProcessor(sessionManager),     // session.id
+    createDocumentLogRecordProcessor(documentProvider),  // browser.document.url.full
+  ],
+  exportConfig: { url: 'https://otlp.&lt;site&gt;/api/v2/otlplogs?dd-api-key=&lt;client token&gt;' },
+},</pre>
+  </article>
+
+  <article class="guide-topic" data-tag="Devtools" data-title="Following one request">
+    <p>"Fake backend call" on the results screen gives two rows: a <strong>span</strong> row from the fetch instrumentation (status, duration, trace ID) and a <code>browser.resource_timing</code> row for the same request.</p>
+    <p><code>propagateTraceHeaderCorsUrls: [/.*/]</code> adds the span's <code>traceparent</code> header to every cross-origin request, so the server has to allow it in its CORS preflight. <code>httpbin.org</code> does. In devtools › Network, its response body echoes the header back, with the same trace ID as the row.</p>
   </article>
 </div>
 
 <script>
-  window.__OTEL_LAB_CONFIG__ = {
-    // Templated by `npm run build` (scripts/build.js) from the same DD_APP_ID
-    // the root app's config.js gets — not a separate hardcoded copy that
-    // could drift from it.
-    applicationId: "%%DD_APP_ID%%",
-  };
   window.LAB_PAGE = {
     id: 'otel',
     log: {
@@ -254,7 +299,7 @@
       { id: 'otel', label: 'OTel SDK loading…', state: 'other' },
       { id: 'export', label: 'Export to Datadog: off', state: 'other' },
     ],
-    sdk: 'OpenTelemetry JS · logs only',
+    sdk: 'OpenTelemetry browser SDK · logs + traces',
   };
 </script>
 <script src="../lab-shared.js"></script>

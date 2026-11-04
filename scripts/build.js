@@ -118,8 +118,8 @@ writeFileSync(
 const substitutions = {
   "%%PAGES_URL%%": pagesUrl(),
   "%%GITHUB_REPO%%": githubRepoUrl(),
-  // otel-rum-lab never loads config.js but stamps datadog.application.id on
-  // every event — same app, same source, so the two never drift apart.
+  // For pages that need the application ID but don't load config.js — same
+  // app, same source, so the two never drift apart.
   ...(creds && { "%%DD_APP_ID%%": creds.applicationId }),
 };
 

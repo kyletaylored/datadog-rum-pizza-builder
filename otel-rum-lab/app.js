@@ -1,8 +1,8 @@
 /**
  * app.js — page UI for the OTel lab: the pizza wizard, the live event feed,
  * and the export/proxy config form. Loaded BEFORE dist/bundle.js (see
- * index.html) so window.otelLab.logEvent already exists by the time the OTel
- * pipeline starts emitting events. The shell (tabs, guide, docked log,
+ * index.html) so window.otelLab.logEvent / logSpan already exist by the time
+ * the OTel pipeline starts emitting events. The shell (tabs, guide, docked log,
  * status bar) is ../lab-shared.js.
  *
  * Mirrors ../pizza-builder-lab/app.js's wizard so this lab reads as the
@@ -111,9 +111,9 @@ function restart() {
 }
 
 function fakeBackendCall() {
-  // ResourceTimingInstrumentation observes this passively via the Resource
-  // Timing API and logs it — no fetch wrapping needed. Real trace
-  // correlation isn't wired up in this lab; see README.md.
+  // Shows up twice: FetchInstrumentation wraps it in a client span (and adds
+  // a traceparent header, which httpbin echoes back), and
+  // ResourceTimingInstrumentation logs its timing entry.
   fetch('https://httpbin.org/get').catch(() => {});
 }
 
@@ -126,6 +126,7 @@ const BUCKET_BY_EVENT = {
   'browser.user_action.click': 'user_action',
   'browser.resource_timing': 'resource',
   'browser.web_vital': 'vital',
+  'browser.navigation_timing': 'vital',
   exception: 'error',
   'browser.console': 'error',
 };
@@ -161,6 +162,12 @@ function getColValues(eventName, attrs) {
       const dur = attrs['browser.resource_timing.duration'];
       return [path, dur != null ? `${Math.round(dur)}ms` : '—'];
     }
+    case 'browser.navigation_timing': {
+      let path = attrs['url.full'] || '—';
+      try { path = new URL(path).pathname; } catch { /* keep raw value */ }
+      const dur = attrs['browser.resource_timing.duration'];
+      return [`page load ${path}`, `${dur != null ? `${Math.round(dur)}ms` : '—'} (${attrs['browser.navigation_timing.type'] || '—'})`];
+    }
     case 'browser.web_vital':
       return [attrs['browser.web_vital.name'] || '—', `${Math.round(attrs['browser.web_vital.value'] ?? 0)} (${attrs['browser.web_vital.rating'] || '—'})`];
     case 'exception':
@@ -190,20 +197,32 @@ window.otelLab.logEvent = function logEvent(logRecord) {
   LabLog.add({ c1: time, type: bucketFor(eventName), c3: a, c4: b, title: eventName });
 };
 
+// Finished spans from the fetch/XHR instrumentations (LiveTableSpanProcessor
+// in src/main.js). Same "resource" filter as their resource-timing rows,
+// badged "span" so the two are told apart.
+window.otelLab.logSpan = function logSpan(span) {
+  const attrs = span.attributes || {};
+  let path = attrs['url.full'] || span.name;
+  try { path = new URL(path).pathname; } catch { /* keep raw value */ }
+  const [s, ns] = span.duration || [0, 0];
+  const ms = Math.round(s * 1e3 + ns / 1e6);
+  const status = attrs['http.response.status_code'] ?? attrs['error.type'] ?? '—';
+  const traceId = span.spanContext().traceId.slice(0, 8);
+  const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  LabLog.add({
+    c1: time, type: 'resource', label: 'span',
+    c3: `${attrs['http.request.method'] || ''} ${path}`.trim(),
+    c4: `${status} · ${ms}ms · trace ${traceId}…`,
+    title: span.name,
+  });
+};
+
 /* ============================================================
-   Export config — your own local proxy only. Two other modes used to
-   live here:
-     - "straight from the browser, no relay at all" — removed because
-       Datadog's OTLP intake has no CORS support at all, confirmed
-       empirically (every attempt failed with a CORS preflight error and
-       retried forever in the background with zero visible feedback).
-     - corsproxy.io, a third-party relay — worked correctly (verified
-       request shape matched their docs), but their `reqHeaders` param
-       (needed to forward dd-api-key) is gated to a paid plan, confirmed
-       by their own 403 response body. Removed in favor of just running
-       the proxy, which needs no third party or billing plan at all.
-   This one-time cleanup clears any leftover credentials either mode may
-   have saved into sessionStorage.
+   Export config. Every setting lives in the URL (see resolveExport() in
+   src/main.js), so Apply reloads the page and the bundle starts once with
+   the new pipeline. Two modes were tried and removed earlier: relaying
+   through corsproxy.io (forwarding dd-api-key needs their paid plan) and a
+   pasted API key kept in sessionStorage. This clears anything either left.
    ============================================================ */
 sessionStorage.removeItem('otelLabDirectEndpoint');
 sessionStorage.removeItem('otelLabDirectApiKey');
@@ -211,33 +230,47 @@ sessionStorage.removeItem('otelLabCorsProxyEndpoint');
 sessionStorage.removeItem('otelLabCorsProxyKey');
 sessionStorage.removeItem('otelLabCorsProxyDdKey');
 
-function currentExportParams() {
-  const params = new URLSearchParams(location.search);
-  return { proxy: params.get('proxy') || '', consoleOff: params.get('console') === '0' };
+const EXPORT_LABELS = { off: 'off', direct: 'direct', proxy: 'via proxy' };
+let exportMode = 'off';
+
+function setExportMode(mode) {
+  exportMode = mode;
+  document.querySelectorAll('#export-form .seg-btn').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+  document.getElementById('proxy-field').hidden = mode !== 'proxy';
+  document.querySelectorAll('#export-form .export-endpoint').forEach((f) => { f.hidden = mode === 'off'; });
+  const site = window.otelLab?.config?.site || 'datadoghq.com';
+  const proxy = document.getElementById('proxy-url-input').value.trim().replace(/\/+$/, '') || 'http://localhost:8791';
+  document.getElementById('traces-url-input').placeholder = mode === 'proxy' ? `${proxy}/v1/traces` : `https://otlp.${site}/v1/traces`;
+  document.getElementById('logs-url-input').placeholder = mode === 'proxy' ? `${proxy}/v1/logs` : `https://otlp.${site}/api/v2/otlplogs`;
 }
 
 function renderExportStatus() {
-  const { proxy, consoleOff } = currentExportParams();
+  const params = new URLSearchParams(location.search);
+  const cfg = window.otelLab?.config;
+  const mode = cfg?.export || 'off';
   const pill = document.getElementById('export-status-pill');
-  const input = document.getElementById('proxy-url-input');
-  const consoleToggle = document.getElementById('console-toggle');
 
-  if (proxy) {
-    pill.textContent = `via your proxy → ${proxy}`;
-    pill.className = 'pill pill--success';
-  } else {
+  document.getElementById('proxy-url-input').value = params.get('proxy') || '';
+  document.getElementById('traces-url-input').value = params.get('traces') || '';
+  document.getElementById('logs-url-input').value = params.get('logs') || '';
+  document.getElementById('console-toggle').checked = params.get('console') !== '0';
+  setExportMode(mode);
+
+  if (cfg?.invalidConfig) {
+    pill.textContent = 'invalid endpoint URL — the SDK did not start';
+    pill.className = 'pill pill--danger';
+  } else if (mode === 'off') {
     pill.textContent = 'static mode — nothing leaves the browser';
     pill.className = 'pill';
+  } else {
+    pill.textContent = `${EXPORT_LABELS[mode]} → traces and logs`;
+    pill.className = 'pill pill--success';
   }
-  LabStatus.set('export', `Export to Datadog: ${proxy ? 'on' : 'off'}`, proxy ? 'success' : 'other');
-  input.value = proxy;
-  consoleToggle.checked = !consoleOff;
+  LabStatus.set('export', `Export to Datadog: ${EXPORT_LABELS[mode]}`, mode === 'off' ? 'other' : 'success');
 
-  // Restore the Config tab after the reload these buttons trigger, so the
-  // status change above is the first thing visible instead of the wizard.
-  if (new URLSearchParams(location.search).get('tab') === 'config') {
-    LabShell.showTab('config');
-  }
+  // Restore the Config tab after the reload Apply triggers, so the status
+  // change above is the first thing visible instead of the wizard.
+  if (params.get('tab') === 'config') LabShell.showTab('config');
 }
 
 // The pipeline as src/main.js built it (window.otelLab.config), not a
@@ -245,32 +278,35 @@ function renderExportStatus() {
 function renderConfig() {
   const cfg = window.otelLab?.config;
   LabShell.renderJson(document.getElementById('config-json'), cfg
-    ? { applicationId: cfg.applicationId, processors: cfg.processors, otlpEndpoint: cfg.otlpEndpoint, instrumentations: cfg.instrumentations }
+    ? { export: cfg.export, endpoints: cfg.endpoints, processors: cfg.processors, instrumentations: cfg.instrumentations }
     : { status: 'the OTel bundle did not load' });
   LabShell.renderJson(document.getElementById('config-resource-json'), cfg ? cfg.resource : {});
 }
 
 function applyExportSettings(event) {
   event.preventDefault();
-  const url = document.getElementById('proxy-url-input').value.trim();
-  const consoleChecked = document.getElementById('console-toggle').checked;
   const params = new URLSearchParams();
-  if (url) params.set('proxy', url);
-  if (!consoleChecked) params.set('console', '0');
+  const value = (id) => document.getElementById(id).value.trim();
+  // ?site= has no field; keep it if it was set by hand.
+  const site = new URLSearchParams(location.search).get('site');
+  if (site) params.set('site', site);
+  if (exportMode !== 'off') {
+    params.set('export', exportMode);
+    if (exportMode === 'proxy' && value('proxy-url-input')) params.set('proxy', value('proxy-url-input'));
+    if (value('traces-url-input')) params.set('traces', value('traces-url-input'));
+    if (value('logs-url-input')) params.set('logs', value('logs-url-input'));
+  }
+  if (!document.getElementById('console-toggle').checked) params.set('console', '0');
   params.set('tab', 'config');
   location.search = params.toString();
-}
-
-function disconnectExport() {
-  document.getElementById('proxy-url-input').value = '';
-  applyExportSettings({ preventDefault() {} });
 }
 
 // The bundle has run by DOMContentLoaded (it's a classic script after this
 // one), so whether the pipeline exists is known by then.
 document.addEventListener('DOMContentLoaded', function () {
-  const ready = !!window.otelLab?.submitOrder;
-  LabStatus.set('otel', ready ? 'OTel SDK ready' : 'OTel SDK not loaded', ready ? 'success' : 'danger');
+  const cfg = window.otelLab?.config;
+  const ready = !!cfg && !cfg.invalidConfig;
+  LabStatus.set('otel', ready ? 'OTel SDK ready' : cfg ? 'OTel SDK: invalid config' : 'OTel SDK not loaded', ready ? 'success' : 'danger');
   renderExportStatus();
   renderConfig();
 });

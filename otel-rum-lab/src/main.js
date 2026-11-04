@@ -1,143 +1,233 @@
 import { logs } from "@opentelemetry/api-logs";
-import { registerInstrumentations } from "@opentelemetry/instrumentation";
+import { startBrowserSdk } from "@opentelemetry/browser-sdk";
+import { createSessionLogRecordProcessor, createSessionSpanProcessor } from "@opentelemetry/browser-sdk/session";
 import {
-  LoggerProvider,
-  BatchLogRecordProcessor,
-  SimpleLogRecordProcessor,
-  ConsoleLogRecordExporter,
-} from "@opentelemetry/sdk-logs";
-import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
-import { resourceFromAttributes } from "@opentelemetry/resources";
-import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
+  createDocumentLogRecordProcessor,
+  createDocumentSpanProcessor,
+  createLocationDocumentProvider,
+} from "@opentelemetry/browser-sdk/document";
+import { SimpleLogRecordProcessor, ConsoleLogRecordExporter } from "@opentelemetry/sdk-logs";
+import { SimpleSpanProcessor, ConsoleSpanExporter } from "@opentelemetry/sdk-trace";
 
 import { NavigationInstrumentation } from "@opentelemetry/browser-instrumentation/experimental/navigation";
+import { NavigationTimingInstrumentation } from "@opentelemetry/browser-instrumentation/experimental/navigation-timing";
 import { UserActionInstrumentation } from "@opentelemetry/browser-instrumentation/experimental/user-action";
 import { ErrorsInstrumentation } from "@opentelemetry/browser-instrumentation/experimental/errors";
 import { WebVitalsInstrumentation } from "@opentelemetry/browser-instrumentation/experimental/web-vitals";
 import { ResourceTimingInstrumentation } from "@opentelemetry/browser-instrumentation/experimental/resource-timing";
 import { ConsoleInstrumentation } from "@opentelemetry/browser-instrumentation/experimental/console";
-// Deliberately not using this package's fetch/xhr instrumentations: unlike
-// everything else here, those two are span-based (they call
-// tracer.startSpan(), not logger.emit()) and need a full trace pipeline
-// (a TracerProvider registered via trace.setGlobalTracerProvider) to do
-// anything — without one they're silent no-ops. That's a real capability
-// gap in a logs-only setup, not a bug: network-call tracing here would need
-// @opentelemetry/sdk-trace-web on top, which is the exact bundle-size
-// tradeoff this lab is intentionally avoiding for the default page. See
-// PLAN.md for that as a documented, optional follow-up rather than default
-// behavior.
+// Span-based: these two call tracer.startSpan(), so they only do anything
+// because startBrowserSdk() below also starts the traces SDK (a global
+// TracerProvider, propagators and a context manager). The opentelemetry-js
+// contrib packages rather than browser-instrumentation's own experimental
+// fetch/xhr, matching the official sandbox (opentelemetry-browser/sandbox/
+// src/otel.ts) — only these have clearTimingResources.
+import { FetchInstrumentation } from "@opentelemetry/instrumentation-fetch";
+import { XMLHttpRequestInstrumentation } from "@opentelemetry/instrumentation-xml-http-request";
 
-import { LiveTableLogProcessor } from "./live-table.js";
+import { LiveTableLogProcessor, LiveTableSpanProcessor } from "./live-table.js";
 import { initSession, getSessionId, endSession } from "./session.js";
 
 // ---------------------------------------------------------------------
-// Everything here is log-based (no spans, no sdk-trace-web, no context-zone
-// / zone.js). @opentelemetry/browser-instrumentation is a real npm package
-// (github.com/open-telemetry/opentelemetry-browser) that emits stock
-// OpenTelemetry log events for navigation, clicks, errors, web vitals, and
-// fetch calls — no hand-rolled auto-instrumentation needed for any of that.
+// One startBrowserSdk() call (github.com/open-telemetry/opentelemetry-browser)
+// sets up both signals: a LoggerProvider for the log-based instrumentations
+// (navigation, clicks, errors, web vitals, resource timing, console) and a
+// TracerProvider for the span-based fetch/xhr ones.
 // ---------------------------------------------------------------------
 
-// The OTLP export target is optional and *off* by default so this page
-// works standalone on a static host (e.g. GitHub Pages) with zero backend.
-// The live event table below works purely client-side either way. Turned
-// on via ?proxy= in the URL, set from the Config tab (see app.js) — a
-// local proxy is the only supported path.
-//
-// Two other modes used to live here: a "straight from the browser, no
-// relay at all" mode (removed — Datadog's OTLP intake has no CORS
-// support at all, confirmed empirically), and relaying through
-// corsproxy.io (removed — worked, but forwarding dd-api-key needs their
-// paid-plan-gated `reqHeaders` parameter, confirmed by their own 403).
-// Just running the proxy needs no third party or billing plan at all.
+// Same shared settings every other lab reads (../config.js).
+const cfg = window.DD_CONFIG || {};
 const params = new URLSearchParams(location.search);
-const PROXY_BASE = params.get("proxy") || window.__OTEL_LAB_CONFIG__?.proxyBase || null;
-const DD_APPLICATION_ID = window.__OTEL_LAB_CONFIG__?.applicationId ?? "UNSET";
 
-const resource = resourceFromAttributes({
-  [ATTR_SERVICE_NAME]: "datadog-rum-pizza-otlp",
-  "telemetry.sdk.language": "webjs",
-});
+const SERVICE_NAME = "datadog-rum-pizza-otlp";
+const SITE = params.get("site") || cfg.site || "datadoghq.com";
 
-// ConsoleLogRecordExporter (from @opentelemetry/sdk-logs) is the same
-// exporter the official getting-started guide uses — every log also prints
-// to devtools via console.dir(), independent of and in addition to the
-// on-page live table. Uses console.dir(), which ConsoleInstrumentation below
-// doesn't patch (it only wraps log/warn/error/info/debug), so this can't
-// feed back into itself. Opt out with ?console=0.
-const processors = [new LiveTableLogProcessor()];
-// What each processor is, in words, for the Config tab (app.js) — built
-// alongside the processors so it can't describe a pipeline that isn't there.
-const processorNames = ["LiveTableLogProcessor"];
-if (params.get("console") !== "0") {
-  processors.push(new SimpleLogRecordProcessor(new ConsoleLogRecordExporter()));
-  processorNames.push("SimpleLogRecordProcessor → ConsoleLogRecordExporter");
-}
-if (PROXY_BASE) {
-  processors.push(
-    new BatchLogRecordProcessor({ exporter: new OTLPLogExporter({ url: `${PROXY_BASE}/v1/logs` }) })
-  );
-  processorNames.push("BatchLogRecordProcessor → OTLPLogExporter");
+// Export is off by default so the page works standalone with nothing
+// leaving the browser. Set from the Config tab (app.js) via the URL:
+//   ?export=direct            → straight to Datadog's OTLP intake, with the
+//                               RUM client token as dd-api-key
+//   ?export=proxy&proxy=<url> → through your own proxy (proxy/server.js),
+//                               which injects the key server-side
+//   ?traces=<url> / ?logs=<url> override either signal's endpoint in
+//                               either mode, e.g. to send traces elsewhere
+// A bare ?proxy=<url> (the old form) still means proxy mode.
+function resolveExport() {
+  const proxy = params.get("proxy") || "";
+  const mode = params.get("export") || (proxy ? "proxy" : "off");
+  if (mode === "off" || (mode === "proxy" && !proxy)) return { mode: "off", traces: null, logs: null };
+
+  const base = mode === "proxy" ? proxy.replace(/\/+$/, "") : `https://otlp.${SITE}`;
+  const traces = params.get("traces") || `${base}/v1/traces`;
+  const logs = params.get("logs") || (mode === "proxy" ? `${base}/v1/logs` : `${base}/api/v2/otlplogs`);
+  return mode === "direct"
+    ? { mode, traces: withClientToken(traces), logs: withClientToken(logs) }
+    : { mode, traces, logs };
 }
 
-const loggerProvider = new LoggerProvider({ resource, processors });
-logs.setGlobalLoggerProvider(loggerProvider);
+// The client token goes in the query string, not a header: a custom header
+// would force a CORS preflight on every export. An override URL that already
+// carries its own dd-api-key (e.g. another org's token) is left alone.
+function withClientToken(url) {
+  try {
+    const u = new URL(url);
+    if (!u.searchParams.has("dd-api-key")) u.searchParams.set("dd-api-key", cfg.clientToken || "");
+    return u.href;
+  } catch {
+    return url; // invalid — startBrowserSdk rejects it and reports invalidConfig
+  }
+}
 
+// For the Config tab: the endpoint as the exporter uses it, token masked.
+function maskKey(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    const key = u.searchParams.get("dd-api-key");
+    if (key) u.searchParams.set("dd-api-key", `${key.slice(0, 6)}…`);
+    return decodeURI(u.href);
+  } catch {
+    return url;
+  }
+}
+
+const target = resolveExport();
+const consoleOn = params.get("console") !== "0";
+
+// Exports to the intake (or the proxy) are themselves fetch/xhr calls the
+// instrumentations would capture, and the capture would be exported in the
+// next batch — a self-feeding trickle for as long as the tab is open.
+const EXPORT_URLS = [/\/v1\/(logs|traces)(\?|$)/, /\/api\/v2\/otlplogs(\?|$)/, target.traces, target.logs].filter(Boolean);
+
+// The official sandbox's instrumentation list and options
+// (opentelemetry-browser/sandbox/src/otel.ts), plus NavigationInstrumentation
+// and ConsoleInstrumentation, which the sandbox doesn't register.
 const instrumentations = [
-  new NavigationInstrumentation(),
-  new UserActionInstrumentation(),
   new ErrorsInstrumentation(),
-  new WebVitalsInstrumentation(),
+  new NavigationInstrumentation(),
+  new NavigationTimingInstrumentation(),
   new ResourceTimingInstrumentation({
-    // Two fixes borrowed from the official sandbox
-    // (opentelemetry-browser/tree/main/sandbox), which hits the same two
-    // problems and solves them at the source instead of at display time:
-    //   - initiatorTypes: only fetch/xhr calls are "real" network activity
-    //     worth a row. Without this, every static asset load (stylesheets,
-    //     fonts, icons) gets captured — and, once export is on, actually
-    //     shipped to Datadog, not just shown in the table. app.js's own
-    //     isLoggableResourceTiming filter only ever hid them from the UI.
-    //   - ignoreUrls: without this, exporting a batch to our own proxy is
-    //     itself a fetch the instrumentation captures, which gets exported
-    //     in the next batch, which gets captured again — a self-feeding
-    //     trickle for as long as the tab stays open with export on.
+    // Not in the sandbox: only fetch/xhr calls are "real" network activity
+    // worth a row. Without this, every static asset load (stylesheets,
+    // fonts, icons) gets captured and, once export is on, shipped.
     initiatorTypes: ["fetch", "xmlhttprequest"],
-    ignoreUrls: [/\/v1\/logs$/, /\/v1\/traces$/],
+    ignoreUrls: EXPORT_URLS,
   }),
+  new UserActionInstrumentation(),
+  // Adds the web-vitals library's attribution object (which element, which
+  // interaction, which resource) as the log record body.
+  new WebVitalsInstrumentation({ includeRawAttribution: true }),
   // Restricted to warn/error so this doesn't flood the live table with
   // routine console.log noise from the page or its dependencies.
   new ConsoleInstrumentation({ logMethods: ["warn", "error"] }),
+  // traceparent goes on every cross-origin request, as in the sandbox. The
+  // server still has to allow the header in its CORS preflight; httpbin.org
+  // (the "Fake backend call" button) does, and echoes it back.
+  // clearTimingResources drops each request's Resource Timing entry once
+  // the span has read it, so the buffer doesn't fill up on a long session.
+  new FetchInstrumentation({
+    propagateTraceHeaderCorsUrls: [/.*/],
+    clearTimingResources: true,
+    ignoreUrls: EXPORT_URLS,
+  }),
+  new XMLHttpRequestInstrumentation({
+    propagateTraceHeaderCorsUrls: [/.*/],
+    ignoreUrls: EXPORT_URLS,
+  }),
 ];
-registerInstrumentations({ instrumentations });
 
-const logger = logs.getLogger("datadog-rum-pizza-otlp");
+// The page every event happened on, as browser.document.url.full: read from
+// location.href at emit time (span start for spans), so it follows the
+// wizard's hash changes with no bookkeeping. Distinct from url.full, which
+// is what the event is about (the navigated-to URL, the fetched resource).
+// This page keeps its export settings in the query string, and an override
+// URL there can carry its own dd-api-key, so those are dropped first.
+const LAB_PARAMS = ["export", "proxy", "traces", "logs", "site", "console", "tab"];
+function stripLabParams(href) {
+  const u = new URL(href);
+  for (const p of LAB_PARAMS) u.searchParams.delete(p);
+  return u.href;
+}
+const documentProvider = createLocationDocumentProvider({ sanitizeUrl: stripLabParams });
 
-// Working-assumption fields (session id, application id) added on top of
-// the instrumentation's own log events — see PLAN.md's "Working assumptions"
-// section for why these, and that they're untested hypotheses rather than a
-// confirmed spec.
-// `attributes["session.id"]` can be passed in explicitly (see initSession
-// below) to avoid calling getSessionId() again from inside a session
-// start/end callback, which would re-enter getSessionId() while it's still
-// mid-transition (old id not yet replaced) and recurse forever.
+// The same settings also appear in url.full on browser.navigation and
+// browser.navigation_timing, which describe this page itself. Only
+// NavigationInstrumentation has a sanitizeUrl option, so one processor
+// covers both.
+const PAGE_URL = location.origin + location.pathname;
+const stripLabParamsFromPageUrl = {
+  onEmit(logRecord) {
+    const url = logRecord.attributes["url.full"];
+    if (typeof url === "string" && url.startsWith(PAGE_URL)) logRecord.setAttribute("url.full", stripLabParams(url));
+  },
+  forceFlush: () => Promise.resolve(),
+  shutdown: () => Promise.resolve(),
+};
+
+// Processors run in order, before the OTLP export processor the SDK appends
+// when a signal has exportConfig. The context processors go first so every
+// later one (the live table included) sees session.id and
+// browser.document.url.full.
+const sessionProvider = { getSessionId };
+const logProcessors = [
+  createSessionLogRecordProcessor(sessionProvider),
+  createDocumentLogRecordProcessor(documentProvider),
+  stripLabParamsFromPageUrl,
+  new LiveTableLogProcessor(),
+];
+const spanProcessors = [
+  createSessionSpanProcessor(sessionProvider),
+  createDocumentSpanProcessor(documentProvider),
+  new LiveTableSpanProcessor(),
+];
+// What each processor is, in words, for the Config tab (app.js), built
+// alongside the processors so it can't describe a pipeline that isn't there.
+const logNames = ["SessionLogRecordProcessor", "DocumentLogRecordProcessor", "stripLabParamsFromPageUrl", "LiveTableLogProcessor"];
+const spanNames = ["SessionSpanProcessor", "DocumentSpanProcessor", "LiveTableSpanProcessor"];
+// ConsoleLogRecordExporter / ConsoleSpanExporter print via console.dir(),
+// which ConsoleInstrumentation doesn't patch, so this can't feed back into
+// itself. Opt out with ?console=0.
+if (consoleOn) {
+  logProcessors.push(new SimpleLogRecordProcessor({ exporter: new ConsoleLogRecordExporter() }));
+  spanProcessors.push(new SimpleSpanProcessor({ exporter: new ConsoleSpanExporter() }));
+  logNames.push("SimpleLogRecordProcessor → ConsoleLogRecordExporter");
+  spanNames.push("SimpleSpanProcessor → ConsoleSpanExporter");
+}
+if (target.logs) logNames.push("BatchLogRecordProcessor → OTLPLogExporter");
+if (target.traces) spanNames.push("BatchSpanProcessor → OTLPTraceExporter");
+
+const resourceAttributes = {
+  "datadog.application.id": cfg.applicationId,
+  "deployment.environment.name": cfg.env,
+};
+
+const sdk = startBrowserSdk({
+  serviceName: SERVICE_NAME,
+  serviceVersion: cfg.version,
+  resourceAttributes,
+  instrumentations,
+  traces: {
+    processors: spanProcessors,
+    ...(target.traces && { exportConfig: { url: target.traces } }),
+  },
+  logs: {
+    processors: logProcessors,
+    ...(target.logs && { exportConfig: { url: target.logs } }),
+  },
+});
+
+const logger = logs.getLogger(SERVICE_NAME);
+
+// session.id comes from the session processor, not from here.
 function emitCustomLog({ eventName, body, attributes = {} }) {
-  logger.emit({
-    eventName,
-    body,
-    attributes: {
-      "datadog.application.id": DD_APPLICATION_ID,
-      "session.id": attributes["session.id"] ?? getSessionId(),
-      ...attributes,
-    },
-  });
+  logger.emit({ eventName, body, attributes });
 }
 
 initSession({
   onStart: (id) => {
     window.LabStatus?.setSession(id);
-    emitCustomLog({ eventName: "session.start", body: "session.start", attributes: { "session.id": id } });
+    emitCustomLog({ eventName: "session.start", body: "session.start" });
   },
-  onEnd: (id) => emitCustomLog({ eventName: "session.end", body: "session.end", attributes: { "session.id": id } }),
+  onEnd: () => emitCustomLog({ eventName: "session.end", body: "session.end" }),
 });
 getSessionId(); // prime the first session
 
@@ -146,11 +236,13 @@ getSessionId(); // prime the first session
 // window.otelLab.logEvent for the live table; this just adds to the same object.
 window.otelLab = window.otelLab ?? {};
 window.otelLab.config = {
-  applicationId: DD_APPLICATION_ID,
-  processors: processorNames,
-  otlpEndpoint: PROXY_BASE ? `${PROXY_BASE}/v1/logs` : null,
+  invalidConfig: !!sdk.invalidConfig,
+  export: target.mode,
+  site: SITE,
+  endpoints: { traces: maskKey(target.traces), logs: maskKey(target.logs) },
+  processors: { traces: spanNames, logs: logNames },
   instrumentations: instrumentations.map((i) => i.instrumentationName),
-  resource: resource.attributes,
+  resource: { "service.name": SERVICE_NAME, "service.version": cfg.version, ...resourceAttributes },
 };
 window.otelLab.submitOrder = function submitOrder(pizzaOrder) {
   emitCustomLog({

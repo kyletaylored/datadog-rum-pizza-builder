@@ -42,18 +42,20 @@ const params = new URLSearchParams(location.search);
 const SERVICE_NAME = "datadog-rum-pizza-otlp";
 const SITE = params.get("site") || cfg.site || "datadoghq.com";
 
-// Export is off by default so the page works standalone with nothing
-// leaving the browser. Set from the Config tab (app.js) via the URL:
+// Export defaults to direct, so the page sends to Datadog out of the box.
+// Changed from the Config tab (app.js) via the URL:
 //   ?export=direct            → straight to Datadog's OTLP intake, with the
-//                               RUM client token as dd-api-key
+//                               RUM client token as dd-api-key (the default)
+//   ?export=off               → nothing leaves the browser
 //   ?export=proxy&proxy=<url> → through your own proxy (proxy/server.js),
 //                               which injects the key server-side
 //   ?traces=<url> / ?logs=<url> override either signal's endpoint in
 //                               either mode, e.g. to send traces elsewhere
-// A bare ?proxy=<url> (the old form) still means proxy mode.
+// A bare ?proxy=<url> (the old form) still means proxy mode. Without a client
+// token (no config.js locally), the default falls back to off.
 function resolveExport() {
   const proxy = params.get("proxy") || "";
-  const mode = params.get("export") || (proxy ? "proxy" : "off");
+  const mode = params.get("export") || (proxy ? "proxy" : cfg.clientToken ? "direct" : "off");
   if (mode === "off" || (mode === "proxy" && !proxy)) return { mode: "off", traces: null, logs: null };
 
   const base = mode === "proxy" ? proxy.replace(/\/+$/, "") : `https://otlp.${SITE}`;

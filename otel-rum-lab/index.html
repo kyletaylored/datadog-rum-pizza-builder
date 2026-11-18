@@ -170,11 +170,11 @@
   <section class="tab-panel" id="tab-config" data-tab="config" data-tab-label="Config">
     <div class="card export-card">
       <div class="card-title">Send events to Datadog</div>
-      <p class="muted">Off by default, so nothing leaves the browser. <strong>Direct</strong> sends both signals to Datadog's OTLP intake, with the RUM client token as <code>dd-api-key</code>. <strong>Proxy</strong> goes through a local relay that adds the key server-side (see the <a href="https://github.com/kyletaylored/datadog-rum-pizza-builder/blob/main/otel-rum-lab/proxy/server.js" target="_blank" rel="noopener">example proxy</a>).</p>
+      <p class="muted"><strong>Direct</strong> is the default: both signals go to Datadog's OTLP intake, with the RUM client token as <code>dd-api-key</code>. <strong>Off</strong> keeps everything in the browser. <strong>Proxy</strong> goes through a local relay that adds the key server-side (see the <a href="https://github.com/kyletaylored/datadog-rum-pizza-builder/blob/main/otel-rum-lab/proxy/server.js" target="_blank" rel="noopener">example proxy</a>).</p>
       <form id="export-form" onsubmit="applyExportSettings(event)">
         <div class="seg" role="group" aria-label="Export mode">
-          <button type="button" class="seg-btn" data-mode="off" aria-pressed="true" onclick="setExportMode('off')">Off</button>
-          <button type="button" class="seg-btn" data-mode="direct" aria-pressed="false" onclick="setExportMode('direct')">Direct</button>
+          <button type="button" class="seg-btn" data-mode="off" aria-pressed="false" onclick="setExportMode('off')">Off</button>
+          <button type="button" class="seg-btn" data-mode="direct" aria-pressed="true" onclick="setExportMode('direct')">Direct</button>
           <button type="button" class="seg-btn" data-mode="proxy" aria-pressed="false" onclick="setExportMode('proxy')">Proxy</button>
         </div>
         <label class="field" id="proxy-field">
@@ -235,7 +235,7 @@
     exportConfig: { url: 'https://otlp.&lt;site&gt;/api/v2/otlplogs?dd-api-key=&lt;client token&gt;' },
   },
 });</pre>
-    <p>Sending to Datadog is <strong>off by default</strong>. Turn it on from the <strong>Config</strong> tab.</p>
+    <p>Events go to Datadog by default (<strong>Direct</strong>). Turn that off, or switch to the proxy, from the <strong>Config</strong> tab.</p>
   </article>
 
   <article class="guide-topic" data-tag="Auto" data-title="What's auto-instrumented">

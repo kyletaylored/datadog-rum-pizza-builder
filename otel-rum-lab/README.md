@@ -20,7 +20,7 @@ Browser
  ├─ @opentelemetry/browser-sdk  startBrowserSdk({ traces, logs })
  │    ├─ session + document processors (stamp session.id, browser.document.url.full)
  │    ├─ live-table processors → the docked log, before export
- │    └─ OTLP exporters, one endpoint per signal (off by default)
+ │    └─ OTLP exporters, one endpoint per signal (Direct by default)
  │
  ├─ Direct:  https://otlp.<site>/v1/traces?dd-api-key=<client token>
  │           https://otlp.<site>/api/v2/otlplogs?dd-api-key=<client token>
@@ -59,8 +59,8 @@ Picked on the **Config** tab, which writes them to the URL and reloads (the SDK 
 
 | URL | Traces go to | Logs go to |
 |---|---|---|
-| *(none)* | nowhere | nowhere |
-| `?export=direct` | `https://otlp.<site>/v1/traces?dd-api-key=<client token>` | `https://otlp.<site>/api/v2/otlplogs?dd-api-key=<client token>` |
+| *(none)* or `?export=direct` | `https://otlp.<site>/v1/traces?dd-api-key=<client token>` | `https://otlp.<site>/api/v2/otlplogs?dd-api-key=<client token>` |
+| `?export=off` | nowhere | nowhere |
 | `?export=proxy&proxy=http://localhost:8791` | `<proxy>/v1/traces` | `<proxy>/v1/logs` |
 | add `&traces=<url>` and/or `&logs=<url>` | that URL | that URL |
 
@@ -210,7 +210,7 @@ npm run dev                  # bundles src/main.js → dist/bundle.js on change,
 
 Click through the wizard — the live event table fills in immediately, no proxy or API key required.
 
-To send events to Datadog, pick **Direct** on the **Config** tab. It uses `applicationId`, `clientToken` and `site` from the root `config.js` (`cp config.template.js config.js`).
+Events go to Datadog by default (**Direct** on the **Config** tab), using `applicationId`, `clientToken` and `site` from the root `config.js` (`cp config.template.js config.js`). Without a client token in `config.js`, the default falls back to **Off**. Pick **Off** to keep everything in the browser.
 
 To go through the proxy instead: copy `otel-rum-lab/.env.example` to `.env`, fill in the two endpoints and a key in the `dd-api-key` slot (the RUM app's client token works), run `npm run proxy` from the repo root in a second terminal, then pick **Proxy** on the **Config** tab (defaults to `http://localhost:8791`).
 

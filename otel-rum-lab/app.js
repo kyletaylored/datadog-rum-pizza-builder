@@ -290,8 +290,9 @@ function applyExportSettings(event) {
   // ?site= has no field; keep it if it was set by hand.
   const site = new URLSearchParams(location.search).get('site');
   if (site) params.set('site', site);
+  // Direct is the default, so Off has to be written out to stick.
+  params.set('export', exportMode);
   if (exportMode !== 'off') {
-    params.set('export', exportMode);
     if (exportMode === 'proxy' && value('proxy-url-input')) params.set('proxy', value('proxy-url-input'));
     if (value('traces-url-input')) params.set('traces', value('traces-url-input'));
     if (value('logs-url-input')) params.set('logs', value('logs-url-input'));

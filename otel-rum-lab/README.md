@@ -155,6 +155,12 @@ Two notes:
 - **`startBrowserSdk()` always starts the traces SDK.** Leave `traces` out and it still exports spans, to the default `http://localhost:4318/v1/traces`. For logs only, call `startLogsSdk()` from `@opentelemetry/browser-sdk/logs` with the `logs` options above instead.
 - **This lab's own config is bigger on purpose.** It adds the live log, console exporters, the sandbox's full instrumentation list, an end-on-demand session (`src/session.js` instead of `createSessionManager()`) and URL cleaning. None of that is needed for Datadog.
 
+## The Dashboard tab
+
+Embeds the shared Datadog dashboard "Pizza Order Trends (OTel RUM)". It charts the RUM events from `service:datadog-rum-pizza-otlp`: `pizza_order_submitted` actions broken down by their `pizza_order.*` attributes, plus errors by wizard step. The same dashboard built from the RUM SDK version is on the [Pizza Builder](../pizza-builder-lab/)'s Results tab, for comparison.
+
+The share only allows embedding on `https://kyletaylored.com`, so the iframe loads on the live site and nowhere else. On `localhost` (and any other host), the tab shows a link to the live lab instead of Datadog's error page.
+
 ## The live event table
 
 The most reusable piece of this lab, independent of Datadog: a `LogRecordProcessor` (and a matching `SpanProcessor`) registered *ahead of* the OTLP export processor. Every log and span, whether it came from stock auto-instrumentation (a click, a navigation change, a fetch) or from something the app emitted on purpose, passes through it before export:

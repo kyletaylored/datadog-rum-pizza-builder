@@ -301,6 +301,21 @@ function applyExportSettings(event) {
   location.search = params.toString();
 }
 
+// The dashboard iframe loads the first time its tab opens, and only where the
+// share allows embedding (data-embed-origin). Elsewhere Datadog serves an
+// error page, so show a note instead.
+LabShell.onTab(function (tab) {
+  if (tab !== 'dashboard') return;
+  const frame = document.querySelector('#tab-dashboard iframe[data-src]');
+  if (!frame || frame.src) return;
+  if (location.origin === frame.dataset.embedOrigin) {
+    frame.src = frame.dataset.src;
+  } else {
+    frame.hidden = true;
+    document.getElementById('dashboard-blocked').hidden = false;
+  }
+});
+
 // The bundle has run by DOMContentLoaded (it's a classic script after this
 // one), so whether the pipeline exists is known by then.
 document.addEventListener('DOMContentLoaded', function () {

@@ -166,6 +166,25 @@
 
   </section>
 
+  <!-- Dashboard -->
+  <section class="tab-panel" id="tab-dashboard" data-tab="dashboard" data-tab-label="Dashboard">
+    <div class="section-head">
+      <h3 class="section-title">Pizza order trends from OTel events</h3>
+      <p>Live dashboard built on RUM events from <code>service:datadog-rum-pizza-otlp</code>: <code>pizza_order_submitted</code> actions broken down by their <code>pizza_order.*</code> attributes, plus errors by wizard step. The same dashboard for the RUM SDK version is on the <a href="../pizza-builder-lab/">Pizza Builder</a>'s Results tab.</p>
+    </div>
+    <!-- data-src: loaded the first time this tab opens (app.js). The share
+         only allows embedding on data-embed-origin; anywhere else it shows a
+         note instead of Datadog's error page. -->
+    <iframe
+      data-src="https://p.datadoghq.com/sb/embed/2bbb2f98-12da-11ef-8e28-da7ad0900002-de6379ac0c343eff61d51b788e2ed9a7"
+      data-embed-origin="https://kyletaylored.com"
+      title="Pizza Order Trends (OTel RUM) dashboard"
+      class="dashboard-iframe"
+      allowfullscreen>
+    </iframe>
+    <p class="muted" id="dashboard-blocked" hidden>This dashboard is shared for embedding on <code>kyletaylored.com</code> only, so it doesn't load here. See it on the <a href="https://kyletaylored.com/datadog-rum-pizza-builder/otel-rum-lab/">live lab</a>.</p>
+  </section>
+
   <!-- Config -->
   <section class="tab-panel" id="tab-config" data-tab="config" data-tab-label="Config">
     <div class="card export-card">
@@ -269,7 +288,7 @@
 
   <article class="guide-topic" data-tag="Datadog" data-title="Where it shows up in Datadog">
     <p>Exported log records become <strong>RUM events</strong>, not logs. In RUM Explorer, query <code>service:datadog-rum-pizza-otlp</code>: each page load is one session and one view, with actions, resources and vitals under it.</p>
-    <p><code>view.url</code> is <code>browser.document.url.full</code>, and <code>view.name</code> is its path. A hash change updates <code>view.url</code> on later events but doesn't start a new view. Without <code>datadog.application.id</code> or <code>session.id</code>, the same records land in Log Explorer instead.</p>
+    <p>The <strong>Dashboard</strong> tab charts the <code>pizza_order_submitted</code> actions from those events. <code>view.url</code> is <code>browser.document.url.full</code>, and <code>view.name</code> is its path. A hash change updates <code>view.url</code> on later events but doesn't start a new view. Without <code>datadog.application.id</code> or <code>session.id</code>, the same records land in Log Explorer instead.</p>
     <p>Measured on 2026-11-04 by removing one piece at a time. The minimum: logs exported to <code>/api/v2/otlplogs</code> with the client token, plus these three attributes.</p>
     <pre>resourceAttributes: { 'datadog.application.id': applicationId },
 logs: {

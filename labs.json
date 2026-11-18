@@ -44,7 +44,7 @@
     "category": "OpenTelemetry",
     "blurb": "Sending browser telemetry to Datadog with standard OpenTelemetry instrumentation instead of the RUM SDK.",
     "apis": ["startBrowserSdk", "LogRecordProcessor", "SpanProcessor", "browser-instrumentation"],
-    "tabs": ["Wizard", "Config"],
+    "tabs": ["Wizard", "Dashboard", "Config"],
     "topics": 6
   }
 ]
